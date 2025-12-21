@@ -10,6 +10,8 @@ import 'package:qurany/feature/home/widgets/daily_goals_card.dart';
 import 'package:qurany/feature/home/widgets/horizontal_sections.dart';
 import 'package:qurany/feature/home/widgets/quran_tab_section.dart';
 
+import '../widgets/recitersCardwidget.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -48,6 +50,7 @@ class HomeScreen extends StatelessWidget {
 
             // Reciters
             const RecitersSection(),
+
             const SizedBox(height: 24),
 
             // Stories

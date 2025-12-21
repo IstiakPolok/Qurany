@@ -30,7 +30,7 @@ class WeeklyStreakRow extends StatelessWidget {
                       ? const Color(0xFFE8F5E9) // Light green for checked
                       : isCurrent
                       ? Colors.transparent
-                      : const Color(0xFFF0F0F0), // Grey for others
+                      : const Color(0xFFECE7E0), // Grey for others
                   border: isCurrent
                       ? Border.all(color: primaryColor, width: 2)
                       : null,

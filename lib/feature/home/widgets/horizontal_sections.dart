@@ -1,60 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class DidYouKnowSection extends StatelessWidget {
-  const DidYouKnowSection({super.key});
+import 'recitersCardwidget.dart';
+import 'package:qurany/feature/home/view/did_you_know_screen.dart';
+import 'package:qurany/feature/home/view/quranic_stories_screen.dart';
+import 'package:qurany/feature/home/view/reciters_screen.dart';
+
+class SectionHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onSeeAll;
+
+  const SectionHeader({super.key, required this.title, required this.onSeeAll});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildHeader("Did you know", () {}),
-        SizedBox(
-          height: 140.h,
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            scrollDirection: Axis.horizontal,
-            itemCount: 2,
-            separatorBuilder: (_, __) => SizedBox(width: 12.w),
-            itemBuilder: (context, index) {
-              return Container(
-                width: 220.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/image/bg2.png'), // Placeholder
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.r),
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black87, Colors.transparent],
-                    ),
-                  ),
-                  padding: EdgeInsets.all(12.w),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    "Masjid Quba is the first mosque in Islam",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(String title, VoidCallback onTap) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
       child: Row(
@@ -65,7 +24,7 @@ class DidYouKnowSection extends StatelessWidget {
             style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
           ),
           GestureDetector(
-            onTap: onTap,
+            onTap: onSeeAll,
             child: Text(
               "See all",
               style: TextStyle(fontSize: 12.sp, color: Colors.green),
@@ -73,6 +32,115 @@ class DidYouKnowSection extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class ReusableHorizontalSection extends StatelessWidget {
+  final String title;
+  final VoidCallback onSeeAll;
+  final double height;
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+  final double? separatorWidth;
+
+  const ReusableHorizontalSection({
+    super.key,
+    required this.title,
+    required this.onSeeAll,
+    required this.height,
+    required this.itemCount,
+    required this.itemBuilder,
+    this.separatorWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SectionHeader(title: title, onSeeAll: onSeeAll),
+        SizedBox(
+          height: height,
+          child: ListView.separated(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            scrollDirection: Axis.horizontal,
+            itemCount: itemCount,
+            separatorBuilder: (_, __) =>
+                SizedBox(width: separatorWidth ?? 12.w),
+            itemBuilder: itemBuilder,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class DidYouKnowSection extends StatelessWidget {
+  const DidYouKnowSection({super.key});
+
+  final List<Map<String, String>> items = const [
+    {
+      'title': "Masjid Quba is the first mosque in Islam",
+      'image':
+          'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "The Quran was revealed over 23 years",
+      'image':
+          'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "Surah Al-Ikhlas is equal to one-third of the Quran",
+      'image':
+          'https://images.unsplash.com/photo-1584281723358-461f7555806e?q=80&w=500&auto=format&fit=crop',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ReusableHorizontalSection(
+      title: "Did you know",
+      onSeeAll: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const DidYouKnowScreen()),
+        );
+      },
+      height: 200.h,
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Container(
+          width: 220.w,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            image: DecorationImage(
+              image: NetworkImage(item['image']!),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+              ),
+            ),
+            padding: EdgeInsets.all(12.w),
+            alignment: Alignment.bottomLeft,
+            child: Text(
+              item['title']!,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -84,70 +152,17 @@ class RecitersSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildHeader("Reciters", () {}),
-        SizedBox(
-          height: 110.h,
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            scrollDirection: Axis.horizontal,
-            itemCount: 4,
-            separatorBuilder: (_, __) => SizedBox(width: 16.w),
-            itemBuilder: (context, index) {
-              return Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 35.r,
-                        backgroundImage: AssetImage(
-                          'assets/image/bg2.png',
-                        ), // Placeholder
-                      ),
-                      Container(
-                        padding: EdgeInsets.all(4.w),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.play_arrow,
-                          size: 16.sp,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                  Text("Mishary", style: TextStyle(fontSize: 12.sp)),
-                ],
-              );
-            },
-          ),
+        SectionHeader(
+          title: "Reciters",
+          onSeeAll: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const RecitersScreen()),
+            );
+          },
         ),
+        HorizontalReciterList(),
       ],
-    );
-  }
-
-  Widget _buildHeader(String title, VoidCallback onTap) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
-          ),
-          GestureDetector(
-            onTap: onTap,
-            child: Text(
-              "See all",
-              style: TextStyle(fontSize: 12.sp, color: Colors.green),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -155,75 +170,69 @@ class RecitersSection extends StatelessWidget {
 class StoriesSection extends StatelessWidget {
   const StoriesSection({super.key});
 
+  final List<Map<String, String>> stories = const [
+    {
+      'title': "Story of Prophet Yusuf",
+      'image':
+          'https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "Story of Prophet Musa",
+      'image':
+          'https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "Story of Prophet Ibrahim",
+      'image':
+          'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=500&auto=format&fit=crop',
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildHeader("Quranic Stories", () {}),
-        SizedBox(
-          height: 140.h,
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            scrollDirection: Axis.horizontal,
-            itemCount: 2,
-            separatorBuilder: (_, __) => SizedBox(width: 12.w),
-            itemBuilder: (context, index) {
-              return Container(
-                width: 160.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/image/bg2.png'), // Placeholder
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.r),
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [Colors.black87, Colors.transparent],
-                    ),
-                  ),
-                  padding: EdgeInsets.all(12.w),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    "Story of Prophet Yusuf",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(String title, VoidCallback onTap) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
-          ),
-          GestureDetector(
-            onTap: onTap,
-            child: Text(
-              "See all",
-              style: TextStyle(fontSize: 12.sp, color: Colors.green),
+    return ReusableHorizontalSection(
+      title: "Quranic Stories",
+      onSeeAll: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const QuranicStoriesScreen()),
+        );
+      },
+      height: 200.h,
+      itemCount: stories.length,
+      itemBuilder: (context, index) {
+        final story = stories[index];
+        return Container(
+          width: 220.w,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            image: DecorationImage(
+              image: NetworkImage(story['image']!),
+              fit: BoxFit.cover,
             ),
           ),
-        ],
-      ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+              ),
+            ),
+            padding: EdgeInsets.all(12.w),
+            alignment: Alignment.bottomLeft,
+            child: Text(
+              story['title']!,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -231,86 +240,96 @@ class StoriesSection extends StatelessWidget {
 class AzkarSection extends StatelessWidget {
   const AzkarSection({super.key});
 
+  final List<Map<String, dynamic>> azkar = const [
+    {
+      'title': "Morning Azkar",
+      'time': "08:00 AM",
+      'image':
+          'https://images.unsplash.com/photo-1531353826977-0941b4779a1c?q=80&w=500&auto=format&fit=crop',
+      'color': Color(0xFFFFE0B2),
+    },
+    {
+      'title': "Evening Azkar",
+      'time': "05:00 PM",
+      'image':
+          'https://images.unsplash.com/photo-1506466010722-395aa2bef877?q=80&w=500&auto=format&fit=crop',
+      'color': Color(0xFFC5CAE9),
+    },
+    {
+      'title': "Before Sleep",
+      'time': "10:00 PM",
+      'image':
+          'https://images.unsplash.com/photo-1531353826977-0941b4779a1c?q=80&w=500&auto=format&fit=crop',
+      'color': Color(0xFFD1C4E9),
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildHeader("Azkar", () {}),
-        SizedBox(
-          height: 140.h,
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            scrollDirection: Axis.horizontal,
-            itemCount: 2,
-            separatorBuilder: (_, __) => SizedBox(width: 12.w),
-            itemBuilder: (context, index) {
-              final isMorning = index == 0;
-              return Container(
-                width: 180.w,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  color: isMorning
-                      ? Colors.orange.shade100
-                      : Colors.indigo.shade100, // Placeholder
-                ),
-                child: Stack(
-                  children: [
-                    // Should add Image here
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(12.w),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isMorning ? "Morning Azkar" : "Evening Azkar",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.sp,
-                              ),
-                            ),
-                            Text(
-                              "08:00 AM",
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(String title, VoidCallback onTap) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
-          ),
-          GestureDetector(
-            onTap: onTap,
-            child: Text(
-              "See all",
-              style: TextStyle(fontSize: 12.sp, color: Colors.green),
+    return ReusableHorizontalSection(
+      title: "Azkar",
+      onSeeAll: () {},
+      height: 200.h,
+      itemCount: azkar.length,
+      itemBuilder: (context, index) {
+        final item = azkar[index];
+        return Container(
+          width: 220.w,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
+            color: item['color'],
+            image: DecorationImage(
+              image: NetworkImage(item['image']),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Colors.black.withOpacity(0.2),
+                BlendMode.darken,
+              ),
             ),
           ),
-        ],
-      ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12.r),
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: EdgeInsets.all(12.w),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['title'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.sp,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          item['time'],
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

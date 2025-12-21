@@ -1,8 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class DailyGoalsCard extends StatelessWidget {
+import '../../../core/const/app_colors.dart';
+
+class DailyGoalsCard extends StatefulWidget {
   const DailyGoalsCard({super.key});
+  @override
+  State<DailyGoalsCard> createState() => _DailyGoalsCardState();
+}
+
+class _DailyGoalsCardState extends State<DailyGoalsCard> {
+  int _currentPage = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  final List<Map<String, dynamic>> goals = const [
+    {
+      'title': 'Read Quran Daily',
+      'progress': 0.25,
+      'current': 22,
+      'total': 30,
+      'unit': 'min reading Today',
+      'icon': "assets/icons/navquranIcons.png",
+    },
+    {
+      'title': 'Memorize Verses',
+      'progress': 0.6,
+      'current': 3,
+      'total': 5,
+      'unit': 'verses memorized',
+      'icon': "assets/icons/123.png",
+    },
+    {
+      'title': 'Reflect on Ayah',
+      'progress': 0.8,
+      'current': 8,
+      'total': 10,
+      'unit': 'ayahs reflected',
+      'icon': "assets/icons/navquranIcons.png",
+    },
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -25,70 +67,121 @@ class DailyGoalsCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: primaryColor),
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Text(
-                  "See All",
-                  style: TextStyle(fontSize: 10.sp, color: Colors.green),
+                  "+ See All",
+                  style: TextStyle(fontSize: 12.sp, color: primaryColor),
                 ),
               ),
             ],
           ),
         ),
-
-        Container(
-          margin: EdgeInsets.symmetric(horizontal: 24.w),
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F5E9),
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2E7D32), // Green
-                  shape: BoxShape.circle,
+        SizedBox(
+          height: 80.h,
+          child: PageView.builder(
+            controller: _pageController,
+            scrollDirection: Axis.vertical,
+            itemCount: goals.length,
+            onPageChanged: (int page) {
+              setState(() {
+                _currentPage = page;
+              });
+            },
+            itemBuilder: (context, index) {
+              final goal = goals[index];
+              return Container(
+                margin: EdgeInsets.symmetric(horizontal: 24.w),
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E9D8),
+                  borderRadius: BorderRadius.circular(9.r),
+                  border: Border.all(
+                    color: const Color(0xFF2F7D33),
+                    width: 1.w,
+                  ),
                 ),
-                child: Icon(Icons.menu_book, color: Colors.white, size: 20.sp),
-              ),
-              SizedBox(width: 16.w),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Read Quran Daily",
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E7D32),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Image.asset(
+                        goal['icon'],
+                        width: 24.w,
+                        height: 24.h,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    "22 / 30 min reading Today",
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: Colors.grey.shade600,
+                    SizedBox(width: 16.w),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          goal['title'],
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "${goal['current']} / ${goal['total']} ${goal['unit']}",
+                          style: TextStyle(fontSize: 12.sp, color: subheading),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              Spacer(),
-              SizedBox(
-                width: 40.w,
-                height: 40.w,
-                child: CircularProgressIndicator(
-                  value: 0.7,
-                  backgroundColor: Colors.white,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF2E7D32),
-                  ),
-                  strokeWidth: 4,
+                    Spacer(),
+                    SizedBox(
+                      width: 40.w,
+                      height: 40.w,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            value: goal['progress'],
+                            backgroundColor: Color(0xFF2E7D32),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color(0xFFD9D9D9),
+                            ),
+                            strokeWidth: 4,
+                          ),
+                          Text(
+                            "${(goal['progress'] * 100).round()}",
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 8.h),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(goals.length, (index) {
+                        return Container(
+                          width: 8.w,
+                          height: 8.w,
+                          margin: EdgeInsets.symmetric(horizontal: 2.w),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _currentPage == index
+                                ? const Color(0xFF2E7D32)
+                                : const Color.fromARGB(181, 217, 217, 217),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ],

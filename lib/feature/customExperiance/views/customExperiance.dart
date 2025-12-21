@@ -220,24 +220,27 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
     Function(String) onSelect,
   ) {
     return Flexible(
-      child: GestureDetector(
-        onTap: () => onSelect(label),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white30),
-          ),
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+        child: GestureDetector(
+          onTap: () => onSelect(label),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.white : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white30),
+            ),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.black : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ),
             ),
@@ -367,7 +370,7 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   Widget _buildContinueButton() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      // Remove padding here to let the white background fill to the bottom
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
@@ -375,20 +378,23 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
           topRight: Radius.circular(25),
         ),
       ),
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E7D32),
-          minimumSize: const Size(double.infinity, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(45),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E7D32),
+            minimumSize: const Size(double.infinity, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(45),
+            ),
           ),
-        ),
-        onPressed: () {
-          Get.to(LocationPermissionScreen());
-        },
-        child: const Text(
-          "Continue",
-          style: TextStyle(fontSize: 18, color: Colors.white),
+          onPressed: () {
+            Get.to(LocationPermissionScreen());
+          },
+          child: const Text(
+            "Continue",
+            style: TextStyle(fontSize: 18, color: Colors.white),
+          ),
         ),
       ),
     );

@@ -6,3 +6,5 @@ const Color bgColor = Color(0xFFD3EBBA);
 const Color callBackgroundColor = Color(0xFFFEDEDD);
 const Color green = Color(0xFF1EA952);
 const Color black = Color(0xFF212121);
+
+const Color subheading = Color(0xFF4D4D4D);
