@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/const/app_colors.dart';
+import 'package:qurany/feature/home/widgets/add_goal_bottom_sheet.dart';
 
 class DailyGoalsCard extends StatefulWidget {
   const DailyGoalsCard({super.key});
@@ -46,6 +47,15 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
     },
   ];
 
+  void _showAddGoalsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddGoalBottomSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -64,15 +74,18 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                   color: Colors.black87,
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  border: Border.all(color: primaryColor),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  "+ See All",
-                  style: TextStyle(fontSize: 12.sp, color: primaryColor),
+              GestureDetector(
+                onTap: _showAddGoalsSheet,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: primaryColor),
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                  child: Text(
+                    "+ See All",
+                    style: TextStyle(fontSize: 12.sp, color: primaryColor),
+                  ),
                 ),
               ),
             ],

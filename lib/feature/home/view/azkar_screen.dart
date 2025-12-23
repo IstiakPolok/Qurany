@@ -1,51 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:qurany/feature/home/view/azkar_detail_screen.dart';
 
-import 'detail_screen.dart';
-
-class QuranicStoriesScreen extends StatelessWidget {
-  const QuranicStoriesScreen({super.key});
+class AzkarScreen extends StatelessWidget {
+  const AzkarScreen({super.key});
 
   final List<Map<String, String>> items = const [
     {
-      'title': "Story of Prophet Yusuf",
-      'image':
-          'https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "The People of the Cave",
-      'image':
-          'https://images.unsplash.com/photo-1542353436-312f0e1f67ff?q=80&w=500&auto=format&fit=crop', // Cave texture
-    },
-    {
-      'title': "Musa & Al-Khidr",
-      'image':
-          'https://images.unsplash.com/photo-1584281723358-461f7555806e?q=80&w=500&auto=format&fit=crop', // Open book with light
-    },
-    {
-      'title': "The Story of Maryam",
-      'image':
-          'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "Prophet Ibrahim's Test",
+      'title': "Morning Azkar",
+      'duration': "5-10 min",
       'image':
           'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?q=80&w=500&auto=format&fit=crop',
     },
     {
-      'title': "Prophet Nuh and the Ark",
+      'title': "Evening Azkar",
+      'duration': "5-10 min",
       'image':
-          'https://images.unsplash.com/photo-1602693822003-8d689b0d1e0d?q=80&w=500&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1542353436-312f0e1f67ff?q=80&w=500&auto=format&fit=crop',
     },
     {
-      'title': "The Story of Yunus",
+      'title': "Before Sleeping Azkar",
+      'duration': "3-5 min",
       'image':
-          'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=500&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1584281723358-461f7555806e?q=80&w=500&auto=format&fit=crop',
     },
     {
-      'title': "The Story of Dhul-Qarnayn",
+      'title': "After Prayer Azkar",
+      'duration': "5-7 min",
       'image':
-          'https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=500&auto=format&fit=crop',
+          'https://images.unsplash.com/photo-1531353826977-0941b4779a1c?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "Before Eating Azkar",
+      'duration': "2-3 min",
+      'image':
+          'https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "During Work Azkar",
+      'duration': "3-5 min",
+      'image':
+          'https://images.unsplash.com/photo-1532857416399-52d3a9870be0?q=80&w=500&auto=format&fit=crop',
+    },
+    {
+      'title': "Before Traveling Azkar",
+      'duration': "4-6 min",
+      'image':
+          'https://images.unsplash.com/photo-1554508494-b295996fdef1?q=80&w=500&auto=format&fit=crop',
     },
   ];
 
@@ -75,7 +76,7 @@ class QuranicStoriesScreen extends StatelessWidget {
           ),
         ),
         title: Text(
-          "Quranic Stories",
+          "Azkar",
           style: TextStyle(
             color: Colors.black,
             fontSize: 18.sp,
@@ -99,38 +100,24 @@ class QuranicStoriesScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DetailScreen(data: item),
+                  builder: (context) => AzkarDetailScreen(categoryData: item),
                 ),
               );
             },
             child: Container(
-              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16.r),
+                image: DecorationImage(
+                  image: NetworkImage(item['image']!),
+                  fit: BoxFit.cover,
+                ),
               ),
               child: Stack(
                 children: [
-                  Image.network(
-                    item['image']!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade300,
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: Colors.grey,
-                            size: 30.sp,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
                   // Gradient Overlay
                   Container(
                     decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16.r),
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
@@ -138,7 +125,7 @@ class QuranicStoriesScreen extends StatelessWidget {
                           Colors.black.withOpacity(0.8),
                           Colors.transparent,
                         ],
-                        stops: const [0.0, 0.6],
+                        stops: [0.0, 0.6],
                       ),
                     ),
                   ),
@@ -147,16 +134,29 @@ class QuranicStoriesScreen extends StatelessWidget {
                     alignment: Alignment.bottomLeft,
                     child: Padding(
                       padding: EdgeInsets.all(12.w),
-                      child: Text(
-                        item['title']!,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['title']!,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            "(${item['duration']})",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

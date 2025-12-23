@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
 import 'package:qurany/feature/home/view/home_screen.dart';
+import 'package:qurany/feature/prayer/view/prayer_screen.dart';
+import 'package:qurany/feature/ask_ai/view/ask_ai_intro_screen.dart';
 
 class BottomNavbarController extends GetxController {
   RxInt currentIndex = 0.obs;
@@ -14,19 +17,24 @@ class BottomNavbarController extends GetxController {
 }
 
 class BottomNavbar extends StatelessWidget {
-  const BottomNavbar({super.key});
+  final int initialIndex;
+  const BottomNavbar({super.key, this.initialIndex = 0});
 
   @override
   Widget build(BuildContext context) {
     final BottomNavbarController controller = Get.put(BottomNavbarController());
+    // Set initial index if provided
+    if (controller.currentIndex.value != initialIndex) {
+      controller.currentIndex.value = initialIndex;
+    }
 
     // Placeholder pages
     final List<Widget> pages = [
       const HomeScreen(),
       const Center(child: Text("Quran")),
-      const Center(child: Text("Ask AI")),
-      const Center(child: Text("Prayer Times")),
-      const Center(child: Text("Qibla")),
+      const AskAIScreen(),
+      const PrayerScreen(),
+      const QiblaCompassScreen(),
     ];
 
     return Scaffold(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class DidYouKnowDetailScreen extends StatelessWidget {
+class DetailScreen extends StatelessWidget {
   final Map<String, String> data;
 
-  const DidYouKnowDetailScreen({super.key, required this.data});
+  const DetailScreen({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +17,22 @@ class DidYouKnowDetailScreen extends StatelessWidget {
             left: 0,
             right: 0,
             height: 350.h,
-            child: Image.network(data['image'] ?? '', fit: BoxFit.cover),
+            child: Image.network(
+              data['image'] ?? '',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: Colors.grey.shade300,
+                  child: Center(
+                    child: Icon(
+                      Icons.image_not_supported_outlined,
+                      color: Colors.grey,
+                      size: 50.sp,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
 
           // Header Buttons
@@ -35,7 +50,7 @@ class DidYouKnowDetailScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.black.withOpacity(
-                        0.3,
+                        0.1,
                       ), // Semi-transparent for visibility on image
                       border: Border.all(color: Colors.white, width: 1),
                     ),

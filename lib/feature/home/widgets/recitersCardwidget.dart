@@ -82,8 +82,16 @@ class ReciterCard extends StatelessWidget {
               child: Image.network(
                 reciter.imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    Container(color: Colors.grey[800]),
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.grey[800],
+                  child: const Center(
+                    child: Icon(
+                      Icons.person_outline,
+                      color: Colors.white54,
+                      size: 40,
+                    ),
+                  ),
+                ),
               ),
             ),
 

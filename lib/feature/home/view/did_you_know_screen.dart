@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:qurany/feature/home/view/did_you_know_detail_screen.dart';
+import 'package:qurany/feature/home/view/detail_screen.dart';
 
 class DidYouKnowScreen extends StatelessWidget {
   const DidYouKnowScreen({super.key});
@@ -100,24 +100,38 @@ class DidYouKnowScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DidYouKnowDetailScreen(data: item),
+                  builder: (context) => DetailScreen(data: item),
                 ),
               );
             },
             child: Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16.r),
-                image: DecorationImage(
-                  image: NetworkImage(item['image']!),
-                  fit: BoxFit.cover,
-                ),
               ),
               child: Stack(
                 children: [
+                  Image.network(
+                    item['image']!,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey.shade300,
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey,
+                            size: 30.sp,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   // Gradient Overlay
                   Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16.r),
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
@@ -125,7 +139,7 @@ class DidYouKnowScreen extends StatelessWidget {
                           Colors.black.withOpacity(0.8),
                           Colors.transparent,
                         ],
-                        stops: [0.0, 0.6],
+                        stops: const [0.0, 0.6],
                       ),
                     ),
                   ),

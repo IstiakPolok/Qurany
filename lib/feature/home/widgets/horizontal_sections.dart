@@ -5,6 +5,7 @@ import 'recitersCardwidget.dart';
 import 'package:qurany/feature/home/view/did_you_know_screen.dart';
 import 'package:qurany/feature/home/view/quranic_stories_screen.dart';
 import 'package:qurany/feature/home/view/reciters_screen.dart';
+import 'package:qurany/feature/home/view/azkar_screen.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -112,32 +113,47 @@ class DidYouKnowSection extends StatelessWidget {
         final item = items[index];
         return Container(
           width: 220.w,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            image: DecorationImage(
-              image: NetworkImage(item['image']!),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12.r)),
+          child: Stack(
+            children: [
+              Image.network(
+                item['image']!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade300,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
-            padding: EdgeInsets.all(12.w),
-            alignment: Alignment.bottomLeft,
-            child: Text(
-              item['title']!,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                  ),
+                ),
+                padding: EdgeInsets.all(12.w),
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  item['title']!,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
@@ -204,32 +220,47 @@ class StoriesSection extends StatelessWidget {
         final story = stories[index];
         return Container(
           width: 220.w,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            image: DecorationImage(
-              image: NetworkImage(story['image']!),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12.r)),
+          child: Stack(
+            children: [
+              Image.network(
+                story['image']!,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade300,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
-            padding: EdgeInsets.all(12.w),
-            alignment: Alignment.bottomLeft,
-            child: Text(
-              story['title']!,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                  ),
+                ),
+                padding: EdgeInsets.all(12.w),
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  story['title']!,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         );
       },
@@ -268,65 +299,83 @@ class AzkarSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return ReusableHorizontalSection(
       title: "Azkar",
-      onSeeAll: () {},
+      onSeeAll: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AzkarScreen()),
+        );
+      },
       height: 200.h,
       itemCount: azkar.length,
       itemBuilder: (context, index) {
         final item = azkar[index];
         return Container(
           width: 220.w,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12.r),
             color: item['color'],
-            image: DecorationImage(
-              image: NetworkImage(item['image']),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.2),
-                BlendMode.darken,
-              ),
-            ),
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12.r),
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-              ),
-            ),
-            child: Stack(
-              children: [
-                Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.w),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['title'],
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14.sp,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          item['time'],
-                          style: TextStyle(
-                            fontSize: 10.sp,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
+          child: Stack(
+            children: [
+              Image.network(
+                item['image'],
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: item['color'],
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
                     ),
+                  );
+                },
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black.withOpacity(0.7), Colors.transparent],
                   ),
                 ),
-              ],
-            ),
+                child: Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.w),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['title'],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14.sp,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              item['time'],
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
