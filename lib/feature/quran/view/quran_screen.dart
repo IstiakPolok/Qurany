@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
+import '../../home/widgets/feeling_widget.dart';
+
 // Sample Surah data
 class SurahModel {
   final int number;
@@ -69,6 +71,7 @@ class FavoriteAyah {
 // Controller
 class QuranController extends GetxController {
   RxInt selectedTab = 0.obs;
+  RxInt selectedMode = 0.obs; // 0 = Read Mode, 1 = Commuter, 2 = Memorization
   RxString searchQuery = ''.obs;
 
   // Sample data
@@ -299,7 +302,7 @@ class QuranScreen extends StatelessWidget {
                   SizedBox(height: 16.h),
 
                   // Mode buttons
-                  _buildModeButtons(),
+                  _buildModeButtons(controller),
 
                   SizedBox(height: 24.h),
 
@@ -548,50 +551,100 @@ class QuranScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModeButtons() {
+  Widget _buildModeButtons(QuranController controller) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildModeButton(Icons.menu_book_outlined, "Read Mode", true),
-          _buildModeButton(Icons.headphones_outlined, "Commuter", false),
-          _buildModeButton(Icons.psychology_outlined, "Memorization", false),
-        ],
+      child: Obx(
+        () => Row(
+          children: [
+            Expanded(
+              child: _buildModeButton(
+                Icons.menu_book_outlined,
+                "Read Mode",
+                0,
+                controller,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: _buildModeButton(
+                Icons.headphones_outlined,
+                "Commuter",
+                1,
+                controller,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: _buildModeButton(
+                Icons.psychology_outlined,
+                "Memorization",
+                2,
+                controller,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildModeButton(IconData icon, String label, bool isSelected) {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE8F5E9) : Colors.grey[100],
-            borderRadius: BorderRadius.circular(16.r),
-            border: isSelected
-                ? Border.all(color: const Color(0xFF2E7D32), width: 2)
-                : null,
-          ),
-          child: Icon(
-            icon,
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[600],
-            size: 24.sp,
-          ),
+  Widget _buildModeButton(
+    IconData icon,
+    String label,
+    int index,
+    QuranController controller,
+  ) {
+    final isSelected = controller.selectedMode.value == index;
+    return GestureDetector(
+      onTap: () => controller.selectedMode.value = index,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 12.w),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE2E9D8) : Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          border: isSelected
+              ? Border.all(color: const Color(0xFF2E7D32), width: 1.5)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        SizedBox(height: 8.h),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.sp,
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[600],
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
+        child: Column(
+          children: [
+            // Hexagonal icon container
+            ClipPath(
+              clipper: HexagonClipper(),
+              child: Container(
+                width: 44.w,
+                height: 44.w,
+                color: const Color(0xFF2E7D32),
+                child: Center(
+                  child: Icon(icon, color: Colors.white, size: 22.sp),
+                ),
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
+
+  // Hexagon clipper for mode button icons
 
   Widget _buildSearchBar() {
     return Padding(
@@ -1118,4 +1171,28 @@ class QuranScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+// Hexagon clipper for mode button icons
+class HexagonClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+
+    // Draw hexagon
+    path.moveTo(w * 0.5, 0);
+    path.lineTo(w, h * 0.25);
+    path.lineTo(w, h * 0.75);
+    path.lineTo(w * 0.5, h);
+    path.lineTo(0, h * 0.75);
+    path.lineTo(0, h * 0.25);
+    path.close();
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
