@@ -7,6 +7,7 @@ import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
 import 'package:qurany/feature/home/view/home_screen.dart';
 import 'package:qurany/feature/prayer/view/prayer_screen.dart';
 import 'package:qurany/feature/ask_ai/view/ask_ai_intro_screen.dart';
+import 'package:qurany/feature/quran/view/quran_screen.dart';
 
 class BottomNavbarController extends GetxController {
   RxInt currentIndex = 0.obs;
@@ -31,7 +32,7 @@ class BottomNavbar extends StatelessWidget {
     // Placeholder pages
     final List<Widget> pages = [
       const HomeScreen(),
-      const Center(child: Text("Quran")),
+      const QuranScreen(),
       const AskAIScreen(),
       const PrayerScreen(),
       const QiblaCompassScreen(),
