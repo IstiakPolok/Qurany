@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'payment_checkout_screen.dart';
 
 class PremiumPlanScreen extends StatefulWidget {
   const PremiumPlanScreen({super.key});
@@ -169,6 +170,15 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                 setState(() {
                   isYearlySelected = false;
                 });
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PaymentCheckoutScreen(
+                      planType: 'Monthly',
+                      price: '\$4.99',
+                    ),
+                  ),
+                );
               },
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 20.h),
@@ -214,6 +224,16 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                 setState(() {
                   isYearlySelected = true;
                 });
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PaymentCheckoutScreen(
+                      planType: 'Yearly',
+                      price: '\$29.99',
+                      savingsText: 'Save 40%',
+                    ),
+                  ),
+                );
               },
               child: Stack(
                 clipBehavior: Clip.none,
