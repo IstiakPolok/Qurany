@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-
-import '../../home/widgets/feeling_widget.dart';
+import 'surah_reading_screen.dart';
 
 // Sample Surah data
 class SurahModel {
@@ -297,7 +296,7 @@ class QuranScreen extends StatelessWidget {
                 children: [
                   _buildHeader(),
                   SizedBox(height: 60.h),
-                  _buildLastReadCard(),
+                  _buildLastReadCard(context),
 
                   SizedBox(height: 16.h),
 
@@ -457,7 +456,9 @@ class QuranScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLastReadCard() {
+  Widget _buildLastReadCard(BuildContext context) {
+    // Progress value for last read (0.0 - 1.0)
+    final double progress = 0.05;
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(16.w),
@@ -501,21 +502,32 @@ class QuranScreen extends StatelessWidget {
                   ],
                 ),
                 SizedBox(height: 12.h),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32),
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Text(
-                    "Continue",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to Surah Reading Screen when in Read Mode
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SurahReadingScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 8.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      "Continue",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -527,20 +539,19 @@ class QuranScreen extends StatelessWidget {
             width: 60.w,
             height: 60.w,
             child: Stack(
+              alignment: Alignment.center,
               children: [
                 CircularProgressIndicator(
-                  value: 0.05,
+                  value: progress,
                   strokeWidth: 4,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation(Color(0xFF2E7D32)),
                 ),
-                Center(
-                  child: Text(
-                    "5%",
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+                Text(
+                  "${(progress * 100).round()}%",
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],

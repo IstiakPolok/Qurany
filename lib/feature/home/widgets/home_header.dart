@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/feature/profile/view/profile_screen.dart';
 
 import 'dayProgressWidgets.dart';
 
@@ -60,16 +59,26 @@ class HomeHeader extends StatelessWidget {
                   ),
 
                   // Profile Icon
-                  Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 24.sp,
-                      color: Colors.black87,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                      child: Icon(
+                        Icons.person_outline,
+                        size: 24.sp,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ],
