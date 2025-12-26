@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../../core/services_class/local_service/shared_preferences_helper.dart';
 import '../../bottom_nav_bar/screen/bottom_nav_bar.dart';
+import '../../welcome/view/onBoarding.dart';
 
 class SplashScreenController extends GetxController {
   void checkIsLogin() async {
@@ -14,7 +15,7 @@ class SplashScreenController extends GetxController {
       // If token exists, the user is logged in
       if (token != null && token.isNotEmpty) {
         // Redirect to the main screen (e.g., Bottom Navbar or Home)
-        Get.offAll(BottomNavbar());
+        Get.offAll(onBoardind());
       } else {
         // Redirect to the Welcome Screen if no token is found
         Get.offAll(BottomNavbar());

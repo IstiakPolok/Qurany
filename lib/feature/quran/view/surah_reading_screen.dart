@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:qurany/core/const/app_colors.dart';
 
 // Verse model
 class VerseModel {
@@ -162,7 +163,6 @@ class SurahReadingScreen extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                color: Colors.white,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.grey[300]!),
               ),
@@ -196,7 +196,6 @@ class SurahReadingScreen extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
-              color: Colors.white,
               shape: BoxShape.circle,
               border: Border.all(color: Colors.grey[300]!),
             ),
@@ -532,75 +531,62 @@ class SurahReadingScreen extends StatelessWidget {
 
   Widget _buildSurahHeader() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
         image: const DecorationImage(
-          image: AssetImage('assets/image/quarnBG.png'),
+          image: AssetImage('assets/image/readmodecardBG.png'),
           fit: BoxFit.cover,
         ),
       ),
-      child: Container(
-        padding: EdgeInsets.all(20.w),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.r),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF2E7D32).withOpacity(0.9),
-              const Color(0xFF1B5E20).withOpacity(0.95),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            meaning,
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 2,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "THE OPENER",
+                style: TextStyle(
+                  fontSize: 11.sp,
+                  color: Colors.black,
+                  letterSpacing: 1,
+                ),
+              ),
+              _buildDot(),
+              Text(
+                origin,
+                style: TextStyle(fontSize: 11.sp, color: Colors.black),
+              ),
+              _buildDot(),
+              Text(
+                "$ayaCount Aya",
+                style: TextStyle(fontSize: 11.sp, color: Colors.black),
+              ),
             ],
           ),
-        ),
-        child: Column(
-          children: [
-            Text(
-              meaning,
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 2,
-              ),
+          SizedBox(height: 20.h),
+          // Bismillah
+          Text(
+            "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+            style: TextStyle(
+              fontSize: 28.sp,
+              color: primaryColor,
+              fontFamily: 'Amiri',
             ),
-            SizedBox(height: 8.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "THE OPENER",
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    color: Colors.white70,
-                    letterSpacing: 1,
-                  ),
-                ),
-                _buildDot(),
-                Text(
-                  origin,
-                  style: TextStyle(fontSize: 11.sp, color: Colors.white70),
-                ),
-                _buildDot(),
-                Text(
-                  "$ayaCount Aya",
-                  style: TextStyle(fontSize: 11.sp, color: Colors.white70),
-                ),
-              ],
-            ),
-            SizedBox(height: 20.h),
-            // Bismillah
-            Text(
-              "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-              style: TextStyle(
-                fontSize: 28.sp,
-                color: Colors.white,
-                fontFamily: 'Amiri',
-              ),
-              textDirection: TextDirection.rtl,
-            ),
-          ],
-        ),
+            textDirection: TextDirection.rtl,
+          ),
+        ],
       ),
     );
   }
@@ -611,10 +597,7 @@ class SurahReadingScreen extends StatelessWidget {
       child: Container(
         width: 4.w,
         height: 4.w,
-        decoration: const BoxDecoration(
-          color: Colors.white54,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
       ),
     );
   }
@@ -788,24 +771,28 @@ class SurahReadingScreen extends StatelessWidget {
               Icon(Icons.more_horiz, color: Colors.grey[500], size: 20.sp),
               Row(
                 children: [
-                  Icon(Icons.link, color: Colors.grey[400], size: 18.sp),
-                  SizedBox(width: 16.w),
-                  Icon(
-                    Icons.copy_outlined,
-                    color: Colors.grey[400],
-                    size: 18.sp,
+                  Image.asset(
+                    'assets/icons/1.solar_notes-outline.png',
+                    width: 18.sp,
+                    height: 18.sp,
                   ),
                   SizedBox(width: 16.w),
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: Colors.grey[400],
-                    size: 18.sp,
+                  Image.asset(
+                    'assets/icons/2.solar_document-add-broken.png',
+                    width: 18.sp,
+                    height: 18.sp,
                   ),
                   SizedBox(width: 16.w),
-                  Icon(
-                    Icons.bookmark_border,
-                    color: Colors.grey[400],
-                    size: 18.sp,
+                  Image.asset(
+                    'assets/icons/3.iconoir_double-check.png',
+                    width: 18.sp,
+                    height: 18.sp,
+                  ),
+                  SizedBox(width: 16.w),
+                  Image.asset(
+                    'assets/icons/4.material-symbols_bookmark-outline-rounded.png',
+                    width: 18.sp,
+                    height: 18.sp,
                   ),
                 ],
               ),
