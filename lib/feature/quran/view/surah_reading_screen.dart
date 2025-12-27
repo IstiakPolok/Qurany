@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/feature/quran/view/listen_mode_screen.dart';
 
 // Verse model
 class VerseModel {
@@ -539,54 +540,57 @@ class SurahReadingScreen extends StatelessWidget {
           fit: BoxFit.cover,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            meaning,
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              meaning,
+              style: TextStyle(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 2,
+              ),
             ),
-          ),
-          SizedBox(height: 8.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "THE OPENER",
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  color: Colors.black,
-                  letterSpacing: 1,
+            SizedBox(height: 8.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "THE OPENER",
+                  style: TextStyle(
+                    fontSize: 11.sp,
+                    color: Colors.black,
+                    letterSpacing: 1,
+                  ),
                 ),
-              ),
-              _buildDot(),
-              Text(
-                origin,
-                style: TextStyle(fontSize: 11.sp, color: Colors.black),
-              ),
-              _buildDot(),
-              Text(
-                "$ayaCount Aya",
-                style: TextStyle(fontSize: 11.sp, color: Colors.black),
-              ),
-            ],
-          ),
-          SizedBox(height: 20.h),
-          // Bismillah
-          Text(
-            "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-            style: TextStyle(
-              fontSize: 28.sp,
-              color: primaryColor,
-              fontFamily: 'Amiri',
+                _buildDot(),
+                Text(
+                  origin,
+                  style: TextStyle(fontSize: 11.sp, color: Colors.black),
+                ),
+                _buildDot(),
+                Text(
+                  "$ayaCount Aya",
+                  style: TextStyle(fontSize: 11.sp, color: Colors.black),
+                ),
+              ],
             ),
-            textDirection: TextDirection.rtl,
-          ),
-        ],
+            SizedBox(height: 20.h),
+            // Bismillah
+            Text(
+              "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+              style: TextStyle(
+                fontSize: 28.sp,
+                color: primaryColor,
+                fontFamily: 'Amiri',
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -862,8 +866,15 @@ class SurahReadingScreen extends StatelessWidget {
               ],
             ),
 
-            // More options
-            Icon(Icons.more_horiz, color: Colors.grey[600], size: 24.sp),
+            // Listen Mode button
+            GestureDetector(
+              onTap: () => Get.to(() => const ListenModeScreen()),
+              child: Icon(
+                Icons.headphones,
+                color: Colors.grey[600],
+                size: 24.sp,
+              ),
+            ),
           ],
         ),
       ),
