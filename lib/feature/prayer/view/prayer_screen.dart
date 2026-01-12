@@ -1,8 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:hijri/hijri_calendar.dart';
 import 'package:qurany/feature/prayer/view/electronic_tasbih_screen.dart';
 import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
+import 'package:qurany/feature/profile/view/prayer_notification_setting_sheet.dart';
 
 class PrayerScreen extends StatefulWidget {
   const PrayerScreen({super.key});
@@ -12,6 +16,81 @@ class PrayerScreen extends StatefulWidget {
 }
 
 class _PrayerScreenState extends State<PrayerScreen> {
+  DateTime _selectedDate = DateTime.now();
+  late Timer _timer;
+  DateTime _currentTime = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _currentTime = DateTime.now();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  void _changeDate(int offset) {
+    setState(() {
+      _selectedDate = _selectedDate.add(Duration(days: offset));
+    });
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF2E7D32),
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  String _getFormattedGregorianDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selected = DateTime(date.year, date.month, date.day);
+
+    String prefix = "";
+    if (selected == today) {
+      prefix = "Today, ";
+    } else if (selected == today.add(const Duration(days: 1))) {
+      prefix = "Tomorrow, ";
+    } else if (selected == today.subtract(const Duration(days: 1))) {
+      prefix = "Yesterday, ";
+    } else {
+      return DateFormat('EEEE, d MMMM').format(date);
+    }
+    return "$prefix${DateFormat('d MMMM').format(date)}";
+  }
+
+  String _getFormattedHijriDate(DateTime date) {
+    final hDate = HijriCalendar.fromDate(date);
+    return "${hDate.hDay} ${hDate.longMonthName} ${hDate.hYear}";
+  }
+
   // Mock data for prayer times
   final List<Map<String, dynamic>> _prayerTimes = [
     {
@@ -54,6 +133,9 @@ class _PrayerScreenState extends State<PrayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double topSectionHeight = (screenHeight * 0.52).clamp(380.0, 500.0);
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
       body: SingleChildScrollView(
@@ -61,7 +143,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
           children: [
             // Top Section (Background, Header, Timeline)
             Container(
-              height: 425.h,
+              height: topSectionHeight,
               width: double.infinity,
               decoration: const BoxDecoration(
                 image: DecorationImage(
@@ -90,9 +172,9 @@ class _PrayerScreenState extends State<PrayerScreen> {
                   // Content
                   Padding(
                     padding: EdgeInsets.only(
-                      left: 24.w,
-                      right: 24.w,
-                      top: 50.h,
+                      left: 20.w,
+                      right: 20.w,
+                      top: MediaQuery.of(context).padding.top + 10.h,
                       bottom: 4.h,
                     ),
                     child: Column(
@@ -101,39 +183,46 @@ class _PrayerScreenState extends State<PrayerScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 12.w,
-                                vertical: 8.h,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(20.r),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on_outlined,
-                                    color: Colors.white,
-                                    size: 16.sp,
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Text(
-                                    "Abu Dhabi, Dubai",
-                                    style: TextStyle(
+                            Flexible(
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 8.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(20.r),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_outlined,
                                       color: Colors.white,
-                                      fontSize: 14.sp,
+                                      size: 16.sp,
                                     ),
-                                  ),
-                                  SizedBox(width: 4.w),
-                                  Icon(
-                                    Icons.keyboard_arrow_down,
-                                    color: Colors.white,
-                                    size: 16.sp,
-                                  ),
-                                ],
+                                    SizedBox(width: 8.w),
+                                    Flexible(
+                                      child: Text(
+                                        "Abu Dhabi, Dubai",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.sp,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    Icon(
+                                      Icons.keyboard_arrow_down,
+                                      color: Colors.white,
+                                      size: 16.sp,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
+                            SizedBox(width: 12.w),
                             Stack(
                               children: [
                                 Icon(
@@ -146,7 +235,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                                   top: 0,
                                   child: Container(
                                     padding: EdgeInsets.all(4.w),
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       color: Colors.green,
                                       shape: BoxShape.circle,
                                     ),
@@ -164,60 +253,79 @@ class _PrayerScreenState extends State<PrayerScreen> {
                           ],
                         ),
 
-                        SizedBox(height: 24.h),
+                        SizedBox(height: 16.h),
 
-                        // Date
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.arrow_back_ios,
-                              color: Colors.white70,
-                              size: 14.sp,
-                            ),
-                            SizedBox(width: 12.w),
-                            Column(
-                              children: [
-                                Text(
-                                  "Today, 3 December",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                            GestureDetector(
+                              onTap: () => _changeDate(-1),
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: EdgeInsets.all(8.w),
+                                child: Icon(
+                                  Icons.arrow_back_ios,
+                                  color: Colors.white70,
+                                  size: 14.sp,
                                 ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  "20 Rabi' al-Awal 1446",
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12.sp,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                            SizedBox(width: 12.w),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: Colors.white70,
-                              size: 14.sp,
+                            SizedBox(width: 4.w),
+                            GestureDetector(
+                              onTap: () => _selectDate(context),
+                              behavior: HitTestBehavior.opaque,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _getFormattedGregorianDate(_selectedDate),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4.h),
+                                  Text(
+                                    _getFormattedHijriDate(_selectedDate),
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12.sp,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 4.w),
+                            GestureDetector(
+                              onTap: () => _changeDate(1),
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: EdgeInsets.all(8.w),
+                                child: Icon(
+                                  Icons.arrow_forward_ios,
+                                  color: Colors.white70,
+                                  size: 14.sp,
+                                ),
+                              ),
                             ),
                           ],
                         ),
 
-                        SizedBox(height: 20.h),
+                        SizedBox(height: 16.h),
 
                         // Time
-                        Text(
-                          "11:18",
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 56.sp,
-                            fontWeight: FontWeight.bold,
+                        FittedBox(
+                          child: Text(
+                            DateFormat('HH:mm').format(_currentTime),
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 56.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
 
-                        SizedBox(height: 12.h),
+                        SizedBox(height: 8.h),
 
                         // Countdown Badge
                         Container(
@@ -232,11 +340,14 @@ class _PrayerScreenState extends State<PrayerScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                "Dhohr will begin in",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12.sp,
+                              Flexible(
+                                child: Text(
+                                  "Dhohr will begin in",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.sp,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               SizedBox(width: 8.w),
@@ -261,18 +372,14 @@ class _PrayerScreenState extends State<PrayerScreen> {
                           ),
                         ),
 
-                        Spacer(),
+                        const Spacer(),
 
-                        // Timeline Scroller
+                        // Timeline Row (No Scroll)
                         SizedBox(
-                          height: 110
-                              .h, // Adjusted height for bigger active card + indicator
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: 6,
-                            separatorBuilder: (context, index) =>
-                                SizedBox(width: 8.w),
-                            itemBuilder: (context, index) {
+                          height: 110.h,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(6, (index) {
                               // Data for the timeline
                               final List<Map<String, dynamic>> timelineItems = [
                                 {
@@ -310,84 +417,89 @@ class _PrayerScreenState extends State<PrayerScreen> {
                               bool isSelected = index == 2; // Dhohr active
                               final item = timelineItems[index];
 
-                              return Column(
-                                mainAxisAlignment: MainAxisAlignment
-                                    .end, // Align to bottom so indicators align
-                                children: [
-                                  Container(
-                                    width: 80.w,
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 10.h,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? const Color(0xFF4E4B45)
-                                          : Colors
-                                                .transparent, // Dark brown/grey bg for active
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          item['icon'] as IconData,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : Colors.white70,
-                                          size: 18.sp,
-                                        ),
-                                        SizedBox(height: 8.h),
-                                        Text(
-                                          item['name'] as String,
-                                          style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : Colors.white70,
-                                            fontSize: isSelected
-                                                ? 12.sp
-                                                : 10.sp,
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.w400,
-                                          ),
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Text(
-                                          item['time'] as String,
-                                          style: TextStyle(
-                                            color: isSelected
-                                                ? Colors.white
-                                                : Colors.white70,
-                                            fontSize: isSelected
-                                                ? 12.sp
-                                                : 10.sp,
-                                            fontWeight: isSelected
-                                                ? FontWeight.bold
-                                                : FontWeight.w400,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (isSelected)
-                                    Transform.translate(
-                                      offset: Offset(
-                                        0,
-                                        -6.h,
-                                      ), // Move up to overlap slightly or connect
-                                      child: CustomPaint(
-                                        size: Size(16.w, 10.h),
-                                        painter: TrianglePainter(),
+                              return Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 12.h,
+                                        horizontal: 8.w,
                                       ),
-                                    )
-                                  else
-                                    SizedBox(
-                                      height: 10.h,
-                                    ), // Spacer to align unselected items
-                                ],
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFF4E4B45)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            item['icon'] as IconData,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.white70,
+                                            size: 16.sp,
+                                          ),
+                                          SizedBox(height: 6.h),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              item['name'] as String,
+                                              style: TextStyle(
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : Colors.white70,
+                                                fontSize: isSelected
+                                                    ? 11.sp
+                                                    : 9.sp,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w400,
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(height: 2.h),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              (item['time'] as String)
+                                                  .replaceFirst(' AM', 'am')
+                                                  .replaceFirst(' PM', 'pm'),
+                                              style: TextStyle(
+                                                color: isSelected
+                                                    ? Colors.white
+                                                    : Colors.white70,
+                                                fontSize: isSelected
+                                                    ? 10.sp
+                                                    : 8.sp,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w400,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Transform.translate(
+                                        offset: Offset(0, -6.h),
+                                        child: CustomPaint(
+                                          size: Size(16.w, 10.h),
+                                          painter: TrianglePainter(),
+                                        ),
+                                      )
+                                    else
+                                      SizedBox(height: 10.h),
+                                  ],
+                                ),
                               );
-                            },
+                            }),
                           ),
                         ),
                       ],
@@ -413,52 +525,62 @@ class _PrayerScreenState extends State<PrayerScreen> {
                         );
                       },
                       child: _buildActionCard(
-                        icon: Icons.explore,
+                        imagePath:
+                            "assets/icons/qibladirctioninprayerIcons.png",
                         title: "Locate",
                         subtitle: "Qibla",
-                        color: const Color(0xFFE8F5E9),
+                        color: const Color(0xFFE2E9D8),
                       ),
                     ),
                   ),
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Container(
-                      padding: EdgeInsets.all(12.w),
+                      height: 115.h,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 16.h,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
+                        color: const Color(0xFFE2E9D8),
                         borderRadius: BorderRadius.circular(16.r),
                       ),
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Stack(
                             alignment: Alignment.center,
                             children: [
                               SizedBox(
-                                width: 50.w,
-                                height: 50.w,
+                                width: 70.w,
+                                height: 70.w,
                                 child: CircularProgressIndicator(
                                   value: 0.2, // 1/5
                                   backgroundColor: Colors.white,
                                   color: const Color(0xFF2E7D32),
-                                  strokeWidth: 6,
+                                  strokeWidth: 10.w,
                                 ),
                               ),
-                              Text(
-                                "1/5",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.sp,
-                                ),
+                              Column(
+                                children: [
+                                  Text(
+                                    "1/5",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18.sp,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Prayed",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12.sp,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            "Prayed",
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 12.sp,
-                            ),
                           ),
                         ],
                       ),
@@ -477,10 +599,11 @@ class _PrayerScreenState extends State<PrayerScreen> {
                         );
                       },
                       child: _buildActionCard(
-                        icon: Icons.touch_app,
+                        imagePath:
+                            "assets/icons/electrictasbihinpracyericon.png",
                         title: "Electronic",
                         subtitle: "Tasbih",
-                        color: const Color(0xFFE8F5E9),
+                        color: const Color(0xFFE2E9D8),
                       ),
                     ),
                   ),
@@ -521,33 +644,30 @@ class _PrayerScreenState extends State<PrayerScreen> {
   }
 
   Widget _buildActionCard({
-    required IconData icon,
+    required String imagePath,
     required String title,
     required String subtitle,
     required Color color,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      width: double.infinity,
+      height: 115.h,
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 12.h),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32),
-              shape: BoxShape.circle, // Or customized shape
-              // Use ClipPath for hexagon if needed, strictly circle for now
-            ),
-            child: Icon(icon, color: Colors.white, size: 20.sp),
-          ),
-          SizedBox(height: 12.h),
+          Image.asset(imagePath, width: 40.w, height: 40.w),
+
           Text(
             title,
-            style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+            style: TextStyle(color: Colors.grey[600], fontSize: 14.sp),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           Text(
             subtitle,
@@ -556,6 +676,8 @@ class _PrayerScreenState extends State<PrayerScreen> {
               fontSize: 14.sp,
               fontWeight: FontWeight.bold,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -575,7 +697,11 @@ class _PrayerScreenState extends State<PrayerScreen> {
         border: Border.all(color: Colors.grey[200]!, width: 1),
         boxShadow: [
           // Subtle shadow
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
@@ -586,53 +712,102 @@ class _PrayerScreenState extends State<PrayerScreen> {
             color: Colors.grey[700],
           ), // Placeholder icon
           SizedBox(width: 12.w),
-          Text(
-            data['name'],
-            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(width: 8.w),
-          Icon(
-            Icons.volume_up_outlined,
-            size: 18.sp,
-            color: const Color(0xFF2E7D32),
-          ),
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    data['name'],
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
 
-          Spacer(),
-
-          if (isNext)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-              margin: EdgeInsets.only(right: 8.w),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4.r),
-              ),
-              child: Text(
-                "in 37m 13s",
-                style: TextStyle(fontSize: 10.sp, color: Colors.grey[600]),
-              ),
+                IconButton(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => PrayerNotificationSettingSheet(
+                        prayerName: data['name'],
+                      ),
+                    );
+                  },
+                  icon: Icon(
+                    Icons.volume_up_outlined,
+                    size: 18.sp,
+                    color: const Color(0xFF2E7D32),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-
-          Text(
-            data['time'],
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
           ),
-          SizedBox(width: 12.w),
 
-          // Checkbox (custom for style match)
-          Container(
-            width: 24.w,
-            height: 24.w,
-            decoration: BoxDecoration(
-              color: isChecked ? const Color(0xFF2E7D32) : Colors.transparent,
-              border: Border.all(
-                color: isChecked ? const Color(0xFF2E7D32) : Colors.grey[400]!,
-              ),
-              borderRadius: BorderRadius.circular(4.r),
+          Expanded(
+            flex: 5,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (isNext)
+                  Flexible(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 4.h,
+                      ),
+                      margin: EdgeInsets.only(right: 8.w),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      child: Text(
+                        "in 37m 13s",
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: Colors.grey[600],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                Text(
+                  data['time'],
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(width: 12.w),
+
+                // Checkbox (custom for style match)
+                Container(
+                  width: 24.w,
+                  height: 24.w,
+                  decoration: BoxDecoration(
+                    color: isChecked
+                        ? const Color(0xFF2E7D32)
+                        : Colors.transparent,
+                    border: Border.all(
+                      color: isChecked
+                          ? const Color(0xFF2E7D32)
+                          : Colors.grey[400]!,
+                    ),
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                  child: isChecked
+                      ? Icon(Icons.check, color: Colors.white, size: 16.sp)
+                      : null,
+                ),
+              ],
             ),
-            child: isChecked
-                ? Icon(Icons.check, color: Colors.white, size: 16.sp)
-                : null,
           ),
         ],
       ),

@@ -12,15 +12,6 @@ class LanguageStep extends StatefulWidget {
 class _LanguageStepState extends State<LanguageStep> {
   String selectedLanguage = 'English';
 
-  final List<Map<String, String>> languages = [
-    {'name': 'English', 'sub': 'Welcome'},
-    {'name': 'العربية', 'sub': 'مرحبا'},
-    {'name': 'اردو', 'sub': 'خوش آمدید'},
-    {'name': 'Türkçe', 'sub': 'Hoş geldiniz'},
-    {'name': 'Bahasa', 'sub': 'Selamat datang'},
-    {'name': 'François', 'sub': 'Bienvenue'},
-  ];
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -87,7 +78,7 @@ class _LanguageStepState extends State<LanguageStep> {
           SizedBox(height: 20.h),
 
           // Language Grid
-          GridView.builder(
+          GridView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -96,61 +87,115 @@ class _LanguageStepState extends State<LanguageStep> {
               crossAxisSpacing: 12.w,
               mainAxisSpacing: 12.h,
             ),
-            itemCount: languages.length,
-            itemBuilder: (context, index) {
-              final lang = languages[index];
-              final isSelected = selectedLanguage == lang['name'];
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    selectedLanguage = lang['name']!;
-                  });
-                },
-                child: Container(
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? Colors.green : Colors.transparent,
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        lang['name']!,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.sp,
-                          color: isSelected
-                              ? Colors.green[800]
-                              : Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        lang['sub']!,
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            children: [
+              _buildLanguageItem('English', 'Welcome'),
+              _buildarbicLanguageItem('العربية', 'مرحبا'),
+              _buildarbicLanguageItem('اردو', 'خوش آمدید'),
+              _buildLanguageItem('Türkçe', 'Hoş geldiniz'),
+              _buildLanguageItem('Bahasa', 'Selamat datang'),
+              _buildLanguageItem('François', 'Bienvenue'),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildarbicLanguageItem(String name, String sub) {
+    final isSelected = selectedLanguage == name;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedLanguage = name;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.green : Colors.transparent,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              name,
+              style: TextStyle(
+                fontFamily: 'Arial',
+                fontWeight: FontWeight.bold,
+                fontSize: 22.sp,
+                color: isSelected ? Colors.green[800] : Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              sub,
+              style: TextStyle(
+                fontFamily: 'Arial',
+                fontSize: 14.sp,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageItem(String name, String sub) {
+    final isSelected = selectedLanguage == name;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedLanguage = name;
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.green : Colors.transparent,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              name,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14.sp,
+                color: isSelected ? Colors.green[800] : Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              sub,
+              style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
+            ),
+          ],
+        ),
       ),
     );
   }

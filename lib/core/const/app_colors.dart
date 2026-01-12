@@ -10,12 +10,12 @@ const Color black = Color(0xFF212121);
 const Color subheading = Color(0xFF4D4D4D);
 
 // Listen Mode (Commuter Mode) Colors
-const Color listenModeBackground = Color(0xFF0D3B1D); // Deep forest green
+const Color listenModeBackground = Color(0xFF0D3B1D);
 const Color listenModeAccent = Color(
   0xFF4CAF50,
-); // Accent green for transliteration
-const Color safetyBannerOrange = Color(0xFFF57C00); // Orange for safety banner
-const Color listenModeCardBg = Color(0xFFFFFFFF); // White card background
+);
+const Color safetyBannerOrange = Color(0xFFF57C00);
+const Color listenModeCardBg = Color(0xFFFFFFFF);
 const Color listenModePlayerBg = Color(
   0xFF1A5A2E,
-); // Slightly lighter green for controls
+);

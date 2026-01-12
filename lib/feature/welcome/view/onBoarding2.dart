@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
 import '../../../core/const/app_colors.dart' as AppColors;
@@ -8,7 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../customExperiance/views/customExperiance.dart';
 
 class onBoardind2 extends StatefulWidget {
-  onBoardind2({super.key});
+  const onBoardind2({super.key});
 
   @override
   State<onBoardind2> createState() => _onBoardind2State();
@@ -51,7 +52,7 @@ class _onBoardind2State extends State<onBoardind2> {
               return Center(
                 child: Image.asset(
                   _images[index],
-                  fit: BoxFit.contain,
+                  fit: BoxFit.fill,
                   width: double.infinity,
                   height: double.infinity,
                 ),
@@ -78,58 +79,67 @@ class _onBoardind2State extends State<onBoardind2> {
           // Show SlideAction only on last image
           if (_currentPage == _images.length - 1)
             Positioned(
-              bottom: 40,
+              bottom: 0,
               left: 0,
               right: 0,
-              child: Center(
-                child: TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 2000),
-                  curve: Curves.elasticOut, // Bouncy effect
-                  tween: Tween<double>(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Transform.scale(scale: value, child: child);
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 50),
-                    child: SlideAction(
-                      key: _slideKey,
-                      onSubmit: () {
-                        _slideKey.currentState!.reset();
-                        Get.to(CustomizeExperienceScreen());
-                      },
-                      height: 50, // Increased height
-                      borderRadius: 60,
-                      elevation: 0,
-                      innerColor: Colors.white,
-                      outerColor: AppColors.primaryColor,
-                      sliderButtonIcon: SizedBox(
-                        width: 40, // Increased width
-                        height: 10, // Increased height
+              child: Container(
+                width: double.infinity,
+                height: 100.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(35.r),
+                ),
+                child: Center(
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 2000),
+                    curve: Curves.elasticOut, // Bouncy effect
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    builder: (context, value, child) {
+                      return Transform.scale(scale: value, child: child);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 50),
+                      child: SlideAction(
+                        key: _slideKey,
+                        onSubmit: () {
+                          _slideKey.currentState!.reset();
+                          Get.to(CustomizeExperienceScreen());
+                          return null;
+                        },
+                        height: 50, // Increased height
+                        borderRadius: 60,
+                        elevation: 0,
+                        innerColor: Colors.white,
+                        outerColor: AppColors.primaryColor,
+                        sliderButtonIcon: SizedBox(
+                          width: 40, // Increased width
+                          height: 10, // Increased height
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/icons/arrow_right.png',
+                                width: 24,
+                                height: 24,
+                              ),
+                            ],
+                          ),
+                        ),
+                        alignment: Alignment.center,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Image.asset(
-                              'assets/icons/arrow_right.png',
-                              width: 24,
-                              height: 24,
+                            Text(
+                              'Get started',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Get started',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
                     ),
                   ),
                 ),

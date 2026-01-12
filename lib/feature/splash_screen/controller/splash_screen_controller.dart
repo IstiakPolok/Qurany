@@ -15,10 +15,12 @@ class SplashScreenController extends GetxController {
       // If token exists, the user is logged in
       if (token != null && token.isNotEmpty) {
         // Redirect to the main screen (e.g., Bottom Navbar or Home)
-        Get.offAll(onBoardind());
+        Get.offAll(BottomNavbar());
       } else {
         // Redirect to the Welcome Screen if no token is found
         Get.offAll(BottomNavbar());
+
+        //Get.offAll(onBoardind());
       }
     });
   }

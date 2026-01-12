@@ -27,11 +27,11 @@ class _ScriptStepState extends State<ScriptStep> {
               color: Colors.black87,
             ),
           ),
-          SizedBox(height: 10.h),
+
           Text(
             "Choose how you want to read the Quran.",
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 16.sp, color: Colors.grey[600]),
           ),
           SizedBox(height: 30.h),
 
@@ -40,27 +40,45 @@ class _ScriptStepState extends State<ScriptStep> {
             width: double.infinity,
             padding: EdgeInsets.all(24.w),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0E8D9),
+              color: const Color(0xFFDAE2D0),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                Text(
-                  "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ۝",
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: selectedScript == 'IndoPak'
-                        ? 'IndoPakFont'
-                        : 'Amiri', // Placeholder fonts
-                  ),
-                  textAlign: TextAlign.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Image.asset(
+                      'assets/image/Layer_1.png',
+                      width: 32.w,
+                      height: 32.h,
+                    ),
+                    Text(
+                      "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: selectedScript == 'IndoPak'
+                            ? 'IndoPakFont'
+                            : 'Amiri', // Placeholder fonts
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
                 SizedBox(height: 12.h),
-                Text(
-                  "[All] praise is [due] to Allah, Lord of the worlds -",
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
-                  textAlign: TextAlign.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      "[All] praise is [due] to Allah, Lord of the worlds -",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[700],
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ],
                 ),
               ],
             ),

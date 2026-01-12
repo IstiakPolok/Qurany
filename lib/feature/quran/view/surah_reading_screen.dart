@@ -9,12 +9,16 @@ class VerseModel {
   final int verseNumber;
   final String arabicText;
   final String translation;
+  final String transliteration;
+  final String tafsir;
   final bool isBookmarked;
 
   VerseModel({
     required this.verseNumber,
     required this.arabicText,
     required this.translation,
+    required this.transliteration,
+    required this.tafsir,
     this.isBookmarked = false,
   });
 }
@@ -34,31 +38,47 @@ class SurahReadingController extends GetxController {
       arabicText: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
       translation:
           "In the Name of Allah—the Most Compassionate, Most Merciful.",
+      transliteration: "Bismillahir Rahmanir Rahim",
+      tafsir:
+          "The Basmalah is the beginning of all surahs except Surah At-Tawbah. It is a declaration of starting in the name of God, the Most Gracious, the Most Merciful.",
     ),
     VerseModel(
       verseNumber: 2,
       arabicText: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ",
       translation: "All praise is due to Allah, the Lord of all the worlds.",
+      transliteration: "Alhamdu lillaahi Rabbil 'aalameen",
+      tafsir:
+          "All praise belongs to Allah, the Creator and Sustainer of all existence.",
     ),
     VerseModel(
       verseNumber: 3,
       arabicText: "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
       translation: "The Most Compassionate, Most Merciful.",
+      transliteration: "Ar-Rahmaanir-Raheem",
+      tafsir:
+          "He is the Most Gracious and Most Merciful to all His creation in this world and the next.",
     ),
     VerseModel(
       verseNumber: 4,
       arabicText: "مَٰلِكِ يَوْمِ ٱلدِّينِ",
       translation: "Master of the Day of Judgment.",
+      transliteration: "Maaliki Yawmid-Deen",
+      tafsir:
+          "He is the Master and Owner of the Day of Judgment, where recompense will be established.",
     ),
     VerseModel(
       verseNumber: 5,
       arabicText: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
       translation: "You alone we worship, and You alone we ask for help.",
+      transliteration: "Iyyaaka na'budu wa lyyaaka nasta'een",
+      tafsir: "We worship You alone and seek Your help in all our affairs.",
     ),
     VerseModel(
       verseNumber: 6,
       arabicText: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
       translation: "Guide us on the Straight Path.",
+      transliteration: "Ihdinas-Siraatal-Mustaqeem",
+      tafsir: "Show us the straight path, the path of guidance and truth.",
     ),
     VerseModel(
       verseNumber: 7,
@@ -66,6 +86,10 @@ class SurahReadingController extends GetxController {
           "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
       translation:
           "The path of those who have received Your grace; not the path of those who have brought down wrath upon themselves, nor of those who have gone astray.",
+      transliteration:
+          "Siraatal-lazeena an'amta 'alayhim ghayril-maghdoobi 'alayhim wa lad-daalleen",
+      tafsir:
+          "The path of those You have blessed, not of those who earned Your anger nor of those who went astray.",
     ),
   ];
 
@@ -532,7 +556,7 @@ class SurahReadingScreen extends StatelessWidget {
 
   Widget _buildSurahHeader() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
         image: const DecorationImage(
@@ -545,12 +569,13 @@ class SurahReadingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            SizedBox(height: 20.h),
             Text(
               meaning,
               style: TextStyle(
                 fontSize: 20.sp,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Colors.black,
                 letterSpacing: 2,
               ),
             ),
@@ -589,6 +614,7 @@ class SurahReadingScreen extends StatelessWidget {
               ),
               textDirection: TextDirection.rtl,
             ),
+            SizedBox(height: 40.h),
           ],
         ),
       ),
@@ -653,6 +679,20 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   Widget _buildVersesList(SurahReadingController controller) {
+    return Obx(() {
+      switch (controller.selectedViewTab.value) {
+        case 1:
+          return _buildTransliterationList(controller);
+        case 2:
+          return _buildTafsirList(controller);
+        case 0:
+        default:
+          return _buildTranslationList(controller);
+      }
+    });
+  }
+
+  Widget _buildTranslationList(SurahReadingController controller) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -662,6 +702,110 @@ class SurahReadingScreen extends StatelessWidget {
         final verse = controller.verses[index];
         return _buildVerseCard(verse, controller);
       },
+    );
+  }
+
+  Widget _buildTransliterationList(SurahReadingController controller) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      itemCount: controller.verses.length,
+      itemBuilder: (context, index) {
+        final verse = controller.verses[index];
+        return _buildTransliterationCard(verse, controller);
+      },
+    );
+  }
+
+  Widget _buildTafsirList(SurahReadingController controller) {
+    return Column(
+      children: [
+        _buildTafsirDetailedHeader(),
+        SizedBox(height: 16.h),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          itemCount: controller.verses.length,
+          itemBuilder: (context, index) {
+            final verse = controller.verses[index];
+            return _buildTafsirCard(verse, controller);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTafsirDetailedHeader() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Tafsir",
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.black87,
+                size: 20.sp,
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            "INTRODUCTION TO FATIHAH",
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF2E7D32),
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "Which was revealed in Makkah?",
+            style: TextStyle(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "The Meaning of Al-Fatihah and its Various Names",
+            style: TextStyle(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "This Surah is called\n- Al-Fatihah, that is, the Opener of the Book, the Surah with which prayers are begun.\n- It is also called, Umm Al-Kitab (the Mother of the Book), according to the majority of the scholars. In an authentic Hadith recorded by At-Tirmidhi, who graded it Sahih, Abu Hurayrah said that the Messenger of Allah ﷺ said,",
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+          // Add more static content here as needed or make it expandable
+        ],
+      ),
     );
   }
 
@@ -801,6 +945,241 @@ class SurahReadingScreen extends StatelessWidget {
                 ],
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransliterationCard(
+    VerseModel verse,
+    SurahReadingController controller,
+  ) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Play button and Arabic text row (Standard)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: () => controller.playVerse(verse.verseNumber),
+                child: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFAFA),
+                    borderRadius: BorderRadius.circular(50.r),
+                    border: Border.all(color: Colors.grey[100]!),
+                  ),
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.black87,
+                    size: 24.sp,
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        verse.arabicText,
+                        style: TextStyle(
+                          fontSize: 22.sp,
+                          fontFamily: 'Amiri',
+                          height: 1.8,
+                        ),
+                        textDirection: TextDirection.rtl,
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    // Verse number in hexagon
+                    ClipPath(
+                      clipper: HexagonClipper(),
+                      child: Container(
+                        width: 28.w,
+                        height: 28.w,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFF2E7D32)),
+                        ),
+                        child: Center(
+                          child: Text(
+                            verse.verseNumber.toString(),
+                            style: TextStyle(
+                              color: const Color(0xFF2E7D32),
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Use Image for Hexagon if available or keep CustomClipper but with border style
+                    // For now keeping CustomClipper style consistent with Translation view but maybe adjusting logic if needed
+                    // Actually let's keep the filled green style for consistency
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 16.h),
+
+          // Transliteration (Green Text)
+          Text(
+            verse.transliteration,
+            style: TextStyle(
+              fontSize: 15.sp,
+              color: const Color(0xFF2E7D32), // Green color
+              fontWeight: FontWeight.w500,
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
+          ),
+          SizedBox(height: 8.h),
+
+          // Translation (Standard Text)
+          Text(
+            verse.translation,
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: Colors.black87,
+              height: 1.5,
+            ),
+          ),
+
+          SizedBox(height: 16.h),
+          // Action buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(Icons.more_horiz, color: Colors.grey[500], size: 20.sp),
+              Row(
+                children: [
+                  Icon(
+                    Icons.message_outlined,
+                    color: Colors.grey[400],
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 16.w),
+                  Icon(
+                    Icons.edit_outlined,
+                    color: Colors.grey[400],
+                    size: 20.sp,
+                  ),
+                  SizedBox(width: 16.w),
+                  Icon(Icons.check, color: Colors.grey[400], size: 20.sp),
+                  SizedBox(width: 16.w),
+                  Icon(
+                    Icons.bookmark_border,
+                    color: Colors.grey[400],
+                    size: 20.sp,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTafsirCard(VerseModel verse, SurahReadingController controller) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8F6), // Light background for Tafsir
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: const Color(0xFFFBE9E7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  verse.arabicText,
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontFamily: 'Amiri',
+                    height: 1.8,
+                  ),
+                  textDirection: TextDirection.rtl,
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              ClipPath(
+                clipper: HexagonClipper(),
+                child: Container(
+                  width: 24.w,
+                  height: 24.w,
+                  color: Colors.transparent,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF2E7D32)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        verse.verseNumber.toString(),
+                        style: TextStyle(
+                          color: const Color(0xFF2E7D32),
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Divider(color: Colors.grey[200]),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Tafsir",
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Icon(Icons.keyboard_arrow_up, color: Colors.black87, size: 20.sp),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            verse.tafsir,
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: Colors.grey[800],
+              height: 1.5,
+            ),
           ),
         ],
       ),

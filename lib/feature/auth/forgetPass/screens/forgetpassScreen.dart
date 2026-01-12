@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/const/app_colors.dart';
 import '../../../../core/const/app_colors.dart' as AppColors;
 import '../../../../core/const/gradientButton.dart';
-import '../../signUp/screens/signScreen.dart';
 import 'otpVerificationScreen.dart';
-
 
 class forgetpassScreen extends StatelessWidget {
   const forgetpassScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-
-
     return Scaffold(
       backgroundColor: AppColors.bgColor,
       body: SingleChildScrollView(
@@ -32,12 +27,14 @@ class forgetpassScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 50.0),
-              Icon(Icons.lock,size: 40),
-              Text("Forgot Password",style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.w500
-
-              ),),
+              Icon(Icons.lock, size: 40),
+              Text(
+                "Forgot Password",
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
 
               SizedBox(height: 50),
               TextField(
@@ -53,7 +50,8 @@ class forgetpassScreen extends StatelessWidget {
                   floatingLabelStyle: TextStyle(
                     fontFamily: 'Roboto',
                     fontSize: 18, // Larger size when active
-                    color: AppColors.primaryColor, // Change to any color you like
+                    color:
+                        AppColors.primaryColor, // Change to any color you like
                     fontWeight: FontWeight.bold,
                   ),
                   hintText: 'Enter Your Email',
@@ -67,17 +65,6 @@ class forgetpassScreen extends StatelessWidget {
                 ),
               ),
 
-
-
-
-
-
-
-
-
-
-
-
               const SizedBox(height: 30.0),
 
               /// Log In Button
@@ -85,19 +72,12 @@ class forgetpassScreen extends StatelessWidget {
                 text: 'Verify',
                 onPressed: () {
                   Get.to(otpVerificationScreen());
-
                 },
-
               ),
-
-
-
             ],
           ),
         ),
       ),
     );
   }
-
-
 }

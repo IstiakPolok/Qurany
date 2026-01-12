@@ -32,8 +32,9 @@ class _FeelingWidgetState extends State<FeelingWidget> {
         SizedBox(height: 10.h),
         GestureDetector(
           onTap: () async {
-            if (_selectedFeeling != null)
+            if (_selectedFeeling != null) {
               return; // Do nothing if already selected, or maybe re-open?
+            }
             // Assuming we only open sheet if nothing selected, or if user wants to change?
             // User request usually implies tapping "How do you feel" opens sheet.
             // If already selected, maybe tapping the pill removes it?

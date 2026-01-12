@@ -19,7 +19,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   int _round = 1;
   int _targetCount = 100; // Example target
   double _dragOffset = 0.0;
-  final double _beadSpacing = 50.0; // Spacing between beads
+  final double _beadSpacing = 35.0; // Spacing between beads
   late Path _beadPath;
   ui.PathMetric? _pathMetric;
 
@@ -191,8 +191,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
                     // First row of chips
                     Wrap(
-                      spacing: 10.w,
-                      runSpacing: 10.h,
+                      spacing: 12.w,
+                      runSpacing: 12.h,
                       children: presetCounts.map((count) {
                         final bool isSelected = tempTargetCount == count;
                         return GestureDetector(
@@ -201,26 +201,10 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                               tempTargetCount = count;
                             });
                           },
-                          child: isSelected
-                              ? _buildHexagonChip(count.toString(), isSelected)
-                              : Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: 20.w,
-                                    vertical: 12.h,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE8F5E9),
-                                    borderRadius: BorderRadius.circular(8.r),
-                                  ),
-                                  child: Text(
-                                    count.toString(),
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ),
+                          child: _buildHexagonChip(
+                            count.toString(),
+                            isSelected,
+                          ),
                         );
                       }).toList(),
                     ),
@@ -243,7 +227,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                         vertical: 4.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Row(
@@ -306,7 +290,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                         vertical: 4.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE8F5E9),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Row(
@@ -367,7 +351,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           value: soundFeedback,
                           onChanged: (val) =>
                               setSheetState(() => soundFeedback = val),
-                          activeColor: const Color(0xFF2E7D32),
+                          activeThumbColor: const Color(0xFF2E7D32),
                         ),
                       ],
                     ),
@@ -387,7 +371,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           value: vibration,
                           onChanged: (val) =>
                               setSheetState(() => vibration = val),
-                          activeColor: const Color(0xFF2E7D32),
+                          activeThumbColor: const Color(0xFF2E7D32),
                         ),
                       ],
                     ),
@@ -436,20 +420,25 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   }
 
   Widget _buildHexagonChip(String text, bool isSelected) {
-    return ClipPath(
-      clipper: HexagonChipClipper(),
-      child: Container(
-        width: 60.w,
-        height: 50.h,
-        color: const Color(0xFF2E7D32),
-        alignment: Alignment.center,
-        child: Text(
-          text,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14.sp,
-            fontWeight: FontWeight.bold,
-          ),
+    return Container(
+      width: 48.w,
+      height: 48.w,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: isSelected
+              ? AssetImage('assets/image/hexashape2.png')
+              : AssetImage('assets/image/hexashape.png'),
+          fit: BoxFit.fill,
+          // Light green for unselected
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+          fontSize: 13.sp,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -459,7 +448,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     final bool hasSelection = _selectedDhikrIndex != null;
     if (!hasSelection) {
       return Container(
-        padding: EdgeInsets.all(20.w),
+        padding: EdgeInsets.only(top: 20.w, left: 16.w, bottom: 16.h),
         decoration: BoxDecoration(
           color: const Color(0xFFE2EAD8),
           borderRadius: BorderRadius.circular(16.r),
@@ -483,9 +472,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   Text(
                     "Start counting blessings with the zikr that speaks to your heart.",
                     style: TextStyle(
-                      fontSize: 12.sp,
-                      color: Colors.grey[700],
-                      height: 1.4,
+                      fontSize: 14.sp,
+                      color: Colors.grey[800],
+                      height: 1.2,
                     ),
                   ),
                   SizedBox(height: 16.h),
@@ -495,11 +484,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20.r),
+                        borderRadius: BorderRadius.circular(70.r),
                       ),
                       padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 8.h,
+                        horizontal: 30.w,
+                        vertical: 0.h,
                       ),
                       elevation: 0,
                     ),
@@ -511,18 +500,10 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                 ],
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: Image.asset(
-                'assets/image/tasbih_hand.png',
-                height: 80.h,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.pan_tool_outlined,
-                  size: 60.sp,
-                  color: Colors.brown,
-                ),
-              ),
+            Image.asset(
+              'assets/image/tasbih_hand.png',
+              height: 110.h,
+              fit: BoxFit.contain,
             ),
           ],
         ),
@@ -713,7 +694,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   @override
   Widget build(BuildContext context) {
     // Recalculate path metrics based on current screen size
-    _calculatePath(Size(320.w, 160.h));
+    _calculatePath(Size(MediaQuery.of(context).size.width, 160.h));
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
@@ -747,20 +728,26 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         ),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+        padding: EdgeInsets.symmetric(vertical: 16.h),
         child: Column(
           children: [
-            _currentDhikrCard(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: _currentDhikrCard(),
+            ),
 
             SizedBox(height: 32.h),
 
             // Dhikr Count
-            Text(
-              "Dhikr Count",
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Text(
+                "Dhikr Count",
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
             ),
             SizedBox(height: 16.h),
@@ -769,34 +756,37 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             Stack(
               alignment: Alignment.center,
               children: [
-                ClipPath(
-                  clipper: HexagonClipper(),
-                  child: Container(
-                    width: 150.w,
-                    height: 150.w, // Approx height for regular hexagon
-                    color: const Color(0xFF2E7D32),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "$_counter / $_targetCount",
-                          style: TextStyle(
-                            fontSize: 28.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          "Round $_round",
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
+                Container(
+                  width: 160.w,
+                  height: 175.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/image/Polygon.png'),
+                      fit: BoxFit.fill,
                     ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "$_counter / $_targetCount",
+                        style: TextStyle(
+                          fontSize: 28.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        "Round $_round",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Positioned(
@@ -829,7 +819,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
               onHorizontalDragUpdate: _onDragUpdate,
               child: SizedBox(
                 height: 160.h,
-                width: 320.w,
+                width: MediaQuery.of(context).size.width,
                 child: Stack(
                   alignment: Alignment.center,
                   clipBehavior: Clip.none,
@@ -839,13 +829,16 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       top: 0,
                       left: 0,
                       child: CustomPaint(
-                        size: Size(400.w, 160.h),
+                        size: Size(MediaQuery.of(context).size.width, 160.h),
                         painter: BeadPathPainter(_beadPath),
                       ),
                     ),
 
                     // Dynamic Beads
-                    ..._buildVisibleBeads(320.w, 160.h),
+                    ..._buildVisibleBeads(
+                      MediaQuery.of(context).size.width,
+                      160.h,
+                    ),
                   ],
                 ),
               ),
@@ -863,6 +856,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             // Style Selector
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: Row(
                 children: [
                   _buildStyleItem("Green", 'assets/image/1.png', true),
@@ -875,6 +869,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: Row(
                 children: [
                   _buildStyleItem(
@@ -902,71 +897,77 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             SizedBox(height: 32.h),
 
             // Premium Unlock
-            Container(
-              padding: EdgeInsets.all(16.w),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8F5E9),
-                borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(color: Colors.green.withOpacity(0.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.lock_open,
-                        color: const Color(0xFF2E7D32),
-                        size: 20.sp,
-                      ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        "Unlock Premium Styles",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.sp,
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECEFE2),
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(color: const Color(0xFFECEFE2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.lock_open,
+                          color: const Color(0xFF2E7D32),
+                          size: 20.sp,
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    "Continue using and engaging with Qurany+ to unlock beautiful new compass styles!",
-                    style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
-                  ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4.r),
-                          child: LinearProgressIndicator(
-                            value: 0.33,
-                            backgroundColor: Colors.grey[300],
-                            color: const Color(0xFF2E7D32),
-                            minHeight: 6.h,
+                        SizedBox(width: 8.w),
+                        Text(
+                          "Unlock Premium Styles",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.sp,
                           ),
                         ),
-                      ),
-                      SizedBox(width: 12.w),
-                      Text(
-                        "33%",
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    "Complete 2 more goals to unlock \"Other\" colors",
-                    style: TextStyle(
-                      fontSize: 10.sp,
-                      color: const Color(0xFF2E7D32),
+                      ],
                     ),
-                  ),
-                ],
+                    SizedBox(height: 8.h),
+                    Text(
+                      "Continue using and engaging with Qurany+ to unlock beautiful new compass styles!",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4.r),
+                            child: LinearProgressIndicator(
+                              value: 0.33,
+                              backgroundColor: Colors.grey[300],
+                              color: const Color(0xFF2E7D32),
+                              minHeight: 6.h,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Text(
+                          "33%",
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      "Complete 2 more goals to unlock \"Other\" colors",
+                      style: TextStyle(
+                        fontSize: 10.sp,
+                        color: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             SizedBox(height: 20.h),
@@ -995,57 +996,34 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           beadLinearPos,
         );
         if (tangent != null) {
-          // Scale based on distance from center for "depth" effect
-          double distanceFromCenter = (beadLinearPos - centerOffset).abs();
-          double scale =
-              1.0 - (distanceFromCenter / (pathLength / 1.5)).clamp(0.0, 0.5);
-          double opacity = scale.clamp(0.2, 1.0);
-
           // Different color for center bead (i == 0)
           final bool isCenterBead = i == 0;
-          final Color beadColor = isCenterBead
-              ? Colors
-                    .transparent // Gold/amber color for center
-              : const Color(0xFF689F38); // Green for others
-          final Color beadHighlight = isCenterBead
-              ? Colors.transparent
-              : Colors.white.withOpacity(0.6);
 
           beads.add(
             Positioned(
-              left:
-                  tangent.position.dx -
-                  (50.w * scale), // Adjust for center anchor
-              top:
-                  tangent.position.dy -
-                  (25.w * scale), // Center anchor adjustment
-              child: Transform.scale(
-                scale: scale,
-                child: Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    width: 50.w,
-                    height: 50.w,
-                    decoration: BoxDecoration(
-                      color: beadColor,
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [beadHighlight, beadColor],
-                        center: Alignment.topLeft,
-                        radius: 1.0,
-                      ),
-                      boxShadow: isCenterBead
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: Offset(2, 2),
-                              ),
-                            ],
-                    ),
-                  ),
+              left: tangent.position.dx - 17.5.w, // Adjust for center anchor
+              top: tangent.position.dy - 17.5.w, // Center anchor adjustment
+              child: Container(
+                width: 35.w,
+                height: 35.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: isCenterBead
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: Offset(0, -4),
+                          ),
+                        ],
                 ),
+                child: isCenterBead
+                    ? null
+                    : Image.asset(
+                        'assets/image/greenball.png',
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
           );

@@ -4,10 +4,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pin_input_text_field/pin_input_text_field.dart';
 
-import '../../../../core/const/app_colors.dart';
 import '../../../../core/const/app_colors.dart' as AppColors;
 import '../../../../core/const/gradientButton.dart';
-import '../../signUp/screens/signScreen.dart';
 import 'resetPassScreen.dart';
 
 class otpVerificationScreen extends StatelessWidget {
@@ -57,9 +55,7 @@ class otpVerificationScreen extends StatelessWidget {
                     gapSpace: 40, // spacing between boxes
                   ),
                   keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   // textStyle: const TextStyle(
                   //   fontFamily: 'Inter',
                   //   fontSize: 24,
@@ -73,14 +69,13 @@ class otpVerificationScreen extends StatelessWidget {
                 ),
               ),
 
-
               const SizedBox(height: 30.0),
 
               /// Verify Button
               GradientButton(
                 text: 'Verify',
                 onPressed: () {
-                 Get.to(resetPassScreen());
+                  Get.to(resetPassScreen());
                 },
               ),
 
@@ -92,16 +87,13 @@ class otpVerificationScreen extends StatelessWidget {
                   Text(
                     'Don’t Get OTP? ',
                     style: GoogleFonts.roboto(
-
                       color: Colors.grey[700],
                       fontSize: 18,
                     ),
                   ),
                   GestureDetector(
-                    onTap: () {
-
-                    },
-                    child:  Text(
+                    onTap: () {},
+                    child: Text(
                       'Resend',
                       style: GoogleFonts.roboto(
                         color: AppColors.primaryColor,

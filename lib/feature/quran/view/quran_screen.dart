@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'surah_reading_screen.dart';
+import 'listen_mode_screen.dart';
+import 'memorization_screen.dart';
 
 // Sample Surah data
 class SurahModel {
@@ -296,7 +298,7 @@ class QuranScreen extends StatelessWidget {
                 children: [
                   _buildHeader(),
                   SizedBox(height: 60.h),
-                  _buildLastReadCard(context),
+                  _buildLastReadCard(context, controller),
 
                   SizedBox(height: 16.h),
 
@@ -456,7 +458,7 @@ class QuranScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLastReadCard(BuildContext context) {
+  Widget _buildLastReadCard(BuildContext context, QuranController controller) {
     // Progress value for last read (0.0 - 1.0)
     final double progress = 0.05;
     return Container(
@@ -504,13 +506,32 @@ class QuranScreen extends StatelessWidget {
                 SizedBox(height: 12.h),
                 GestureDetector(
                   onTap: () {
-                    // Navigate to Surah Reading Screen when in Read Mode
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SurahReadingScreen(),
-                      ),
-                    );
+                    // Navigate based on selected mode
+                    if (controller.selectedMode.value == 1) {
+                      // Commuter / Listen Mode
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ListenModeScreen(),
+                        ),
+                      );
+                    } else if (controller.selectedMode.value == 2) {
+                      // Memorization Mode
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MemorizationScreen(),
+                        ),
+                      );
+                    } else {
+                      // Default to Read Mode (SurahReadingScreen)
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SurahReadingScreen(),
+                        ),
+                      );
+                    }
                   },
                   child: Container(
                     padding: EdgeInsets.symmetric(

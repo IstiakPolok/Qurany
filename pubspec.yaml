@@ -52,6 +52,8 @@ dependencies:
   flutter_compass: ^0.8.1
   qibla_direction: ^1.0.1
   geolocator: ^14.0.2
+  intl: ^0.20.2
+  hijri: ^3.0.0
 
 dev_dependencies:
   flutter_test:

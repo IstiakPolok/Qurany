@@ -31,7 +31,7 @@ class SplashScreen extends StatelessWidget {
             ),
           ),
           Positioned(
-            bottom: 200,
+            bottom: 50,
             left: 0,
             right: 0,
             child: Center(

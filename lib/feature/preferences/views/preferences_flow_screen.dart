@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:get/get.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import '../../auth/views/login_options_screen.dart';
 import '../widgets/language_step.dart';
 import '../widgets/script_step.dart';
 import '../widgets/reciter_step.dart';
 import '../widgets/goals_step.dart';
-import 'package:qurany/feature/welcome/view/preparing_space_screen.dart';
 
 class PreferencesFlowScreen extends StatefulWidget {
   const PreferencesFlowScreen({super.key});
@@ -75,7 +72,7 @@ class _PreferencesFlowScreenState extends State<PreferencesFlowScreen> {
                             decoration: BoxDecoration(
                               color: index <= _currentStep
                                   ? primaryColor
-                                  : Colors.grey.shade300,
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(2.r),
                             ),
                           ),

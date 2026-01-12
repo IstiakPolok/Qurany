@@ -5,6 +5,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/feature/permissions/views/location_permission_screen.dart';
 
 import '../../../core/const/app_colors.dart';
@@ -13,6 +14,8 @@ import '../../compass/widgets/modernCompass.dart';
 import '../../compass/widgets/cleanCompass.dart';
 
 class CustomizeExperienceScreen extends StatefulWidget {
+  const CustomizeExperienceScreen({super.key});
+
   @override
   _CustomizeExperienceScreenState createState() =>
       _CustomizeExperienceScreenState();
@@ -89,6 +92,12 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final width = mq.size.width;
+    // Base height for the bottom sheet (approx: top+button+bottom padding)
+    final bottomSheetBase = 96.0;
+    final bottomSheetHeight = bottomSheetBase + mq.viewPadding.bottom;
+
     return Scaffold(
       backgroundColor: primaryColor,
       body: Stack(
@@ -107,28 +116,25 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
+                    padding: EdgeInsets.only(bottom: bottomSheetHeight),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _buildHeader(),
-                        _buildSelectionCard(
-                          "Visual Style",
-                          ["Minimal", "Islamic", "Ornate"],
-                          selectedVisual,
-                          (val) => setState(() => selectedVisual = val),
-                        ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: width * 0.02),
+
                         _buildSelectionCard(
                           "Qibla Compass",
                           ["Classic", "Modern", "Clean"],
                           selectedCompass,
                           (val) => setState(() => selectedCompass = val),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: width * 0.03),
                         _buildPaginationDots(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: width * 0.03),
                         _buildCompassPreview(),
 
-                        _buildContinueButton(),
+                        SizedBox(height: width * 0.03),
                       ],
                     ),
                   ),
@@ -138,12 +144,19 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
           ),
         ],
       ),
+      bottomSheet: _buildContinueButton(),
     );
   }
 
   Widget _buildHeader() {
+    final width = MediaQuery.of(context).size.width;
+    final hPad = (width * 0.05).clamp(12.0, 32.0);
+    final vPad = (width * 0.03).clamp(8.0, 22.0);
+    final headlineSize = (width * 0.05).clamp(18.0, 22.0);
+    final subtitleSize = (width * 0.03).clamp(12.0, 14.0);
+
     return Padding(
-      padding: const EdgeInsets.all(20.0),
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       child: Column(
         children: [
           Align(
@@ -151,22 +164,28 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
             child: CircleAvatar(
               backgroundColor: Colors.white24,
               child: IconButton(
-                icon: Icon(Icons.close, color: Colors.white),
+                icon: Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: headlineSize * 0.6,
+                ),
                 onPressed: () {},
               ),
             ),
           ),
-          const Text(
+          SizedBox(height: vPad * 0.5),
+          Text(
             "Customize your Experience",
-            style: TextStyle(
+            style: GoogleFonts.abhayaLibre(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: headlineSize,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const Text(
+          SizedBox(height: vPad * 0.25),
+          Text(
             "See changes in real-time",
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(color: Colors.white70, fontSize: subtitleSize),
           ),
         ],
       ),
@@ -179,9 +198,14 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
     String current,
     Function(String) onSelect,
   ) {
+    final width = MediaQuery.of(context).size.width;
+    final hMargin = (width * 0.05).clamp(12.0, 32.0);
+    final innerPadding = (width * 0.03).clamp(8.0, 20.0);
+    final titleSize = (width * 0.035).clamp(12.0, 16.0);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.symmetric(horizontal: hMargin),
+      padding: EdgeInsets.all(innerPadding),
       decoration: BoxDecoration(
         color: Colors.white10,
         borderRadius: BorderRadius.circular(20),
@@ -191,18 +215,23 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+              Icon(
+                Icons.auto_awesome,
+                color: Colors.white,
+                size: titleSize + 4,
+              ),
               SizedBox(width: 8),
               Text(
                 title,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
+                  fontSize: titleSize,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: innerPadding * 0.7),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: options
@@ -219,13 +248,17 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
     bool isSelected,
     Function(String) onSelect,
   ) {
+    final width = MediaQuery.of(context).size.width;
     return Flexible(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2.0),
         child: GestureDetector(
           onTap: () => onSelect(label),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: (width * 0.03).clamp(8.0, 16.0),
+              vertical: (width * 0.025).clamp(6.0, 12.0),
+            ),
             decoration: BoxDecoration(
               color: isSelected ? Colors.white : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
@@ -239,7 +272,7 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
                   style: TextStyle(
                     color: isSelected ? Colors.black : Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: (width * 0.03).clamp(11.0, 14.0),
                   ),
                 ),
               ),
@@ -251,15 +284,17 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   }
 
   Widget _buildCompassPreview() {
+    final width = MediaQuery.of(context).size.width;
+    final hMargin = (width * 0.05).clamp(12.0, 32.0);
+    final innerPad = (width * 0.06).clamp(16.0, 40.0);
+    final radius = (width * 0.08).clamp(20.0, 40.0);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFFBF2),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(40),
-          topRight: Radius.circular(40),
-        ),
+      margin: EdgeInsets.symmetric(horizontal: hMargin),
+      padding: EdgeInsets.all(innerPad),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF2),
+        borderRadius: BorderRadius.all(Radius.circular(radius)),
       ),
       child: Column(
         children: [
@@ -288,20 +323,27 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
               );
             },
           ),
-          const SizedBox(height: 30),
+          SizedBox(height: innerPad * 0.33),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              Icon(CupertinoIcons.compass, size: 20, color: Colors.grey),
-              const SizedBox(width: 4),
-              const Text(
+              Icon(
+                CupertinoIcons.compass,
+                size: (width * 0.05).clamp(14.0, 20.0),
+                color: Colors.grey,
+              ),
+              SizedBox(width: 6),
+              Text(
                 "Qibla Compass",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: (width * 0.03).clamp(11.0, 14.0),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: innerPad * 0.5),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -328,6 +370,10 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   }
 
   Widget _buildSmallPreview(String label, String img, bool isSelected) {
+    final width = MediaQuery.of(context).size.width;
+    final pad = (width * 0.02).clamp(6.0, 12.0);
+    final size = (width * 0.09).clamp(32.0, 60.0);
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -337,7 +383,7 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(pad),
             decoration: BoxDecoration(
               border: isSelected
                   ? Border.all(color: Colors.green, width: 2)
@@ -345,22 +391,26 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: SizedBox(
-              width: 40,
-              height: 40,
+              width: size,
+              height: size,
               child: Image.asset(
                 img,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Icon(
                   Icons.compass_calibration,
-                  size: 40,
+                  size: size * 0.9,
                   color: Colors.grey,
                 ),
               ),
             ),
           ),
+          SizedBox(height: 6),
           Text(
             label,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: (width * 0.03).clamp(11.0, 13.0),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -368,32 +418,35 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   }
 
   Widget _buildContinueButton() {
-    return Container(
-      width: double.infinity,
-      // Remove padding here to let the white background fill to the bottom
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(25),
-          topRight: Radius.circular(25),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E7D32),
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(45),
-            ),
+    return SafeArea(
+      top: false,
+      child: Container(
+        width: double.infinity,
+        // Remove padding here to let the white background fill to the bottom
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFFBF2),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25),
+            topRight: Radius.circular(25),
           ),
-          onPressed: () {
-            Get.to(LocationPermissionScreen());
-          },
-          child: const Text(
-            "Continue",
-            style: TextStyle(fontSize: 18, color: Colors.white),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              minimumSize: const Size(double.infinity, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(45),
+              ),
+            ),
+            onPressed: () {
+              Get.to(LocationPermissionScreen());
+            },
+            child: const Text(
+              "Continue",
+              style: TextStyle(fontSize: 18, color: Colors.white),
+            ),
           ),
         ),
       ),

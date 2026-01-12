@@ -16,7 +16,7 @@ class VerseOfDayCard extends StatelessWidget {
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        height: 230.h,
+        height: 250.h,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.r),
           image: const DecorationImage(

@@ -115,25 +115,184 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           SizedBox(height: 16.h),
 
           // List
-          _filteredSurahs.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: Text("No Surahs found"),
-                  ),
-                )
+          _selectedTab == "Surah"
+              ? (_filteredSurahs.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20.0),
+                          child: Text("No Surahs found"),
+                        ),
+                      )
+                    : ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: _filteredSurahs.length,
+                        separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                        itemBuilder: (context, index) {
+                          return _buildSurahItem(_filteredSurahs[index]);
+                        },
+                      ))
               : ListView.separated(
                   physics: const NeverScrollableScrollPhysics(),
                   shrinkWrap: true,
-                  itemCount: _filteredSurahs.length,
-                  separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                  itemCount: JuzModel.sampleJuz.length,
+                  separatorBuilder: (_, __) => SizedBox(height: 16.h),
                   itemBuilder: (context, index) {
-                    return _buildSurahItem(_filteredSurahs[index]);
+                    return _buildJuzItem(JuzModel.sampleJuz[index]);
                   },
                 ),
           SizedBox(height: 20.h),
         ],
       ),
+    );
+  }
+
+  Widget _buildJuzItem(JuzModel juz) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Juz ${juz.number}",
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            GestureDetector(
+              onTap: () {},
+              child: Text(
+                "Read Juz",
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12.h),
+        Container(
+          padding: EdgeInsets.all(12.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF9F0),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: juz.surahs.map((surah) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: juz.surahs.last == surah ? 0 : 12.h,
+                ),
+                child: Row(
+                  children: [
+                    _buildStarNumber(surah.number),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            surah.englishName,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            surah.revelationType,
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.done_all,
+                                size: 12.sp,
+                                color: Colors.green,
+                              ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                "0 / 286 Aya", // Placeholder for actual progress
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          surah.arabicName,
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Amiri',
+                            color: primaryColor,
+                          ),
+                        ),
+                        Text(
+                          surah.versesRange,
+                          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStarNumber(int number) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.rotate(
+          angle: 45 * 3.1415926535 / 180,
+          child: Container(
+            width: 32.w,
+            height: 32.w,
+            decoration: BoxDecoration(
+              border: Border.all(color: primaryColor, width: 1.5),
+              borderRadius: BorderRadius.circular(4.r),
+            ),
+          ),
+        ),
+        Container(
+          width: 32.w,
+          height: 32.w,
+          decoration: BoxDecoration(
+            border: Border.all(color: primaryColor, width: 1.5),
+            borderRadius: BorderRadius.circular(4.r),
+          ),
+        ),
+        Text(
+          "$number",
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
+        ),
+      ],
     );
   }
 

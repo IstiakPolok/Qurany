@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../../../core/const/app_colors.dart';
 import '../../../../core/const/app_colors.dart' as AppColors;
 import '../../../bottom_nav_bar/screen/bottom_nav_bar.dart' hide AppColors;
 import '../controllers/RoleSelectController.dart';

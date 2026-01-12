@@ -98,3 +98,72 @@ class SurahModel {
     ),
   ];
 }
+
+class JuzModel {
+  final int number;
+  final List<JuzSurahModel> surahs;
+
+  const JuzModel({required this.number, required this.surahs});
+
+  static List<JuzModel> get sampleJuz => [
+    JuzModel(
+      number: 1,
+      surahs: [
+        JuzSurahModel(
+          number: 1,
+          englishName: "Al-Fatihah",
+          arabicName: "الفاتحة",
+          revelationType: "MECCAN",
+          versesRange: "7 VERSES",
+        ),
+        JuzSurahModel(
+          number: 2,
+          englishName: "Al-Baqarah",
+          arabicName: "البقرة",
+          revelationType: "MEDINIAN",
+          versesRange: "1 - 141 VERSES",
+        ),
+      ],
+    ),
+    JuzModel(
+      number: 2,
+      surahs: [
+        JuzSurahModel(
+          number: 2,
+          englishName: "Al-Baqarah",
+          arabicName: "البقرة",
+          revelationType: "MEDINIAN",
+          versesRange: "142 - 252 VERSES",
+        ),
+      ],
+    ),
+    JuzModel(
+      number: 3,
+      surahs: [
+        JuzSurahModel(
+          number: 2,
+          englishName: "Al-Baqarah",
+          arabicName: "البقرة",
+          revelationType: "MEDINIAN",
+          versesRange: "252 - 286 VERSES",
+        ),
+      ],
+    ),
+  ];
+}
+
+class JuzSurahModel {
+  final int number;
+  final String englishName;
+  final String arabicName;
+  final String revelationType;
+  final String versesRange;
+
+  const JuzSurahModel({
+    required this.number,
+    required this.englishName,
+    required this.arabicName,
+    required this.revelationType,
+    required this.versesRange,
+  });
+}

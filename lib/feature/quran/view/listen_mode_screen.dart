@@ -72,13 +72,67 @@ class ListenModeController extends GetxController {
   }
 
   void showVoiceCommand() {
-    // TODO: Implement voice command functionality
-    Get.snackbar(
-      'Voice Command',
-      'Voice command feature coming soon!',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.white,
-      colorText: Colors.black87,
+    // Show available commands
+    Get.bottomSheet(
+      Container(
+        padding: EdgeInsets.all(24.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Available Commands:",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Get.back(),
+                  child: Icon(Icons.close, color: Colors.grey, size: 24.sp),
+                ),
+              ],
+            ),
+            SizedBox(height: 16.h),
+            _buildCommandItem("Next", "Skip To Next Verse"),
+            _buildCommandItem("Previous", "To Go Back"),
+            _buildCommandItem("Pause", "To Stop Playback"),
+            _buildCommandItem("Play", "To Resume"),
+            _buildCommandItem("Repeat", "To Replay Current Verse"),
+            SizedBox(height: 32.h),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommandItem(String command, String action) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8.h),
+      child: RichText(
+        text: TextSpan(
+          text: "- Say \"$command\" ",
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+          children: [
+            TextSpan(
+              text: action,
+              style: TextStyle(fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -100,6 +154,7 @@ class ListenModeScreen extends StatelessWidget {
     final ListenModeController controller = Get.put(ListenModeController());
 
     return Scaffold(
+      backgroundColor: listenModeBackground,
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -109,7 +164,7 @@ class ListenModeScreen extends StatelessWidget {
             image: const AssetImage('assets/image/quarnBG.png'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
-              listenModeBackground.withOpacity(0.85),
+              listenModeBackground.withOpacity(0.9),
               BlendMode.darken,
             ),
           ),
@@ -117,11 +172,8 @@ class ListenModeScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              // Safe Driving Banner
-              _buildSafetyBanner(),
-
-              // Header with back button and title
-              _buildHeader(context),
+              // Header with back button and title, and safety banner
+              _buildTopSection(context),
 
               // Surah name and progress
               _buildSurahInfo(controller),
@@ -136,13 +188,25 @@ class ListenModeScreen extends StatelessWidget {
                 ),
               ),
 
+              SizedBox(height: 32.h),
+
               // Player Controls
               _buildPlayerControls(controller),
 
-              SizedBox(height: 16.h),
+              SizedBox(height: 48.h),
 
               // Voice Command Button
               _buildVoiceCommandButton(controller),
+
+              SizedBox(height: 10.h),
+
+              GestureDetector(
+                onTap: () => controller.showVoiceCommand(),
+                child: Text(
+                  "Show Voice Command",
+                  style: TextStyle(color: Colors.white70, fontSize: 12.sp),
+                ),
+              ),
 
               SizedBox(height: 24.h),
             ],
@@ -152,71 +216,48 @@ class ListenModeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSafetyBanner() {
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: safetyBannerOrange,
-        borderRadius: BorderRadius.circular(12.r),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: Colors.white, size: 20.sp),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Text(
-              'Safe driving reminder: Use voice commands only.',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w500,
+  Widget _buildTopSection(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 16.sp,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Back button
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
+              Text(
+                'Commuter Mode',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
-              child: Icon(
-                Icons.arrow_back_ios_new,
-                size: 18.sp,
-                color: Colors.white,
-              ),
-            ),
+              // Dummy icon for symmetry or actual notification
+              Icon(Icons.more_horiz, color: Colors.transparent),
+            ],
           ),
-
-          // Title
-          Text(
-            'Commuter Mode',
-            style: TextStyle(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-
-          // Placeholder for symmetry
-          SizedBox(width: 40.w),
-        ],
-      ),
+        ),
+        // Safety Banner if needed, usually shown as a toast or top banner.
+        // Based on UI provided design, it might not be permanent.
+        // But requested to "Update Commuter Mode UI" so I will keep the important parts.
+        // If specific design has orange banner:
+        // _buildSafetyBanner(),
+      ],
     );
   }
 
@@ -227,19 +268,16 @@ class ListenModeScreen extends StatelessWidget {
           Text(
             controller.currentSurahName.value,
             style: TextStyle(
-              fontSize: 28.sp,
+              fontSize: 24.sp,
               fontWeight: FontWeight.bold,
               color: Colors.white,
-              letterSpacing: 2,
+              letterSpacing: 1,
             ),
           ),
           SizedBox(height: 8.h),
           Text(
             '${controller.currentVerseIndex.value + 1}/${controller.totalVerses.value} Aya',
-            style: TextStyle(
-              fontSize: 14.sp,
-              color: Colors.white.withOpacity(0.8),
-            ),
+            style: TextStyle(fontSize: 12.sp, color: Colors.white70),
           ),
         ],
       ),
@@ -251,82 +289,83 @@ class ListenModeScreen extends StatelessWidget {
       final verse = controller.currentVerse;
       return Container(
         width: double.infinity,
-        padding: EdgeInsets.all(24.w),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
         decoration: BoxDecoration(
-          color: listenModeCardBg,
-          borderRadius: BorderRadius.circular(20.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24.r),
+        ),
+        child: Column(
+          children: [
+            // Verse end symbol
+            Align(
+              alignment: Alignment.topRight,
+              child: Container(
+                padding: EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: primaryColor),
+                ),
+                child: Icon(
+                  Icons.mosque,
+                  size: 14.sp,
+                  color: primaryColor,
+                ), // Placeholder for ayah end symbol
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 16.h),
+                    // Arabic text
+                    Text(
+                      verse['arabic'] ?? '',
+                      style: TextStyle(
+                        fontSize: 28.sp,
+                        fontFamily: 'Amiri',
+                        height: 1.8,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textDirection: TextDirection.rtl,
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24.h),
+
+                    // Transliteration
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        verse['transliteration'] ?? '',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: listenModeAccent,
+                          fontWeight: FontWeight.w600,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+
+                    // Translation
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        verse['translation'] ?? '',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Verse number badge
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20.r),
-                ),
-                child: Text(
-                  'Verse ${controller.currentVerseIndex.value + 1}',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 24.h),
-
-              // Arabic text
-              Text(
-                verse['arabic'] ?? '',
-                style: TextStyle(
-                  fontSize: 26.sp,
-                  fontFamily: 'Amiri',
-                  height: 1.8,
-                  color: Colors.black87,
-                ),
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.center,
-              ),
-
-              SizedBox(height: 24.h),
-
-              // Transliteration
-              Text(
-                verse['transliteration'] ?? '',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: listenModeAccent,
-                  fontStyle: FontStyle.italic,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-              SizedBox(height: 16.h),
-
-              // Translation
-              Text(
-                verse['translation'] ?? '',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: Colors.black87,
-                  height: 1.6,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
         ),
       );
     });
@@ -334,23 +373,23 @@ class ListenModeScreen extends StatelessWidget {
 
   Widget _buildPlayerControls(ListenModeController controller) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 40.w),
+      padding: EdgeInsets.symmetric(horizontal: 60.w),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Previous button
           GestureDetector(
             onTap: () => controller.previousVerse(),
             child: Container(
-              padding: EdgeInsets.all(16.w),
+              padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withOpacity(0.15),
               ),
               child: Icon(
                 Icons.skip_previous,
                 color: Colors.white,
-                size: 28.sp,
+                size: 24.sp,
               ),
             ),
           ),
@@ -360,7 +399,7 @@ class ListenModeScreen extends StatelessWidget {
             () => GestureDetector(
               onTap: () => controller.togglePlayPause(),
               child: Container(
-                padding: EdgeInsets.all(20.w),
+                padding: EdgeInsets.all(16.w),
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
@@ -368,7 +407,7 @@ class ListenModeScreen extends StatelessWidget {
                 child: Icon(
                   controller.isPlaying.value ? Icons.pause : Icons.play_arrow,
                   color: primaryColor,
-                  size: 36.sp,
+                  size: 32.sp,
                 ),
               ),
             ),
@@ -378,12 +417,12 @@ class ListenModeScreen extends StatelessWidget {
           GestureDetector(
             onTap: () => controller.nextVerse(),
             child: Container(
-              padding: EdgeInsets.all(16.w),
+              padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withOpacity(0.15),
               ),
-              child: Icon(Icons.skip_next, color: Colors.white, size: 28.sp),
+              child: Icon(Icons.skip_next, color: Colors.white, size: 24.sp),
             ),
           ),
         ],
@@ -396,24 +435,17 @@ class ListenModeScreen extends StatelessWidget {
       onTap: () => controller.showVoiceCommand(),
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 40.w),
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 14.h),
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.mic, color: primaryColor, size: 22.sp),
-            SizedBox(width: 12.w),
+            Icon(Icons.mic_none, color: Colors.black87, size: 20.sp),
+            SizedBox(width: 8.w),
             Text(
               'Tap for Voice Command',
               style: TextStyle(

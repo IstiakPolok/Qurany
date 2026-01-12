@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,7 +21,7 @@ class _ReciterStepState extends State<ReciterStep> {
     "Saad Al-Ghamdi",
     "Maher Al Muaiqly",
     "Ahmed Al Ajmy",
-  ]; 
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -49,24 +51,43 @@ class _ReciterStepState extends State<ReciterStep> {
             width: double.infinity,
             padding: EdgeInsets.all(24.w),
             decoration: BoxDecoration(
-              color: const Color(0xFFE0E8D9),
+              color: const Color(0xFFDAE2D0),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
-                Text(
-                  "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ۝",
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Image.asset(
+                      'assets/image/Layer_1.png',
+                      width: 32.w,
+                      height: 32.h,
+                    ),
+                    Text(
+                      "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        // Placeholder fonts
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
                 SizedBox(height: 12.h),
-                Text(
-                  "[All] praise is [due] to Allah, Lord of the worlds -",
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
-                  textAlign: TextAlign.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      "[All] praise is [due] to Allah, Lord of the worlds -",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[700],
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ],
                 ),
               ],
             ),

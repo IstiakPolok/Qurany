@@ -18,7 +18,7 @@ class DayProgressWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double effectiveSize = size ?? 120.h;
-    return Container(
+    return SizedBox(
       width: effectiveSize,
       height: effectiveSize,
 
