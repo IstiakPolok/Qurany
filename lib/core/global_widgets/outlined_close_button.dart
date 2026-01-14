@@ -11,11 +11,11 @@ class OutlinedCloseButton extends StatelessWidget {
   const OutlinedCloseButton({
     super.key,
     this.onPressed,
-    this.radius = 20,
-    this.iconSize = 20,
+    this.radius = 18,
+    this.iconSize = 18,
     this.borderColor = const Color(0x80FFFFFF),
     this.iconColor = Colors.white,
-    this.borderWidth = 2,
+    this.borderWidth = 1.5,
   });
 
   @override

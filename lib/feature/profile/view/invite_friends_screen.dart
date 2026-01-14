@@ -11,33 +11,38 @@ class InviteFriendsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFFFFAF3),
       body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Green Header with background
-            _buildHeader(context),
+            Image.asset('assets/image/inviteBG.png'),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Green Header with background
+                _buildHeader(context),
 
-            // Personal Invite Code Card (overlapping header)
-            _buildInviteCodeCard(context),
+                // Personal Invite Code Card (overlapping header)
+                _buildInviteCodeCard(context),
 
-            SizedBox(height: 20.h),
+                SizedBox(height: 20.h),
 
-            // Message Template
-            _buildMessageTemplate(context),
+                // Message Template
+                _buildMessageTemplate(context),
 
-            SizedBox(height: 24.h),
+                SizedBox(height: 24.h),
 
-            // Referral Benefits
-            _buildReferralBenefits(),
+                // Referral Benefits
+                _buildReferralBenefits(),
 
-            SizedBox(height: 24.h),
+                SizedBox(height: 24.h),
 
-            // How It Works
-            _buildHowItWorks(),
+                // How It Works
+                _buildHowItWorks(),
 
-            SizedBox(height: 32.h),
+                SizedBox(height: 32.h),
+              ],
+            ),
           ],
         ),
       ),
@@ -45,84 +50,74 @@ class InviteFriendsScreen extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-      decoration: const BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage('assets/image/login_OptionBG.png'),
-          fit: BoxFit.fitWidth,
-          alignment: Alignment.topCenter,
-        ),
-      ),
-      child: Column(
-        children: [
-          // App bar with back button
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.2),
-                    ),
-                    child: Icon(
-                      Icons.arrow_back_ios_new,
-                      size: 16.sp,
-                      color: Colors.white,
-                    ),
+    return Column(
+      children: [
+        // App bar with back button
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.2),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 16.sp,
+                    color: Colors.white,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 4.h),
-
-          // Title
-          Text(
-            "Invite your friends",
-            style: TextStyle(
-              fontSize: 20.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-
-          SizedBox(height: 8.h),
-
-          // Subtitle
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40.w),
-            child: Text(
-              "Share the gift of Quran and earn\nPremium rewards together",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.sp,
-                color: Colors.white.withOpacity(0.9),
-                height: 1.4,
               ),
-            ),
-          ),
-
-          SizedBox(height: 20.h),
-
-          // Stats cards
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildStatCard("12", "Friends Invited"),
-              SizedBox(width: 12.w),
-              _buildStatCard("4", "Months Earned"),
             ],
           ),
+        ),
 
-          SizedBox(height: 50.h),
-        ],
-      ),
+        SizedBox(height: 4.h),
+
+        // Title
+        Text(
+          "Invite your friends",
+          style: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+
+        SizedBox(height: 8.h),
+
+        // Subtitle
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 40.w),
+          child: Text(
+            "Share the gift of Quran and earn\nPremium rewards together",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: Colors.white.withOpacity(0.9),
+              height: 1.4,
+            ),
+          ),
+        ),
+
+        SizedBox(height: 20.h),
+
+        // Stats cards
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildStatCard("12", "Friends Invited"),
+            SizedBox(width: 12.w),
+            _buildStatCard("4", "Months Earned"),
+          ],
+        ),
+
+        SizedBox(height: 50.h),
+      ],
     );
   }
 
@@ -163,8 +158,9 @@ class InviteFriendsScreen extends StatelessWidget {
         margin: EdgeInsets.symmetric(horizontal: 16.w),
         padding: EdgeInsets.all(20.w),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Color(0xFFE2E9D8),
           borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: const Color(0xFFFFFFFF), width: 10.w),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
@@ -191,9 +187,9 @@ class InviteFriendsScreen extends StatelessWidget {
             SizedBox(height: 12.h),
             Text(
               inviteUrl,
-              style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 11.sp, color: Colors.black),
             ),
-            SizedBox(height: 16.h),
+            Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -402,9 +398,17 @@ Use my code: QURAN2025''';
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
+
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -478,10 +482,17 @@ Use my code: QURAN2025''';
           ),
           SizedBox(height: 12.h),
           ...steps.map(
-            (step) => _buildStepItem(
-              step['number']!,
-              step['title']!,
-              step['description']!,
+            (step) => Container(
+              color: Colors.white,
+
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: _buildStepItem(
+                  step['number']!,
+                  step['title']!,
+                  step['description']!,
+                ),
+              ),
             ),
           ),
         ],
@@ -492,6 +503,7 @@ Use my code: QURAN2025''';
   Widget _buildStepItem(String number, String title, String description) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
+
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

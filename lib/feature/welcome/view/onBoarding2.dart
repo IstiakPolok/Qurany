@@ -16,6 +16,24 @@ class onBoardind2 extends StatefulWidget {
 }
 
 class _onBoardind2State extends State<onBoardind2> {
+  @override
+  void initState() {
+    super.initState();
+    _startAutoSlide();
+  }
+
+  void _startAutoSlide() async {
+    for (int i = 0; i < _images.length - 1; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+      _pageController.animateToPage(
+        i + 1,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   final PageController _pageController = PageController();
   int _currentPage = 0;
 

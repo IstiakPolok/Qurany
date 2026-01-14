@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/feature/permissions/views/location_permission_screen.dart';
 
 import '../../../core/const/app_colors.dart';
+import '../../../core/global_widgets/outlined_close_button.dart';
 import '../../compass/widgets/classicCompass.dart';
 import '../../compass/widgets/modernCompass.dart';
 import '../../compass/widgets/cleanCompass.dart';
@@ -129,12 +130,12 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
                           selectedCompass,
                           (val) => setState(() => selectedCompass = val),
                         ),
-                        SizedBox(height: width * 0.03),
+                        SizedBox(height: width * 0.05),
                         _buildPaginationDots(),
-                        SizedBox(height: width * 0.03),
+                        SizedBox(height: width * 0.05),
                         _buildCompassPreview(),
 
-                        SizedBox(height: width * 0.03),
+                        SizedBox(height: width * 0.05),
                       ],
                     ),
                   ),
@@ -160,18 +161,8 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
       child: Column(
         children: [
           Align(
-            alignment: Alignment.topRight,
-            child: CircleAvatar(
-              backgroundColor: Colors.white24,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: headlineSize * 0.6,
-                ),
-                onPressed: () {},
-              ),
-            ),
+            alignment: Alignment.centerRight,
+            child: OutlinedCloseButton(onPressed: () => Navigator.pop(context)),
           ),
           SizedBox(height: vPad * 0.5),
           Text(
@@ -323,7 +314,7 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
               );
             },
           ),
-          SizedBox(height: innerPad * 0.33),
+          SizedBox(height: innerPad * 1),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:glassmorphism/glassmorphism.dart';
 import 'payment_checkout_screen.dart';
 
 class PremiumPlanScreen extends StatefulWidget {
@@ -22,7 +23,7 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
           height: double.infinity,
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/image/login_OptionBG.png'),
+              image: AssetImage('assets/image/Premiumbg.png'),
               fit: BoxFit.fitWidth,
               alignment: Alignment.topCenter,
             ),
@@ -40,21 +41,9 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                   // Crown Icon
                   Image.asset(
                     'assets/image/crown.png',
-                    width: 80.w,
-                    height: 80.h,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 80.w,
-                      height: 80.h,
-                      decoration: BoxDecoration(
-                        color: Colors.amber,
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Icon(
-                        Icons.workspace_premium,
-                        size: 50.sp,
-                        color: Colors.white,
-                      ),
-                    ),
+                    width: 120.w,
+                    height: 120.h,
+                    fit: BoxFit.contain,
                   ),
 
                   SizedBox(height: 16.h),
@@ -164,47 +153,115 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
       child: Row(
         children: [
           // Monthly Card
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  isYearlySelected = false;
-                });
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PaymentCheckoutScreen(
-                      planType: 'Monthly',
-                      price: '\$4.99',
-                    ),
+          _buildPricingCard(
+            title: "Monthly",
+            price: "\$4.99",
+            isSelected: !isYearlySelected,
+            onTap: () {
+              setState(() {
+                isYearlySelected = false;
+              });
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PaymentCheckoutScreen(
+                    planType: 'Monthly',
+                    price: '\$4.99',
                   ),
-                );
-              },
+                ),
+              );
+            },
+          ),
+
+          SizedBox(width: 16.w),
+
+          // Yearly Card
+          _buildPricingCard(
+            title: "Yearly",
+            price: "\$29.99",
+            isSelected: isYearlySelected,
+            showBadge: true,
+            badgeText: "Save 40%",
+            onTap: () {
+              setState(() {
+                isYearlySelected = true;
+              });
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PaymentCheckoutScreen(
+                    planType: 'Yearly',
+                    price: '\$29.99',
+                    savingsText: 'Save 40%',
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPricingCard({
+    required String title,
+    required String price,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool showBadge = false,
+    String? badgeText,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GlassmorphicContainer(
+              width: double.infinity,
+              height: 135.h,
+              borderRadius: 20.r,
+              blur: 18,
+              alignment: Alignment.center,
+              border: 0,
+              linearGradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.10),
+                  Colors.white.withOpacity(0.05),
+                ],
+                stops: const [0.1, 1],
+              ),
+              borderGradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.2),
+                  Colors.white.withOpacity(0.05),
+                ],
+              ),
               child: Container(
-                padding: EdgeInsets.symmetric(vertical: 20.h),
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 24.h),
                 decoration: BoxDecoration(
-                  color: isYearlySelected
-                      ? Colors.white.withOpacity(0.15)
-                      : Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: !isYearlySelected
-                      ? Border.all(color: Colors.white, width: 2)
-                      : null,
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Column(
                   children: [
                     Text(
-                      "Monthly",
+                      title,
                       style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      "\$4.99",
+                      price,
                       style: TextStyle(
-                        fontSize: 28.sp,
+                        fontSize: 32.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -213,91 +270,38 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                 ),
               ),
             ),
-          ),
-
-          SizedBox(width: 16.w),
-
-          // Yearly Card
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  isYearlySelected = true;
-                });
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PaymentCheckoutScreen(
-                      planType: 'Yearly',
-                      price: '\$29.99',
-                      savingsText: 'Save 40%',
+            if (showBadge && badgeText != null)
+              Positioned(
+                top: -12.h,
+                right: -8.w,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2E7D32),
                     ),
                   ),
-                );
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(vertical: 20.h),
-                    decoration: BoxDecoration(
-                      color: isYearlySelected
-                          ? Colors.white.withOpacity(0.25)
-                          : Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: isYearlySelected
-                          ? Border.all(color: Colors.white, width: 2)
-                          : null,
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          "Yearly",
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          "\$29.99",
-                          style: TextStyle(
-                            fontSize: 28.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Save badge
-                  Positioned(
-                    top: -12.h,
-                    right: 8.w,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        "Save 40%",
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF2E7D32),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -319,62 +323,51 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
             ),
           ),
           SizedBox(height: 20.h),
-          _buildFeatureItem(
-            Icons.palette_outlined,
+          _buildFeatureImageItem(
+            'assets/icons/Premium1.png',
             "Exclusive Design Themes",
             "Unlock beautiful premium themes and customize your experience",
-            const Color(0xFF4CAF50),
           ),
           SizedBox(height: 16.h),
-          _buildFeatureItem(
-            Icons.star,
+          _buildFeatureImageItem(
+            'assets/icons/Premium2.png',
             "Unlimited AI Companion queries",
             "Get all the answers and insights you're looking for",
-            const Color(0xFFFFB300),
           ),
           SizedBox(height: 16.h),
-          _buildFeatureItem(
-            Icons.headphones,
+          _buildFeatureImageItem(
+            'assets/icons/Premium3.png',
             "Premium reciters library",
             "Explore a diverse collection of renowned reciters",
-            const Color(0xFF4CAF50),
           ),
           SizedBox(height: 16.h),
-          _buildFeatureItem(
-            Icons.auto_graph,
+          _buildFeatureImageItem(
+            'assets/icons/Premium4.png',
             "Advanced memorization tracking",
             "Personalized learning strategies",
-            const Color(0xFF4CAF50),
           ),
           SizedBox(height: 16.h),
-          _buildFeatureItem(
-            Icons.explore_outlined,
+          _buildFeatureImageItem(
+            'assets/icons/Premium5.png',
             "Unlock all Qibla compass styles",
             "Find your direction with unique designs",
-            const Color(0xFF4CAF50),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureItem(
-    IconData icon,
+  Widget _buildFeatureImageItem(
+    String imagePath,
     String title,
     String description,
-    Color iconBgColor,
   ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 40.w,
-          height: 40.h,
-          decoration: BoxDecoration(
-            color: iconBgColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-          child: Icon(icon, size: 22.sp, color: iconBgColor),
+        Padding(
+          padding: EdgeInsets.all(6.w),
+          child: Image.asset(imagePath, fit: BoxFit.contain),
         ),
         SizedBox(width: 12.w),
         Expanded(

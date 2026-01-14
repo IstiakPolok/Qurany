@@ -57,15 +57,16 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
   void _calculatePath(Size size) {
     final path = Path();
-    // Arc from bottom-left going up to top-right then curving down
-    path.moveTo(0, size.height * 0.9);
+    // Move the curve a bit lower by increasing all y values
+    double verticalShift = 60.h; // Move down by 60 screen units
+    path.moveTo(-size.width * 0.25, size.height * 0.98 + verticalShift);
     path.cubicTo(
-      size.width * 0.15,
-      size.height * 0.3, // First control point
-      size.width * 0.5,
-      -size.height * 0.3, // Second control point (peak)
-      size.width,
-      size.height * 0.1, // End point (top-right)
+      size.width * -0.18,
+      size.height * 0.05 + verticalShift, // Even more curve (left outside)
+      size.width * 0.8,
+      -size.height * 0.9 + verticalShift, // Much higher peak for stronger arc
+      size.width * 1.25,
+      size.height * 0.01 + verticalShift, // End point (right outside)
     );
     _beadPath = path;
     _pathMetric = _beadPath.computeMetrics().first;
@@ -839,24 +840,29 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       MediaQuery.of(context).size.width,
                       160.h,
                     ),
+                    Text(
+                      "Right to left swipe will\ndecrease count",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-            SizedBox(height: 16.h),
-            Text(
-              "Right to left swipe will\ndecrease count",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-            ),
-
-            SizedBox(height: 40.h),
+            // Text(
+            //   "Right to left swipe will\ndecrease count",
+            //   textAlign: TextAlign.center,
+            //   style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+            // ),
 
             // Style Selector
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
+
               child: Row(
                 children: [
                   _buildStyleItem("Green", 'assets/image/1.png', true),
@@ -864,14 +870,6 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   _buildStyleItem("Orange", 'assets/image/2.png', false),
 
                   _buildStyleItem("Parrot", 'assets/image/3.png', false),
-                ],
-              ),
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Row(
-                children: [
                   _buildStyleItem(
                     "Galaxy",
                     'assets/image/4.png',
@@ -984,10 +982,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     final double pathLength = _pathMetric!.length;
     final double centerOffset = pathLength / 2;
 
-    // We render multiple beads to fill the path
-    // Range of beads to render relative to "center" (index 0)
-    for (int i = -5; i <= 5; i++) {
-      // Calculate abstract distance on the line
+    // Render beads so they overflow out of the screen
+    // Increase range to cover more beads
+    for (int i = -12; i <= 12; i++) {
       double beadLinearPos = centerOffset + _dragOffset + (i * _beadSpacing);
 
       // Map to path if within bounds
@@ -996,13 +993,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           beadLinearPos,
         );
         if (tangent != null) {
-          // Different color for center bead (i == 0)
           final bool isCenterBead = i == 0;
-
           beads.add(
             Positioned(
-              left: tangent.position.dx - 17.5.w, // Adjust for center anchor
-              top: tangent.position.dy - 17.5.w, // Center anchor adjustment
+              left: tangent.position.dx - 17.5.w,
+              top: tangent.position.dy - 17.5.w,
               child: Container(
                 width: 35.w,
                 height: 35.w,

@@ -7,6 +7,7 @@ import 'package:hijri/hijri_calendar.dart';
 import 'package:qurany/feature/prayer/view/electronic_tasbih_screen.dart';
 import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
 import 'package:qurany/feature/profile/view/prayer_notification_setting_sheet.dart';
+import 'islamic_calendar_screen.dart';
 
 class PrayerScreen extends StatefulWidget {
   const PrayerScreen({super.key});
@@ -40,32 +41,6 @@ class _PrayerScreenState extends State<PrayerScreen> {
     setState(() {
       _selectedDate = _selectedDate.add(Duration(days: offset));
     });
-  }
-
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF2E7D32),
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
   }
 
   String _getFormattedGregorianDate(DateTime date) {
@@ -272,7 +247,15 @@ class _PrayerScreenState extends State<PrayerScreen> {
                             ),
                             SizedBox(width: 4.w),
                             GestureDetector(
-                              onTap: () => _selectDate(context),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const IslamicCalendarScreen(),
+                                  ),
+                                );
+                              },
                               behavior: HitTestBehavior.opaque,
                               child: Column(
                                 children: [

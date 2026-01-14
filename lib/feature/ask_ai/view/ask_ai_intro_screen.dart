@@ -46,12 +46,17 @@ class AskAIScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final AskAIController controller = Get.put(AskAIController());
-
-    return Obx(
-      () => controller.showChat.value
-          ? _buildChatView(context, controller)
-          : _buildIntroView(context, controller),
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      builder: (context, child) {
+        final AskAIController controller = Get.put(AskAIController());
+        return Obx(
+          () => controller.showChat.value
+              ? _buildChatView(context, controller)
+              : _buildIntroView(context, controller),
+        );
+      },
     );
   }
 
@@ -114,7 +119,7 @@ class AskAIScreen extends StatelessWidget {
                                   textAlign: TextAlign.center,
                                 ),
 
-                                SizedBox(height: 20.h),
+                                SizedBox(height: 10.h),
 
                                 // Description
                                 RichText(
@@ -142,7 +147,7 @@ class AskAIScreen extends StatelessWidget {
                                   ),
                                 ),
 
-                                SizedBox(height: 32.h),
+                                SizedBox(height: 20.h),
 
                                 // Divider
                                 Container(
@@ -175,7 +180,7 @@ class AskAIScreen extends StatelessWidget {
                                   ],
                                 ),
 
-                                SizedBox(height: 32.h),
+                                SizedBox(height: 20.h),
 
                                 // Feature Icons Row
                                 Row(
@@ -204,6 +209,7 @@ class AskAIScreen extends StatelessWidget {
                                 ),
 
                                 const Spacer(),
+                                SizedBox(height: 20.h),
 
                                 // Start Button
                                 SizedBox(

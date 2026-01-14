@@ -27,10 +27,6 @@ class ProfileScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(context),
-                  SizedBox(height: 46.h),
-                  _buildFreePlanCard(context),
-
-                  SizedBox(height: 16.h),
 
                   // Support Mission Card
                   _buildSupportMissionCard(),
@@ -62,173 +58,148 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Stack(
-      clipBehavior: Clip.none,
       children: [
-        // Green background with image
-        Container(
-          padding: EdgeInsets.only(
-            bottom: 45.h,
-          ), // Extra padding for card overlap
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/image/login_OptionBG.png'),
-              fit: BoxFit.cover,
-            ),
+        // Background Image Stack
+        Positioned(
+          child: Image.asset(
+            'assets/image/profilebg.png',
+            width: MediaQuery.of(context).size.width,
+
+            fit: BoxFit.fill,
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFF2E7D32).withOpacity(0.9),
-                  const Color(0xFF1B5E20).withOpacity(0.95),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  // App Bar
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 8.h,
+        ),
+        SafeArea(
+          child: Column(
+            children: [
+              // Top Bar
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                          size: 16.sp,
+                        ),
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            padding: EdgeInsets.all(8.w),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              size: 16.sp,
+                    Text(
+                      "Profile",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(width: 40.w), // Spacer to balance back button
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                child: Row(
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 50.w,
+                      height: 50.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(70.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          "EJ",
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    // Name and Email
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Emily John",
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              "Profile",
-                              style: TextStyle(
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            "johndoe@email.com",
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.white,
                             ),
                           ),
-                        ),
-                        SizedBox(width: 40.w), // Balance for back button
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 50.h), // Space for card to overlap into
-                ],
+                    // Edit Profile Button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EditProfileScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 8.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(25.r),
+                          border: Border.all(color: Colors.white),
+                        ),
+                        child: Text(
+                          "Edit Profile",
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-        ),
+              SizedBox(height: 20.h),
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16.w),
+                padding: EdgeInsets.all(8.w),
 
-        // User Info Card - positioned to overlap
-        Positioned(
-          left: 16.w,
-          right: 16.w,
-          bottom: -30.h,
-          child: Container(
-            padding: EdgeInsets.all(16.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Avatar
-                Container(
-                  width: 50.w,
-                  height: 50.w,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: Center(
-                    child: Text(
-                      "EJ",
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2E7D32),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12.w),
-                // Name and Email
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Emily John",
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        "johndoe@email.com",
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Edit Profile Button
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfileScreen(),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Text(
-                      "Edit Profile",
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+                child: _buildFreePlanCard(context),
+              ),
+            ],
           ),
         ),
       ],
@@ -237,24 +208,21 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildFreePlanCard(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFE2E9D8),
         borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Text("👑", style: TextStyle(fontSize: 24.sp)),
+              Image.asset(
+                'assets/image/crown.png',
+                width: 50.w,
+
+                fit: BoxFit.contain,
+              ),
               SizedBox(width: 12.w),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +257,7 @@ class ProfileScreen extends StatelessWidget {
               width: double.infinity,
               padding: EdgeInsets.symmetric(vertical: 14.h),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32),
+                color: const Color(0xFF2F7D33),
                 borderRadius: BorderRadius.circular(25.r),
               ),
               child: Center(
@@ -312,84 +280,103 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildSupportMissionCard() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.3)),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2F7D33), Color(0xFF00D492)],
+        ),
+        borderRadius: BorderRadius.circular(16.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text("💚", style: TextStyle(fontSize: 20.sp)),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Support Our Mission",
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF2E7D32),
-                      ),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      "Want to help us keep Qurani+ free for everyone? Watch a short video to support our mission — your contribution helps us serve the Ummah better.",
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey[700],
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
+              Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.favorite, color: Colors.white, size: 18.sp),
+              ),
+              SizedBox(width: 10.w),
+              Text(
+                "Support Our Mission",
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
             ],
           ),
-
-          SizedBox(height: 16.h),
-
-          // Donation counter
+          SizedBox(height: 12.h),
+          Text(
+            "Want to help us keep Qurani+ free for everyone? Watch a short video to support our mission — your contribution helps us serve the Ummah better.",
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: Colors.white.withOpacity(0.9),
+              height: 1.4,
+            ),
+          ),
+          SizedBox(height: 20.h),
+          // Donation counter bar
           Container(
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32),
-              borderRadius: BorderRadius.circular(8.r),
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10.r),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                Text(
-                  "Your Donations",
-                  style: TextStyle(fontSize: 13.sp, color: Colors.white),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Your Donations",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      "12 videos",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  "12 videos",
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.bold,
+                SizedBox(height: 8.h),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10.r),
+                  child: LinearProgressIndicator(
+                    value: 0.5,
+                    backgroundColor: Colors.white.withOpacity(0.2),
                     color: Colors.white,
+                    minHeight: 8.h,
                   ),
                 ),
               ],
             ),
           ),
-
-          SizedBox(height: 8.h),
-
+          SizedBox(height: 12.h),
           Text(
             "You've helped support Qurani+ — Thank you! 🤲",
-            style: TextStyle(fontSize: 11.sp, color: const Color(0xFF2E7D32)),
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-
-          SizedBox(height: 12.h),
-
+          SizedBox(height: 20.h),
           // Watch & Donate Button
           Container(
             width: double.infinity,
@@ -397,22 +384,26 @@ class ProfileScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(25.r),
-              border: Border.all(color: Colors.grey[300]!),
             ),
             child: Center(
               child: Text(
                 "Watch & Donate (30 sec)",
-                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
             ),
           ),
-
-          SizedBox(height: 8.h),
-
+          SizedBox(height: 12.h),
           Center(
             child: Text(
               "100% free • No payment required • Skip anytime",
-              style: TextStyle(fontSize: 10.sp, color: const Color(0xFF2E7D32)),
+              style: TextStyle(
+                fontSize: 11.sp,
+                color: Colors.white.withOpacity(0.9),
+              ),
             ),
           ),
         ],
@@ -586,14 +577,24 @@ class ProfileScreen extends StatelessWidget {
   }) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 22.sp,
-              color: isDestructive ? Colors.red : Colors.grey[600],
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: const Color(
+                  0xFFF5F5F5,
+                ), // Light gray background for icon
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 20.sp,
+                color: isDestructive ? Colors.red : Colors.grey[700],
+              ),
             ),
             SizedBox(width: 16.w),
             Expanded(
@@ -639,20 +640,20 @@ class ProfileScreen extends StatelessWidget {
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 16.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFEBEE),
+          color: Colors.red,
           borderRadius: BorderRadius.circular(25.r),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.logout, size: 20.sp, color: Colors.red),
+            Icon(Icons.logout, size: 20.sp, color: Colors.white),
             SizedBox(width: 8.w),
             Text(
               "Logout",
               style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
+                fontSize: 16.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
           ],

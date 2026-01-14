@@ -14,7 +14,7 @@ class PaymentSuccessScreen extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             image: DecorationImage(
-              image: AssetImage('assets/image/login_OptionBG.png'),
+              image: AssetImage('assets/image/CustomizeExperienceBZ.jpg'),
               fit: BoxFit.fitWidth,
               alignment: Alignment.topCenter,
             ),
@@ -37,9 +37,11 @@ class PaymentSuccessScreen extends StatelessWidget {
                       child: Container(
                         width: 36.w,
                         height: 36.h,
+
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withOpacity(0.0),
                           shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white70),
                         ),
                         child: Icon(
                           Icons.close,
@@ -69,7 +71,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                     fontSize: 24.sp,
                     fontWeight: FontWeight.w500,
                     color: Colors.white,
-                    fontFamily: 'Arabic',
+                    fontFamily: 'Arial',
                   ),
                 ),
 
@@ -96,10 +98,38 @@ class PaymentSuccessScreen extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(height: 24.h),
+                SizedBox(height: 20.h),
 
                 // Features Card
-                Expanded(child: _buildFeaturesCard(context)),
+                _buildFeaturesCard(context),
+                SizedBox(height: 10.h),
+                Padding(
+                  padding: const EdgeInsets.all(15.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      // Navigate to home or main screen
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30.r),
+                      ),
+                      child: Center(
+                        child: Text(
+                          "Start Exploring",
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -111,111 +141,87 @@ class PaymentSuccessScreen extends StatelessWidget {
   Widget _buildFeaturesCard(BuildContext context) {
     final features = [
       {
-        'icon': Icons.palette_outlined,
+        'image': 'assets/icons/update1.png',
         'title': 'Exclusive Design Themes',
         'description':
             'Unlock beautiful premium themes and customize your experience',
       },
       {
-        'icon': Icons.star,
+        'image': 'assets/icons/update2.png',
         'title': 'Unlimited AI Companion queries',
         'description': "Get all the answers and insights you're looking for",
       },
       {
-        'icon': Icons.headphones,
+        'image': 'assets/icons/update3.png',
         'title': 'Premium reciters library',
         'description': 'Explore a diverse collection of renowned reciters',
       },
       {
-        'icon': Icons.auto_graph,
+        'image': 'assets/icons/update4.png',
         'title': 'Advanced memorization tracking',
         'description': 'Personalized learning strategies',
       },
       {
-        'icon': Icons.explore_outlined,
+        'image': 'assets/icons/update5.png',
         'title': 'Unlock all Qibla compass styles',
         'description': 'Find your direction with unique designs',
       },
     ];
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      margin: EdgeInsets.symmetric(horizontal: 24.w),
       padding: EdgeInsets.only(
-        top: 20.h,
-        bottom: 24.h,
-        left: 20.w,
-        right: 20.w,
+        top: 10.h,
+        bottom: 10.h,
+        left: 16.w,
+        right: 16.w,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF3D8B40),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24.r),
-          topRight: Radius.circular(24.r),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF16641A), Color(0xFF2F7D33)],
         ),
+        borderRadius: BorderRadius.all(Radius.circular(24.r)),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: features.length,
-              separatorBuilder: (context, index) => SizedBox(height: 16.h),
-              itemBuilder: (context, index) {
-                final feature = features[index];
-                return _buildFeatureItem(
-                  feature['icon'] as IconData,
+          ...features.asMap().entries.map((entry) {
+            final index = entry.key;
+            final feature = entry.value;
+            return Column(
+              children: [
+                _buildFeatureItem(
+                  feature['image'] as String,
                   feature['title'] as String,
                   feature['description'] as String,
-                );
-              },
-            ),
-          ),
-          SizedBox(height: 16.h),
-          // Start Exploring Button
-          GestureDetector(
-            onTap: () {
-              // Navigate to home or main screen
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30.r),
-              ),
-              child: Center(
-                child: Text(
-                  "Start Exploring",
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
                 ),
-              ),
-            ),
-          ),
+                if (index != features.length - 1)
+                  Divider(
+                    color: Colors.white.withOpacity(0.3),
+                    thickness: 1,
+                    height: 4.h,
+                  ),
+              ],
+            );
+          }).toList(),
+
+          // Start Exploring Button
         ],
       ),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String title, String description) {
+  Widget _buildFeatureItem(String imagePath, String title, String description) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: 44.w,
-          height: 44.h,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Icon(icon, size: 22.sp, color: Colors.white),
+        Padding(
+          padding: EdgeInsets.all(8.w),
+          child: Image.asset(imagePath, fit: BoxFit.contain),
         ),
-        SizedBox(width: 12.w),
+
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +234,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              SizedBox(height: 2.h),
+
               Text(
                 description,
                 style: TextStyle(
@@ -240,15 +246,15 @@ class PaymentSuccessScreen extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(width: 8.w),
+
         Container(
-          width: 24.w,
-          height: 24.h,
+          width: 16.w,
+          height: 16.h,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white,
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.check, size: 14.sp, color: Colors.white),
+          child: Icon(Icons.check, size: 14.sp, color: Color(0xFF2E7D32)),
         ),
       ],
     );
