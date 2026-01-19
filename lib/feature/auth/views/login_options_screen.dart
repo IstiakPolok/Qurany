@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:qurany/core/const/app_colors.dart';
 
 import 'package:get/get.dart';
 import 'package:qurany/feature/welcome/view/preparing_space_screen.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+
+import '../services/google_auth_service.dart';
 
 class LoginOptionsScreen extends StatelessWidget {
   const LoginOptionsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Initialize the AuthController
+
     return Scaffold(
       backgroundColor: Color(0xFF227026),
       body: Column(
@@ -69,16 +73,39 @@ class LoginOptionsScreen extends StatelessWidget {
           // Google Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: _buildSocialButton(
-              onPressed: () {
-                Get.to(() => const PreparingSpaceScreen());
-              },
-              icon: Image.asset(
-                'assets/icons/googleIcon.png',
-                width: 28.sp,
-                height: 28.sp,
+            child: Obx(
+              () => _buildSocialButton(
+                onPressed: GoogleSignInService.isLoading.value
+                    ? () {}
+                    : () async {
+                        EasyLoading.show(status: 'Signing in...');
+                        final success =
+                            await GoogleSignInService.signInWithGoogle();
+                        EasyLoading.dismiss();
+
+                        if (success) {
+                          // Navigate to home screen or preparing space
+                          Get.off(() => const PreparingSpaceScreen());
+                        }
+                      },
+                icon: GoogleSignInService.isLoading.value
+                    ? SizedBox(
+                        width: 28.sp,
+                        height: 28.sp,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.black,
+                          ),
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/icons/googleIcon.png',
+                        width: 28.sp,
+                        height: 28.sp,
+                      ),
+                label: "Continue with Google",
               ),
-              label: "Continue with Google",
             ),
           ),
 

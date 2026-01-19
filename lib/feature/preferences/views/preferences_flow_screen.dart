@@ -28,7 +28,7 @@ class _PreferencesFlowScreenState extends State<PreferencesFlowScreen> {
     } else {
       // Navigate to PreparingSpaceScreen
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginOptionsScreen()),
+        MaterialPageRoute(builder: (context) => LoginOptionsScreen()),
       );
     }
   }
