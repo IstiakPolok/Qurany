@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -38,11 +40,13 @@ class GoogleSignInService {
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
+      developer.log('🔑 ID Token: $idToken', name: 'GoogleAuth');
 
       // Obtain the access token (requires authorization step in v7+)
       final authorization = await googleUser.authorizationClient
           .authorizeScopes(['email', 'profile', 'openid']);
       final String accessToken = authorization.accessToken;
+      developer.log('🔑 Access Token: $accessToken', name: 'GoogleAuth');
 
       if (idToken == null || accessToken == null) {
         throw 'Unable to obtain authentication tokens';
@@ -95,4 +99,14 @@ class GoogleSignInService {
 
   /// Check if user is signed in
   static bool get isSignedIn => _auth.currentUser != null;
+
+  /// Helper method to split long strings for printing
+  static List<String> _splitString(String text, int chunkSize) {
+    final chunks = <String>[];
+    for (var i = 0; i < text.length; i += chunkSize) {
+      final end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
+      chunks.add(text.substring(i, end));
+    }
+    return chunks;
+  }
 }
