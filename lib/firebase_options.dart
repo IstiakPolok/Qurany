@@ -41,51 +41,53 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBgfnysNiFjPU8UcVTeNSnlRbLn2WYYUt8',
-    appId: '1:19186387012:web:69b9c5c2c31240331b9411',
-    messagingSenderId: '19186387012',
-    projectId: 'qurany-b80ee',
-    authDomain: 'qurany-b80ee.firebaseapp.com',
-    storageBucket: 'qurany-b80ee.firebasestorage.app',
+    apiKey: 'AIzaSyBfg5Ql2OSm0zIZw6X4yNzQ6__K6AFVQ9s',
+    appId: '1:756089115715:web:6fb75e8e130a07da1bf0f6',
+    messagingSenderId: '756089115715',
+    projectId: 'qurany-6d394',
+    authDomain: 'qurany-6d394.firebaseapp.com',
+    storageBucket: 'qurany-6d394.firebasestorage.app',
+    measurementId: 'G-RJT0YVZTVZ',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDUI5jN7HPVIx0Sh9UZdFxWc6fkj9iw0p8',
-    appId: '1:19186387012:android:413dfafce2a19e2a1b9411',
-    messagingSenderId: '19186387012',
-    projectId: 'qurany-b80ee',
-    storageBucket: 'qurany-b80ee.firebasestorage.app',
+    apiKey: 'AIzaSyDAj65edwCJDoH7OAG4pbN6kfW7stxRP4Y',
+    appId: '1:756089115715:android:749cbf6564c005e31bf0f6',
+    messagingSenderId: '756089115715',
+    projectId: 'qurany-6d394',
+    storageBucket: 'qurany-6d394.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAhG6ZpWK_fUeCUSwOLXHGeePiovdDgeME',
-    appId: '1:19186387012:ios:2af15578945adf561b9411',
-    messagingSenderId: '19186387012',
-    projectId: 'qurany-b80ee',
-    storageBucket: 'qurany-b80ee.firebasestorage.app',
-    androidClientId: '19186387012-53vegvf6ipvn4bt1cncjc6dnv6hgpuj5.apps.googleusercontent.com',
-    iosClientId: '19186387012-vtu4esfenqrpo2st6ug7718022nbb4b1.apps.googleusercontent.com',
+    apiKey: 'AIzaSyCDnovndDzOG6m-bJlTtA8YhvIUAfKg0dk',
+    appId: '1:756089115715:ios:d74fd6d8cbfb92421bf0f6',
+    messagingSenderId: '756089115715',
+    projectId: 'qurany-6d394',
+    storageBucket: 'qurany-6d394.firebasestorage.app',
+    androidClientId: '756089115715-79s6ofnv059u6v4gqlq18labiamibqej.apps.googleusercontent.com',
+    iosClientId: '756089115715-jofus5u0d4phc29khd5r0q6f5qv7ptan.apps.googleusercontent.com',
     iosBundleId: 'com.example.qurany',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyAhG6ZpWK_fUeCUSwOLXHGeePiovdDgeME',
-    appId: '1:19186387012:ios:2af15578945adf561b9411',
-    messagingSenderId: '19186387012',
-    projectId: 'qurany-b80ee',
-    storageBucket: 'qurany-b80ee.firebasestorage.app',
-    androidClientId: '19186387012-53vegvf6ipvn4bt1cncjc6dnv6hgpuj5.apps.googleusercontent.com',
-    iosClientId: '19186387012-vtu4esfenqrpo2st6ug7718022nbb4b1.apps.googleusercontent.com',
+    apiKey: 'AIzaSyCDnovndDzOG6m-bJlTtA8YhvIUAfKg0dk',
+    appId: '1:756089115715:ios:d74fd6d8cbfb92421bf0f6',
+    messagingSenderId: '756089115715',
+    projectId: 'qurany-6d394',
+    storageBucket: 'qurany-6d394.firebasestorage.app',
+    androidClientId: '756089115715-79s6ofnv059u6v4gqlq18labiamibqej.apps.googleusercontent.com',
+    iosClientId: '756089115715-jofus5u0d4phc29khd5r0q6f5qv7ptan.apps.googleusercontent.com',
     iosBundleId: 'com.example.qurany',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBgfnysNiFjPU8UcVTeNSnlRbLn2WYYUt8',
-    appId: '1:19186387012:web:8fc295130e9aec881b9411',
-    messagingSenderId: '19186387012',
-    projectId: 'qurany-b80ee',
-    authDomain: 'qurany-b80ee.firebaseapp.com',
-    storageBucket: 'qurany-b80ee.firebasestorage.app',
+    apiKey: 'AIzaSyBfg5Ql2OSm0zIZw6X4yNzQ6__K6AFVQ9s',
+    appId: '1:756089115715:web:c31c7fe3602c36e21bf0f6',
+    messagingSenderId: '756089115715',
+    projectId: 'qurany-6d394',
+    authDomain: 'qurany-6d394.firebaseapp.com',
+    storageBucket: 'qurany-6d394.firebasestorage.app',
+    measurementId: 'G-39DYLQLHRH',
   );
 
 }

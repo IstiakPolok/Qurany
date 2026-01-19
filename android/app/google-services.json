@@ -1,45 +1,45 @@
 {
   "project_info": {
-    "project_number": "19186387012",
-    "project_id": "qurany-b80ee",
-    "storage_bucket": "qurany-b80ee.firebasestorage.app"
+    "project_number": "756089115715",
+    "project_id": "qurany-6d394",
+    "storage_bucket": "qurany-6d394.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:19186387012:android:413dfafce2a19e2a1b9411",
+        "mobilesdk_app_id": "1:756089115715:android:749cbf6564c005e31bf0f6",
         "android_client_info": {
-          "package_name": "com.example.qurany"
+          "package_name": "com.joaqo.qurany"
         }
       },
       "oauth_client": [
         {
-          "client_id": "19186387012-53vegvf6ipvn4bt1cncjc6dnv6hgpuj5.apps.googleusercontent.com",
+          "client_id": "756089115715-79s6ofnv059u6v4gqlq18labiamibqej.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.qurany",
+            "package_name": "com.joaqo.qurany",
             "certificate_hash": "9e40c53840bcdb7c97df30ab130be0e53c8b8908"
           }
         },
         {
-          "client_id": "19186387012-40rfpjah61j31ebfm0gmq5lm8qrlcs4i.apps.googleusercontent.com",
+          "client_id": "756089115715-f4l067kce9gjik5kbrrur5u9nb4ks0oo.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDUI5jN7HPVIx0Sh9UZdFxWc6fkj9iw0p8"
+          "current_key": "AIzaSyDAj65edwCJDoH7OAG4pbN6kfW7stxRP4Y"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "19186387012-40rfpjah61j31ebfm0gmq5lm8qrlcs4i.apps.googleusercontent.com",
+              "client_id": "756089115715-f4l067kce9gjik5kbrrur5u9nb4ks0oo.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "19186387012-vtu4esfenqrpo2st6ug7718022nbb4b1.apps.googleusercontent.com",
+              "client_id": "756089115715-jofus5u0d4phc29khd5r0q6f5qv7ptan.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.example.qurany"

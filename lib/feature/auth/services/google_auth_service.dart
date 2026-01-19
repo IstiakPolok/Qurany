@@ -13,8 +13,11 @@ class GoogleSignInService {
   /// Private method to ensure GoogleSignIn is initialized
   static Future<void> _ensureInitialized() async {
     await _googleSignIn.initialize(
+      //   serverClientId:
+      //       "551512267457-u6q3vqnv2bf7567ecrbptv7b04m7t1h7.apps.googleusercontent.com",
+      // );
       serverClientId:
-          '19186387012-40rfpjah61j31ebfm0gmq5lm8qrlcs4i.apps.googleusercontent.com',
+          '756089115715-f4l067kce9gjik5kbrrur5u9nb4ks0oo.apps.googleusercontent.com',
     );
   }
 
@@ -39,14 +42,16 @@ class GoogleSignInService {
       // Obtain the auth details (idToken is here)
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+
       final String? idToken = googleAuth.idToken;
-      developer.log('🔑 ID Token: $idToken', name: 'GoogleAuth');
+
+      developer.log('Google ID Token: $idToken', name: 'GoogleAuth');
 
       // Obtain the access token (requires authorization step in v7+)
       final authorization = await googleUser.authorizationClient
           .authorizeScopes(['email', 'profile', 'openid']);
       final String accessToken = authorization.accessToken;
-      developer.log('🔑 Access Token: $accessToken', name: 'GoogleAuth');
+      developer.log('google Access Token: $accessToken', name: 'GoogleAuth');
 
       if (idToken == null || accessToken == null) {
         throw 'Unable to obtain authentication tokens';
@@ -67,6 +72,9 @@ class GoogleSignInService {
       if (user != null) {
         print('✅ Signed in with Google: ${user.email}');
         isLoading.value = false;
+        print("skjdnfkjsndkjfnksjdf");
+        final dd = await user?.getIdToken();
+        developer.log('🔑 ID Token DEDDDDDDDDD: $dd', name: 'Firebase');
         return true;
       }
 
