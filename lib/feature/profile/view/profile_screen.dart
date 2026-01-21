@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:get/utils.dart';
+import 'package:qurany/feature/auth/views/login_options_screen.dart';
+import '../../../core/services_class/local_service/shared_preferences_helper.dart';
+import '../../auth/services/google_auth_service.dart';
 import 'appearance_settings_screen.dart';
 import 'bookmarks_screen.dart';
 import 'downlaod_reciters_screen.dart';
@@ -636,27 +641,39 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildLogoutButton() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 16.h),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(25.r),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.logout, size: 20.sp, color: Colors.white),
-            SizedBox(width: 8.w),
-            Text(
-              "Logout",
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      child: GestureDetector(
+        onTap: () async {
+          // Clear user data and navigate to login screen
+          await SharedPreferencesHelper.logoutUser();
+          // Optionally sign out from Google if using GoogleSignInService
+          try {
+            await GoogleSignInService.signOut();
+          } catch (_) {}
+          // Replace with your actual login screen import and navigation
+          Get.offAll(() => const LoginOptionsScreen());
+        },
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(25.r),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.logout, size: 20.sp, color: Colors.white),
+              SizedBox(width: 8.w),
+              Text(
+                "Logout",
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
