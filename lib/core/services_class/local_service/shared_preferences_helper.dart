@@ -115,6 +115,15 @@ class SharedPreferencesHelper {
         'me'; // Default to 'me' if not found
   }
 
+  static Future<void> saveRefreshToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('refresh_token', token);
+  }
+
+  static Future<void> saveAccessToken(String token) async {
+    await saveToken(token);
+  }
+
   static Future<void> logoutUser() async {
     await clearAllData();
     // Get.offAll(() => LoginView());

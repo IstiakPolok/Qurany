@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:qurany/feature/home/controller/verse_of_day_controller.dart';
 import 'package:qurany/feature/home/view/verse_of_day_screen.dart';
 
 class VerseOfDayCard extends StatelessWidget {
@@ -7,6 +9,8 @@ class VerseOfDayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.put(VerseOfDayController());
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -20,99 +24,147 @@ class VerseOfDayCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.r),
           image: const DecorationImage(
-            image: AssetImage('assets/image/VerseOfDayCard.png'), // Placeholder
+            image: AssetImage('assets/image/VerseOfDayCard.png'),
             fit: BoxFit.fill,
           ),
         ),
         child: Padding(
           padding: EdgeInsets.all(20.w),
           child: Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Obx(() {
+              // Loading state
+              if (controller.isLoading.value) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                );
+              }
+
+              // Error state
+              if (controller.errorMessage.value.isNotEmpty) {
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    Icon(Icons.error_outline, color: Colors.white, size: 40.sp),
+                    SizedBox(height: 8.h),
                     Text(
-                      "Verse of the Day",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      'Failed to load verse',
+                      style: TextStyle(color: Colors.white, fontSize: 14.sp),
                     ),
-                    Icon(
-                      Icons.share_outlined,
-                      color: Colors.white,
-                      size: 20.sp,
+                    SizedBox(height: 8.h),
+                    ElevatedButton(
+                      onPressed: controller.refreshVerse,
+                      child: const Text('Retry'),
                     ),
                   ],
-                ),
-                SizedBox(height: 12.h),
-                Row(
-                  children: [
-                    Image.asset(
-                      'assets/icons/navquranIcons.png',
-                      width: 20.w,
-                      height: 20.h,
-                      color: Colors.white,
-                    ), // Placeholder Bismillah icon
-                    SizedBox(width: 8.w),
-                    Text(
-                      "Surah Ash-Shams (7:10)", // Placeholder reference
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
+                );
+              }
+
+              // Success state - display verse
+              final verse = controller.randomVerse.value;
+              if (verse == null) {
+                return const SizedBox.shrink();
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Verse of the Day",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Image.asset(
-                      'assets/icons/123.png',
-                      width: 24.w,
-                      height: 24.h,
-                    ), // Placeholder icon
-                    SizedBox(width: 8.w),
-                    Text(
-                      "وَمَا خَلَقْتُ الْجِنَّ وَالْإِنسَ إِلَّا لِيَعْبُدُونِ",
-                      textDirection: TextDirection.ltr,
-                      textAlign: TextAlign.left,
-                      maxLines: 2,
-                      style: TextStyle(
+                      Icon(
+                        Icons.share_outlined,
                         color: Colors.white,
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
+                        size: 20.sp,
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  "\"And I did not create the jinn and mankind\nexcept to worship Me.\"",
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.sp,
-                    fontStyle: FontStyle.italic,
+                    ],
                   ),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(
-                    'Read Full Surah →',
-                    style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                  SizedBox(height: 12.h),
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/icons/navquranIcons.png',
+                        width: 20.w,
+                        height: 20.h,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 8.w),
+                      Expanded(
+                        child: Text(
+                          controller.getVerseReference(),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
+                  SizedBox(height: 12.h),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Image.asset(
+                                'assets/icons/123.png',
+                                width: 24.w,
+                                height: 24.h,
+                              ),
+                              SizedBox(width: 8.w),
+                              Expanded(
+                                child: Text(
+                                  verse.data.verse.text,
+                                  textDirection: TextDirection.rtl,
+                                  textAlign: TextAlign.right,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const VerseOfDayScreen(),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      'Read Full Surah →',
+                      style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                    ),
+                  ),
+                ],
+              );
+            }),
           ),
         ),
       ),

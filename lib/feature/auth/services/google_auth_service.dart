@@ -1,4 +1,9 @@
 import 'dart:developer' as developer;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../../core/network_caller/endpoints.dart';
+
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
@@ -15,9 +20,9 @@ class GoogleSignInService {
     await _googleSignIn.initialize(
       //   serverClientId:
       //       "551512267457-u6q3vqnv2bf7567ecrbptv7b04m7t1h7.apps.googleusercontent.com",
-      // );
+      //
       serverClientId:
-          '756089115715-f4l067kce9gjik5kbrrur5u9nb4ks0oo.apps.googleusercontent.com',
+          '917319441883-gf0vcq0tohjkal87djhcntn7hbupoo0p.apps.googleusercontent.com',
     );
   }
 
@@ -47,35 +52,54 @@ class GoogleSignInService {
 
       developer.log('Google ID Token: $idToken', name: 'GoogleAuth');
 
-      // Obtain the access token (requires authorization step in v7+)
-      final authorization = await googleUser.authorizationClient
-          .authorizeScopes(['email', 'profile', 'openid']);
-      final String accessToken = authorization.accessToken;
-      developer.log('google Access Token: $accessToken', name: 'GoogleAuth');
+      if (idToken != null) {
+        print('✅ Obtained Google ID Token, sending to backend...');
 
-      if (idToken == null || accessToken == null) {
-        throw 'Unable to obtain authentication tokens';
-      }
+        // Send token to backend
+        try {
+          final response = await http.post(
+            Uri.parse(
+              '$baseUrl/api/user/auth/google',
+            ), // Use your backend endpoint here
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({"token": idToken}),
+          );
 
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: accessToken,
-        idToken: idToken,
-      );
+          print('Backend Response Status: ${response.statusCode}');
+          print('Backend Response Body: ${response.body}');
 
-      // Sign in to Firebase with the Google credential
-      final UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            // Parse successful response
+            final data = jsonDecode(response.body);
+            print("✅ Backend Login Success: $data");
 
-      final User? user = userCredential.user;
-      if (user != null) {
-        print('✅ Signed in with Google: ${user.email}');
-        isLoading.value = false;
-        print("skjdnfkjsndkjfnksjdf");
-        final dd = await user?.getIdToken();
-        developer.log('🔑 ID Token DEDDDDDDDDD: $dd', name: 'Firebase');
-        return true;
+            // Save tokens to SharedPreferences
+            if (data['data'] != null) {
+              final accessToken = data['data']['accessToken'];
+              final refreshToken = data['data']['refreshToken'];
+              final email = data['data']['email'];
+
+              // Add your preferred saving method here
+              // Example:
+              await SharedPreferencesHelper.saveAccessToken(accessToken);
+              await SharedPreferencesHelper.saveRefreshToken(refreshToken);
+              await SharedPreferencesHelper.saveEmail(email);
+            }
+
+            // Note: We are deliberately skipping Firebase Auth sign-in
+            // as requested ("not firebase").
+            isLoading.value = false;
+            return true;
+          } else {
+            print("❌ Backend Login Failed");
+            isLoading.value = false;
+            return false;
+          }
+        } catch (e) {
+          print("❌ Error sending token to backend: $e");
+          isLoading.value = false;
+          return false;
+        }
       }
 
       isLoading.value = false;
