@@ -3,95 +3,80 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/quran/view/listen_mode_screen.dart';
-
-// Verse model
-class VerseModel {
-  final int verseNumber;
-  final String arabicText;
-  final String translation;
-  final String transliteration;
-  final String tafsir;
-  final bool isBookmarked;
-
-  VerseModel({
-    required this.verseNumber,
-    required this.arabicText,
-    required this.translation,
-    required this.transliteration,
-    required this.tafsir,
-    this.isBookmarked = false,
-  });
-}
+import 'package:qurany/feature/home/services/quran_service.dart';
+import 'package:qurany/feature/quran/model/verse_detail_model.dart';
 
 // Controller
 class SurahReadingController extends GetxController {
+  final QuranService _quranService = QuranService();
+  final int surahId;
+
   RxInt selectedViewTab =
       0.obs; // 0 = Translation, 1 = Transliteration, 2 = Tafsir
   RxBool isPlaying = false.obs;
   RxInt currentPlayingVerse = (-1).obs;
   RxDouble playbackSpeed = 1.0.obs;
+  RxBool isLoading = true.obs;
+  RxBool isLoadingMore = false.obs;
+  RxInt currentPage = 1.obs;
+  RxInt totalVerses = 0.obs;
+  RxBool hasMoreVerses = true.obs;
 
-  // Sample verses for Al-Fatihah
-  final List<VerseModel> verses = [
-    VerseModel(
-      verseNumber: 1,
-      arabicText: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-      translation:
-          "In the Name of Allah—the Most Compassionate, Most Merciful.",
-      transliteration: "Bismillahir Rahmanir Rahim",
-      tafsir:
-          "The Basmalah is the beginning of all surahs except Surah At-Tawbah. It is a declaration of starting in the name of God, the Most Gracious, the Most Merciful.",
-    ),
-    VerseModel(
-      verseNumber: 2,
-      arabicText: "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ",
-      translation: "All praise is due to Allah, the Lord of all the worlds.",
-      transliteration: "Alhamdu lillaahi Rabbil 'aalameen",
-      tafsir:
-          "All praise belongs to Allah, the Creator and Sustainer of all existence.",
-    ),
-    VerseModel(
-      verseNumber: 3,
-      arabicText: "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-      translation: "The Most Compassionate, Most Merciful.",
-      transliteration: "Ar-Rahmaanir-Raheem",
-      tafsir:
-          "He is the Most Gracious and Most Merciful to all His creation in this world and the next.",
-    ),
-    VerseModel(
-      verseNumber: 4,
-      arabicText: "مَٰلِكِ يَوْمِ ٱلدِّينِ",
-      translation: "Master of the Day of Judgment.",
-      transliteration: "Maaliki Yawmid-Deen",
-      tafsir:
-          "He is the Master and Owner of the Day of Judgment, where recompense will be established.",
-    ),
-    VerseModel(
-      verseNumber: 5,
-      arabicText: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
-      translation: "You alone we worship, and You alone we ask for help.",
-      transliteration: "Iyyaaka na'budu wa lyyaaka nasta'een",
-      tafsir: "We worship You alone and seek Your help in all our affairs.",
-    ),
-    VerseModel(
-      verseNumber: 6,
-      arabicText: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
-      translation: "Guide us on the Straight Path.",
-      transliteration: "Ihdinas-Siraatal-Mustaqeem",
-      tafsir: "Show us the straight path, the path of guidance and truth.",
-    ),
-    VerseModel(
-      verseNumber: 7,
-      arabicText:
-          "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
-      translation:
-          "The path of those who have received Your grace; not the path of those who have brought down wrath upon themselves, nor of those who have gone astray.",
-      transliteration:
-          "Siraatal-lazeena an'amta 'alayhim ghayril-maghdoobi 'alayhim wa lad-daalleen",
-      tafsir:
-          "The path of those You have blessed, not of those who earned Your anger nor of those who went astray.",
-    ),
-  ];
+  var verses = <VerseDetailModel>[].obs;
+  Rx<AudioDetailModel?> audio = Rx<AudioDetailModel?>(null);
+
+  SurahReadingController({required this.surahId});
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchSurahDetails();
+  }
+
+  Future<void> fetchSurahDetails() async {
+    try {
+      isLoading(true);
+      currentPage.value = 1;
+      final response = await _quranService.fetchSurahById(
+        surahId,
+        page: currentPage.value,
+        limit: 20,
+      );
+      verses.assignAll(response.verses);
+      audio.value = response.audio;
+      hasMoreVerses.value = response.verses.length >= 20;
+    } catch (e) {
+      print("Error fetching surah details: $e");
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  Future<void> loadMoreVerses() async {
+    if (isLoadingMore.value || !hasMoreVerses.value) return;
+
+    try {
+      isLoadingMore(true);
+      currentPage.value++;
+      final response = await _quranService.fetchSurahById(
+        surahId,
+        page: currentPage.value,
+        limit: 20,
+      );
+
+      if (response.verses.isEmpty) {
+        hasMoreVerses.value = false;
+      } else {
+        verses.addAll(response.verses);
+        hasMoreVerses.value = response.verses.length >= 20;
+      }
+    } catch (e) {
+      print("Error loading more verses: $e");
+      currentPage.value--; // Revert page on error
+    } finally {
+      isLoadingMore(false);
+    }
+  }
 
   void togglePlayPause() {
     isPlaying.value = !isPlaying.value;
@@ -104,6 +89,7 @@ class SurahReadingController extends GetxController {
 }
 
 class SurahReadingScreen extends StatelessWidget {
+  final int surahId;
   final String surahName;
   final String arabicName;
   final String meaning;
@@ -112,6 +98,7 @@ class SurahReadingScreen extends StatelessWidget {
 
   const SurahReadingScreen({
     super.key,
+    required this.surahId,
     this.surahName = "Al-Faatiha",
     this.arabicName = "الفاتحة",
     this.meaning = "Al-Faatiha",
@@ -121,7 +108,10 @@ class SurahReadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SurahReadingController controller = Get.put(SurahReadingController());
+    final SurahReadingController controller = Get.put(
+      SurahReadingController(surahId: surahId),
+      tag: surahId.toString(),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
@@ -326,24 +316,24 @@ class SurahReadingScreen extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          // Surah number in hexagon
-                          ClipPath(
-                            clipper: HexagonClipper(),
-                            child: Container(
-                              width: 32.w,
-                              height: 32.w,
-                              color: const Color(0xFF2E7D32),
-                              child: Center(
-                                child: Text(
-                                  surah["number"].toString(),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          // Surah number in image
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/icons/Layer_1.png',
+                                width: 32.w,
+                                height: 32.w,
+                              ),
+                              Text(
+                                surah["number"].toString(),
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                           SizedBox(width: 16.w),
                           // Surah name
@@ -693,48 +683,161 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   Widget _buildTranslationList(SurahReadingController controller) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      itemCount: controller.verses.length,
-      itemBuilder: (context, index) {
-        final verse = controller.verses[index];
-        return _buildVerseCard(verse, controller);
-      },
-    );
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      if (controller.verses.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Text("No verses found"),
+          ),
+        );
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        itemCount: controller.verses.length + 1,
+        itemBuilder: (context, index) {
+          if (index == controller.verses.length) {
+            // Load More button
+            return _buildLoadMoreButton(controller);
+          }
+          final verse = controller.verses[index];
+          return _buildVerseCard(verse, controller);
+        },
+      );
+    });
   }
 
   Widget _buildTransliterationList(SurahReadingController controller) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      itemCount: controller.verses.length,
-      itemBuilder: (context, index) {
-        final verse = controller.verses[index];
-        return _buildTransliterationCard(verse, controller);
-      },
-    );
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      if (controller.verses.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Text("No verses found"),
+          ),
+        );
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        itemCount: controller.verses.length + 1,
+        itemBuilder: (context, index) {
+          if (index == controller.verses.length) {
+            // Load More button
+            return _buildLoadMoreButton(controller);
+          }
+          final verse = controller.verses[index];
+          return _buildTransliterationCard(verse, controller);
+        },
+      );
+    });
   }
 
   Widget _buildTafsirList(SurahReadingController controller) {
-    return Column(
-      children: [
-        _buildTafsirDetailedHeader(),
-        SizedBox(height: 16.h),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          itemCount: controller.verses.length,
-          itemBuilder: (context, index) {
-            final verse = controller.verses[index];
-            return _buildTafsirCard(verse, controller);
-          },
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      if (controller.verses.isEmpty) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: Text("No verses found"),
+          ),
+        );
+      }
+      return Column(
+        children: [
+          _buildTafsirDetailedHeader(),
+          SizedBox(height: 16.h),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            itemCount: controller.verses.length + 1,
+            itemBuilder: (context, index) {
+              if (index == controller.verses.length) {
+                // Load More button
+                return _buildLoadMoreButton(controller);
+              }
+              final verse = controller.verses[index];
+              return _buildTafsirCard(verse, controller);
+            },
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildLoadMoreButton(SurahReadingController controller) {
+    return Obx(() {
+      if (!controller.hasMoreVerses.value) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          child: Center(
+            child: Text(
+              "No more verses",
+              style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+            ),
+          ),
+        );
+      }
+
+      if (controller.isLoadingMore.value) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          child: const Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        child: Center(
+          child: ElevatedButton(
+            onPressed: () => controller.loadMoreVerses(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+            ),
+            child: Text(
+              "Load More Verses",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ),
-      ],
-    );
+      );
+    });
   }
 
   Widget _buildTafsirDetailedHeader() {
@@ -809,7 +912,10 @@ class SurahReadingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVerseCard(VerseModel verse, SurahReadingController controller) {
+  Widget _buildVerseCard(
+    VerseDetailModel verse,
+    SurahReadingController controller,
+  ) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
@@ -833,12 +939,12 @@ class SurahReadingScreen extends StatelessWidget {
             children: [
               // Play button
               GestureDetector(
-                onTap: () => controller.playVerse(verse.verseNumber),
+                onTap: () => controller.playVerse(verse.verseId),
                 child: Container(
                   padding: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(8.r),
+                    borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Icon(
                     Icons.play_arrow,
@@ -857,9 +963,28 @@ class SurahReadingScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.end,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Image.asset(
+                              'assets/icons/Layer_1.png',
+
+                              height: 35.w,
+                            ),
+                            Text(
+                              verse.ayate,
+                              style: TextStyle(
+                                color: const Color(0xFF2E7D32),
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+
                         Expanded(
                           child: Text(
-                            verse.arabicText,
+                            verse.text,
                             style: TextStyle(
                               fontSize: 22.sp,
                               fontFamily: 'Amiri',
@@ -867,26 +992,6 @@ class SurahReadingScreen extends StatelessWidget {
                             ),
                             textDirection: TextDirection.rtl,
                             textAlign: TextAlign.right,
-                          ),
-                        ),
-                        SizedBox(width: 8.w),
-                        // Verse number in hexagon
-                        ClipPath(
-                          clipper: HexagonClipper(),
-                          child: Container(
-                            width: 28.w,
-                            height: 28.w,
-                            color: const Color(0xFF2E7D32),
-                            child: Center(
-                              child: Text(
-                                verse.verseNumber.toString(),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
                           ),
                         ),
                       ],
@@ -952,7 +1057,7 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   Widget _buildTransliterationCard(
-    VerseModel verse,
+    VerseDetailModel verse,
     SurahReadingController controller,
   ) {
     return Container(
@@ -977,7 +1082,7 @@ class SurahReadingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GestureDetector(
-                onTap: () => controller.playVerse(verse.verseNumber),
+                onTap: () => controller.playVerse(verse.verseId),
                 child: Container(
                   padding: EdgeInsets.all(8.w),
                   decoration: BoxDecoration(
@@ -1000,7 +1105,7 @@ class SurahReadingScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        verse.arabicText,
+                        verse.text,
                         style: TextStyle(
                           fontSize: 22.sp,
                           fontFamily: 'Amiri',
@@ -1011,30 +1116,25 @@ class SurahReadingScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 8.w),
-                    // Verse number in hexagon
-                    ClipPath(
-                      clipper: HexagonClipper(),
-                      child: Container(
-                        width: 28.w,
-                        height: 28.w,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: const Color(0xFF2E7D32)),
+                    // Verse number in image
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/icons/Layer_1.png',
+                          width: 28.w,
+                          height: 28.w,
                         ),
-                        child: Center(
-                          child: Text(
-                            verse.verseNumber.toString(),
-                            style: TextStyle(
-                              color: const Color(0xFF2E7D32),
-                              fontSize: 11.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        Text(
+                          verse.ayate,
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    // Use Image for Hexagon if available or keep CustomClipper but with border style
-                    // For now keeping CustomClipper style consistent with Translation view but maybe adjusting logic if needed
-                    // Actually let's keep the filled green style for consistency
                   ],
                 ),
               ),
@@ -1043,12 +1143,12 @@ class SurahReadingScreen extends StatelessWidget {
 
           SizedBox(height: 16.h),
 
-          // Transliteration (Green Text)
+          // Note: Transliteration not provided by API, showing translation instead
           Text(
-            verse.transliteration,
+            verse.translation,
             style: TextStyle(
               fontSize: 15.sp,
-              color: const Color(0xFF2E7D32), // Green color
+              color: const Color(0xFF2E7D32),
               fontWeight: FontWeight.w500,
               fontStyle: FontStyle.italic,
               height: 1.5,
@@ -1056,7 +1156,7 @@ class SurahReadingScreen extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
 
-          // Translation (Standard Text)
+          // Translation
           Text(
             verse.translation,
             style: TextStyle(
@@ -1102,7 +1202,10 @@ class SurahReadingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTafsirCard(VerseModel verse, SurahReadingController controller) {
+  Widget _buildTafsirCard(
+    VerseDetailModel verse,
+    SurahReadingController controller,
+  ) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(16.w),
@@ -1119,7 +1222,7 @@ class SurahReadingScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  verse.arabicText,
+                  verse.text,
                   style: TextStyle(
                     fontSize: 20.sp,
                     fontFamily: 'Amiri',
@@ -1130,28 +1233,23 @@ class SurahReadingScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 8.w),
-              ClipPath(
-                clipper: HexagonClipper(),
-                child: Container(
-                  width: 24.w,
-                  height: 24.w,
-                  color: Colors.transparent,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF2E7D32)),
-                    ),
-                    child: Center(
-                      child: Text(
-                        verse.verseNumber.toString(),
-                        style: TextStyle(
-                          color: const Color(0xFF2E7D32),
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    'assets/icons/Layer_1.png',
+                    width: 24.w,
+                    height: 24.w,
+                  ),
+                  Text(
+                    verse.ayate,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -1174,7 +1272,7 @@ class SurahReadingScreen extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            verse.tafsir,
+            "Note: Tafsir details not provided by API. Showing translation.",
             style: TextStyle(
               fontSize: 14.sp,
               color: Colors.grey[800],

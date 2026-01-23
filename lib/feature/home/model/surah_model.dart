@@ -15,6 +15,17 @@ class SurahModel {
     required this.revealedVerses,
   });
 
+  factory SurahModel.fromJson(Map<String, dynamic> json) {
+    return SurahModel(
+      number: json['surahId'] ?? 0,
+      englishName: json['transliteration'] ?? '',
+      arabicName: json['name'] ?? '',
+      revelationType: (json['type'] as String? ?? '').toUpperCase(),
+      totalVerses: json['total_verses'] ?? 0,
+      revealedVerses: json['total_verses_read'] ?? 0,
+    );
+  }
+
   static List<SurahModel> get sampleSurahs => [
     SurahModel(
       number: 1,

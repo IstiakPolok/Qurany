@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/home/model/surah_model.dart';
+import 'package:qurany/feature/home/services/quran_service.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Removed as not used and caused error
 
 class QuranTabSection extends StatefulWidget {
@@ -13,13 +14,52 @@ class QuranTabSection extends StatefulWidget {
 
 class _QuranTabSectionState extends State<QuranTabSection> {
   final TextEditingController _searchController = TextEditingController();
-  List<SurahModel> _filteredSurahs = SurahModel.sampleSurahs;
+  final QuranService _quranService = QuranService();
+  List<SurahModel> _allSurahs = [];
+  List<SurahModel> _filteredSurahs = [];
+  bool _isLoading = true;
+  String? _errorMessage;
   String _selectedTab = "Surah";
+
+  // Pagination state
+  int _currentPage = 1;
+  int _totalItems = 0;
+  final int _pageSize = 10;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _fetchSurahs();
+  }
+
+  Future<void> _fetchSurahs({int? page}) async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+        if (page != null) {
+          _currentPage = page;
+        }
+      });
+      final response = await _quranService.fetchSurahs(
+        page: _currentPage,
+        limit: _pageSize,
+      );
+      setState(() {
+        _allSurahs = response.surahs;
+        _filteredSurahs = response.surahs;
+        _totalItems = response.total;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = e.toString();
+        });
+      }
+    }
   }
 
   @override
@@ -32,7 +72,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredSurahs = SurahModel.sampleSurahs.where((surah) {
+      _filteredSurahs = _allSurahs.where((surah) {
         final matchesName =
             surah.englishName.toLowerCase().contains(query) ||
             surah.arabicName.contains(query);
@@ -50,6 +90,74 @@ class _QuranTabSectionState extends State<QuranTabSection> {
       // In a real app, you might switch the data source or filter logic here.
       // For this task, we will just keep the visual toggle.
     });
+  }
+
+  Widget _buildPagination() {
+    int totalPages = (_totalItems / _pageSize).ceil();
+    if (totalPages <= 1) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Previous Button (optional, but good for UX)
+        if (_currentPage > 1)
+          IconButton(
+            onPressed: () => _fetchSurahs(page: _currentPage - 1),
+            icon: const Icon(Icons.chevron_left),
+          ),
+
+        // Page Numbers
+        ...List.generate(totalPages, (index) {
+          int pageNum = index + 1;
+          // Only show 5 pages at a time or something similar if total pages are many
+          // For now, simple list
+          if (pageNum == _currentPage) {
+            return Container(
+              margin: EdgeInsets.symmetric(horizontal: 4.w),
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: primaryColor,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                "$pageNum",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
+          } else if (pageNum == 1 ||
+              pageNum == totalPages ||
+              (pageNum >= _currentPage - 1 && pageNum <= _currentPage + 1)) {
+            return GestureDetector(
+              onTap: () => _fetchSurahs(page: pageNum),
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 4.w),
+                padding: EdgeInsets.all(8.w),
+                child: Text("$pageNum"),
+              ),
+            );
+          } else if (pageNum == _currentPage - 2 ||
+              pageNum == _currentPage + 2) {
+            return const Text("...");
+          }
+          return const SizedBox.shrink();
+        }).where((w) => w is! SizedBox).toList(),
+
+        // Next Button
+        if (_currentPage < totalPages)
+          TextButton(
+            onPressed: () => _fetchSurahs(page: _currentPage + 1),
+            child: Row(
+              children: [
+                Text("Next", style: TextStyle(color: primaryColor)),
+                Icon(Icons.chevron_right, color: primaryColor),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -116,21 +224,41 @@ class _QuranTabSectionState extends State<QuranTabSection> {
 
           // List
           _selectedTab == "Surah"
-              ? (_filteredSurahs.isEmpty
+              ? (_isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _errorMessage != null
                     ? Center(
+                        child: Column(
+                          children: [
+                            const Text("Failed to load surahs"),
+                            TextButton(
+                              onPressed: _fetchSurahs,
+                              child: const Text("Retry"),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _filteredSurahs.isEmpty
+                    ? const Center(
                         child: Padding(
                           padding: EdgeInsets.all(20.0),
                           child: Text("No Surahs found"),
                         ),
                       )
-                    : ListView.separated(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        itemCount: _filteredSurahs.length,
-                        separatorBuilder: (_, __) => SizedBox(height: 8.h),
-                        itemBuilder: (context, index) {
-                          return _buildSurahItem(_filteredSurahs[index]);
-                        },
+                    : Column(
+                        children: [
+                          ListView.separated(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            itemCount: _filteredSurahs.length,
+                            separatorBuilder: (_, __) => SizedBox(height: 8.h),
+                            itemBuilder: (context, index) {
+                              return _buildSurahItem(_filteredSurahs[index]);
+                            },
+                          ),
+                          SizedBox(height: 16.h),
+                          _buildPagination(),
+                        ],
                       ))
               : ListView.separated(
                   physics: const NeverScrollableScrollPhysics(),
