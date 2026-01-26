@@ -501,6 +501,7 @@ class QuranScreen extends StatelessWidget {
                             meaning: "Al-Faatiha",
                             origin: "MECCAN",
                             ayaCount: 7,
+                            translation: "The Opener",
                           ),
                         ),
                       );
@@ -787,6 +788,7 @@ class QuranScreen extends StatelessWidget {
                 meaning: surah.englishName,
                 origin: surah.revelationType,
                 ayaCount: surah.totalVerses,
+                translation: surah.translation,
               ),
             ),
           );
@@ -886,7 +888,7 @@ class QuranScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
-                    fontFamily: 'Amiri',
+                    fontFamily: 'Arial',
                   ),
                 ),
                 Text(
@@ -1044,6 +1046,7 @@ class QuranScreen extends StatelessWidget {
                 meaning: surah.englishName,
                 origin: surah.revelationType,
                 ayaCount: 0,
+                translation: surah.translation,
               ),
             ),
           );
@@ -1215,7 +1218,7 @@ class QuranScreen extends StatelessWidget {
               ayah.arabicText,
               style: TextStyle(
                 fontSize: 18.sp,
-                fontFamily: 'Amiri',
+                fontFamily: 'Arial',
                 height: 1.8,
               ),
             ),
@@ -1265,6 +1268,7 @@ class QuranScreen extends StatelessWidget {
                 meaning: surah.englishName,
                 origin: surah.revelationType,
                 ayaCount: surah.totalVerses,
+                translation: surah.translation,
               ),
             ),
           );

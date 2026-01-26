@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/feature/permissions/views/location_permission_screen.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 import '../../../core/const/app_colors.dart';
 import '../../../core/global_widgets/outlined_close_button.dart';
@@ -31,7 +32,21 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSavedCompassStyle();
     _determinePosition();
+  }
+
+  void _loadSavedCompassStyle() async {
+    final savedStyle = await SharedPreferencesHelper.getCompassStyle();
+    if (mounted) {
+      setState(() {
+        selectedCompass = savedStyle;
+      });
+    }
+  }
+
+  void _saveCompassStyle(String style) async {
+    await SharedPreferencesHelper.saveCompassStyle(style);
   }
 
   Future<void> _determinePosition() async {
@@ -128,7 +143,10 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
                           "Qibla Compass",
                           ["Classic", "Modern", "Clean"],
                           selectedCompass,
-                          (val) => setState(() => selectedCompass = val),
+                          (val) {
+                            setState(() => selectedCompass = val);
+                            _saveCompassStyle(val);
+                          },
                         ),
                         SizedBox(height: width * 0.05),
                         _buildPaginationDots(),
@@ -370,6 +388,7 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
         setState(() {
           selectedCompass = label;
         });
+        _saveCompassStyle(label);
       },
       child: Column(
         children: [

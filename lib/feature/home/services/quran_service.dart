@@ -5,6 +5,7 @@ import 'package:qurany/core/services_class/local_service/shared_preferences_help
 import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/model/random_verse_model.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
+import 'package:qurany/feature/quran/model/tafsir_model.dart';
 import 'package:flutter/foundation.dart';
 
 class SurahResponse {
@@ -15,6 +16,20 @@ class SurahResponse {
 
   SurahResponse({
     required this.surahs,
+    required this.total,
+    required this.page,
+    required this.limit,
+  });
+}
+
+class TafsirResponse {
+  final List<TafsirModel> tafsirs;
+  final int total;
+  final int page;
+  final int limit;
+
+  TafsirResponse({
+    required this.tafsirs,
     required this.total,
     required this.page,
     required this.limit,
@@ -68,7 +83,7 @@ class QuranService {
   Future<SurahDetailResponse> fetchSurahById(
     int surahId, {
     int page = 1,
-    int limit = 20,
+    int limit = 6,
   }) async {
     final url = Uri.parse(
       '$baseUrl/api/auth/quran/surah/$surahId?page=$page&limit=$limit',
@@ -90,7 +105,8 @@ class QuranService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true) {
-          return SurahDetailResponse.fromJson(body['data']);
+          final List<dynamic> data = body['data'] ?? [];
+          return SurahDetailResponse.fromList(data);
         } else {
           throw Exception(body['message'] ?? 'Failed to load surah');
         }
@@ -134,6 +150,83 @@ class QuranService {
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching random verse: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<TafsirResponse> fetchTafsir(
+    int surahId, {
+    int page = 1,
+    int limit = 6,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/api/quran/tafsir/$surahId?page=$page&limit=$limit',
+    );
+    try {
+      if (kDebugMode) {
+        print('Fetching tafsir for surah $surahId from: $url');
+      }
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          final meta = body['meta'] as Map<String, dynamic>?;
+          return TafsirResponse(
+            tafsirs: data.map((e) => TafsirModel.fromJson(e)).toList(),
+            total: meta?['total'] ?? 0,
+            page: meta?['page'] ?? 1,
+            limit: meta?['limit'] ?? 5,
+          );
+        } else {
+          throw Exception(body['message'] ?? 'Failed to load tafsir');
+        }
+      } else {
+        throw Exception('Failed to load tafsir: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tafsir: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<List<JuzModel>> fetchJuz() async {
+    final url = Uri.parse('$baseUrl/api/auth/quran/juz');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('Fetching Juz from: $url');
+        print('Token: $token');
+      }
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          return data
+              .map((e) => JuzModel.fromJson(e))
+              .where((juz) => juz.surahs.isNotEmpty) // Filter out empty Juz
+              .toList();
+        } else {
+          throw Exception(body['message'] ?? 'Failed to load Juz');
+        }
+      } else {
+        throw Exception('Failed to load Juz: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching Juz: $e');
       }
       rethrow;
     }

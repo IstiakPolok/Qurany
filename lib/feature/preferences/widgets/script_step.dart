@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class ScriptStep extends StatefulWidget {
   const ScriptStep({super.key});
@@ -11,6 +12,28 @@ class ScriptStep extends StatefulWidget {
 
 class _ScriptStepState extends State<ScriptStep> {
   String selectedScript = 'Imlaei';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadScript();
+  }
+
+  Future<void> _loadScript() async {
+    final script = await SharedPreferencesHelper.getArabicScript();
+    if (mounted) {
+      setState(() {
+        selectedScript = script;
+      });
+    }
+  }
+
+  Future<void> _selectScript(String script) async {
+    setState(() {
+      selectedScript = script;
+    });
+    await SharedPreferencesHelper.saveArabicScript(script);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,11 +151,7 @@ class _ScriptStepState extends State<ScriptStep> {
   }) {
     final isSelected = selectedScript == value;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedScript = value;
-        });
-      },
+      onTap: () => _selectScript(value),
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(

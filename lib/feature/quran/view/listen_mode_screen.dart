@@ -1,74 +1,268 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:qurany/feature/home/services/quran_service.dart';
+import 'package:qurany/feature/quran/model/verse_detail_model.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 /// Controller for Listen Mode (Commuter Mode) screen
 class ListenModeController extends GetxController {
+  final int surahId;
+  ListenModeController({this.surahId = 1});
+
+  final QuranService _quranService = QuranService();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+
   RxInt currentVerseIndex = 0.obs;
   RxBool isPlaying = false.obs;
   RxString currentSurahName = 'AL-FATIHAH'.obs;
-  RxInt totalVerses = 7.obs;
+  RxInt totalVerses = 0.obs;
+  RxBool isLoading = true.obs;
 
-  // Sample verse data for Al-Fatihah
-  final List<Map<String, String>> verses = [
-    {
-      'arabic': 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-      'transliteration': 'Bismillahir Rahmanir Raheem',
-      'translation':
-          'In the Name of Allah—the Most Compassionate, Most Merciful.',
-    },
-    {
-      'arabic': 'ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ',
-      'transliteration': 'Alhamdu lillaahi Rabbil \'aalameen',
-      'translation': 'All praise is due to Allah, the Lord of all the worlds.',
-    },
-    {
-      'arabic': 'ٱلرَّحْمَٰنِ ٱلرَّحِيمِ',
-      'transliteration': 'Ar-Rahmaanir-Raheem',
-      'translation': 'The Most Compassionate, Most Merciful.',
-    },
-    {
-      'arabic': 'مَٰلِكِ يَوْمِ ٱلدِّينِ',
-      'transliteration': 'Maaliki Yawmid-Deen',
-      'translation': 'Master of the Day of Judgment.',
-    },
-    {
-      'arabic': 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ',
-      'transliteration': 'Iyyaaka na\'budu wa lyyaaka nasta\'een',
-      'translation': 'You alone we worship, and You alone we ask for help.',
-    },
-    {
-      'arabic': 'ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ',
-      'transliteration': 'Ihdinas-Siraatal-Mustaqeem',
-      'translation': 'Guide us on the Straight Path.',
-    },
-    {
-      'arabic':
-          'صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ',
-      'transliteration':
-          'Siraatal-lazeena an\'amta \'alaihim ghayril-maghdoobi \'alaihim wa lad-daaalleen',
-      'translation':
-          'The path of those who have received Your grace; not the path of those who have brought down wrath upon themselves, nor of those who have gone astray.',
-    },
-  ];
+  // Voice Command State
+  RxBool isListening = false.obs;
+  RxString commandStatus = "Tap for Voice Command".obs;
+  RxBool isSpeechAvailable = false.obs;
 
-  Map<String, String> get currentVerse => verses[currentVerseIndex.value];
+  var verses = <VerseDetailModel>[].obs;
+  Rx<VerseDetailModel?> currentVerseModel = Rx<VerseDetailModel?>(null);
 
-  void togglePlayPause() {
-    isPlaying.value = !isPlaying.value;
+  @override
+  void onInit() {
+    super.onInit();
+    _configureAudioSession();
+    _initSpeech();
+    fetchSurahDetails();
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      isPlaying.value = state == PlayerState.playing;
+      if (state == PlayerState.completed) {
+        nextVerse();
+      }
+    });
+
+    // Update currentVerseModel when index or verses change
+    ever(currentVerseIndex, (_) => _updateCurrentVerse());
+    ever(verses, (_) => _updateCurrentVerse());
   }
 
-  void nextVerse() {
+  Future<void> _configureAudioSession() async {
+    final AudioContext audioContext = AudioContext(
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playAndRecord,
+        options: const {
+          AVAudioSessionOptions.defaultToSpeaker,
+          AVAudioSessionOptions.mixWithOthers,
+          AVAudioSessionOptions.allowBluetooth,
+          AVAudioSessionOptions.allowBluetoothA2DP,
+          AVAudioSessionOptions.allowAirPlay,
+        },
+      ),
+      android: AudioContextAndroid(
+        isSpeakerphoneOn: true,
+        stayAwake: true,
+        contentType: AndroidContentType.music,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.none,
+      ),
+    );
+    await _audioPlayer.setAudioContext(audioContext);
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      // Check microphone permission first
+      var status = await Permission.microphone.status;
+      if (!status.isGranted) {
+        await Permission.microphone.request();
+      }
+
+      isSpeechAvailable.value = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'listening') {
+            isListening.value = true;
+            commandStatus.value = "Listening...";
+          } else if (status == 'notListening') {
+            isListening.value = false;
+            if (commandStatus.value == "Listening...") {
+              commandStatus.value = "Tap for Voice Command";
+            }
+          }
+        },
+        onError: (errorNotification) {
+          isListening.value = false;
+          commandStatus.value = "Error: ${errorNotification.errorMsg}";
+          print("Speech Error: ${errorNotification.errorMsg}");
+        },
+      );
+    } catch (e) {
+      print("Speech initialization error: $e");
+    }
+  }
+
+  void listenForCommand() async {
+    if (!isSpeechAvailable.value) {
+      await _initSpeech();
+      if (!isSpeechAvailable.value) {
+        commandStatus.value = "Speech recognition not available";
+        return;
+      }
+    }
+
+    if (isListening.value) {
+      _speech.stop();
+      isListening.value = false;
+      commandStatus.value = "Tap for Voice Command";
+    } else {
+      await _speech.listen(
+        onResult: (result) {
+          if (result.finalResult) {
+            _processCommand(result.recognizedWords);
+          }
+        },
+      );
+    }
+  }
+
+  void _processCommand(String command) {
+    String lowerCommand = command.toLowerCase();
+    commandStatus.value = "Command: $command";
+
+    if (lowerCommand.contains("next") || lowerCommand.contains("skip")) {
+      nextVerse();
+    } else if (lowerCommand.contains("previous") ||
+        lowerCommand.contains("back")) {
+      previousVerse();
+    } else if (lowerCommand.contains("pause") ||
+        lowerCommand.contains("stop")) {
+      if (isPlaying.value) togglePlayPause();
+    } else if (lowerCommand.contains("play") ||
+        lowerCommand.contains("resume") ||
+        lowerCommand.contains("start")) {
+      if (!isPlaying.value) togglePlayPause();
+    } else if (lowerCommand.contains("repeat") ||
+        lowerCommand.contains("again")) {
+      _playCurrentVerse();
+    }
+
+    // Reset status after a delay
+    Future.delayed(const Duration(seconds: 2), () {
+      commandStatus.value = "Tap for Voice Command";
+    });
+  }
+
+  void _updateCurrentVerse() {
+    if (verses.isNotEmpty &&
+        currentVerseIndex.value >= 0 &&
+        currentVerseIndex.value < verses.length) {
+      currentVerseModel.value = verses[currentVerseIndex.value];
+    } else {
+      currentVerseModel.value = null;
+    }
+  }
+
+  @override
+  void onClose() {
+    _audioPlayer.dispose();
+    super.onClose();
+  }
+
+  Future<void> fetchSurahDetails() async {
+    try {
+      isLoading(true);
+      // Fetch all verses? Or paginate?
+      // For listen mode, we probably want a playlist.
+      // Fetching first 10 or 20 for now. Better to implement lazy loading if list is long.
+      // But for simplicity/demo, fetch what we can.
+      final response = await _quranService.fetchSurahById(
+        surahId,
+        page: 1,
+        limit: 50, // Fetch a chunk appropriate for listening context
+      );
+      verses.assignAll(response.verses);
+      totalVerses.value = response
+          .verses
+          .length; // Approximate if not full fetch, but serves UI
+
+      // Auto play if data loaded? Optional.
+      if (verses.isNotEmpty) {
+        // Prepare first verse
+      }
+    } catch (e) {
+      print("Error fetching surah for listen mode: $e");
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  Future<void> togglePlayPause() async {
+    if (verses.isEmpty) return;
+
+    if (isPlaying.value) {
+      await _audioPlayer.pause();
+    } else {
+      // If nothing is playing, play current index
+      await _playCurrentVerse();
+    }
+  }
+
+  Future<void> nextVerse() async {
     if (currentVerseIndex.value < verses.length - 1) {
       currentVerseIndex.value++;
+      await _playCurrentVerse();
+    } else {
+      // Loop or stop? Stop for now.
+      isPlaying.value = false;
+      // currentVerseIndex.value = 0; // Optional: Reset
     }
   }
 
-  void previousVerse() {
+  Future<void> previousVerse() async {
     if (currentVerseIndex.value > 0) {
       currentVerseIndex.value--;
+      await _playCurrentVerse();
     }
+  }
+
+  Future<void> _playCurrentVerse() async {
+    if (verses.isEmpty) return;
+
+    final verse = verses[currentVerseIndex.value];
+
+    try {
+      // Get preferred reciter
+      String preferredReciterName = await SharedPreferencesHelper.getReciter();
+      String audioKey = _mapReciterNameToKey(preferredReciterName);
+
+      String? audioUrl;
+
+      if (verse.audio.containsKey(audioKey)) {
+        audioUrl = verse.audio[audioKey]?.url;
+      } else if (verse.audio.isNotEmpty) {
+        audioUrl = verse.audio.values.first.url;
+      }
+
+      if (audioUrl != null) {
+        await _audioPlayer.stop(); // Stop previous
+        await _audioPlayer.setSourceUrl(audioUrl);
+        await _audioPlayer.resume();
+      }
+    } catch (e) {
+      print("Error playing verse in listen mode: $e");
+    }
+  }
+
+  String _mapReciterNameToKey(String name) {
+    if (name.contains("Mishary")) return "mishary";
+    if (name.contains("Abu Bakr")) return "abuBakar";
+    if (name.contains("Nasser")) return "nasser";
+    if (name.contains("Yasser")) return "yasser";
+    return "mishary";
   }
 
   void showVoiceCommand() {
@@ -140,18 +334,22 @@ class ListenModeController extends GetxController {
 /// Listen Mode (Commuter Mode) Screen
 /// A simplified audio-focused interface for listening to Quran while commuting
 class ListenModeScreen extends StatelessWidget {
+  final int surahId;
   final String surahName;
   final String arabicName;
 
   const ListenModeScreen({
     super.key,
+    this.surahId = 1,
     this.surahName = 'Al-Fatihah',
     this.arabicName = 'الفاتحة',
   });
 
   @override
   Widget build(BuildContext context) {
-    final ListenModeController controller = Get.put(ListenModeController());
+    final ListenModeController controller = Get.put(
+      ListenModeController(surahId: surahId),
+    );
 
     return Scaffold(
       backgroundColor: listenModeBackground,
@@ -266,7 +464,7 @@ class ListenModeScreen extends StatelessWidget {
       () => Column(
         children: [
           Text(
-            controller.currentSurahName.value,
+            surahName, // Use widget parameter or controller.currentSurahName
             style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.bold,
@@ -286,7 +484,19 @@ class ListenModeScreen extends StatelessWidget {
 
   Widget _buildVerseCard(ListenModeController controller) {
     return Obx(() {
-      final verse = controller.currentVerse;
+      if (controller.isLoading.value) {
+        return const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        );
+      }
+
+      final verse = controller.currentVerseModel.value;
+      if (verse == null) {
+        return const Center(
+          child: Text("No verses found", style: TextStyle(color: Colors.white)),
+        );
+      }
+
       return Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
@@ -305,11 +515,14 @@ class ListenModeScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: primaryColor),
                 ),
-                child: Icon(
-                  Icons.mosque,
-                  size: 14.sp,
-                  color: primaryColor,
-                ), // Placeholder for ayah end symbol
+                child: Text(
+                  verse.ayate,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
 
@@ -321,10 +534,10 @@ class ListenModeScreen extends StatelessWidget {
                     SizedBox(height: 16.h),
                     // Arabic text
                     Text(
-                      verse['arabic'] ?? '',
+                      verse.text,
                       style: TextStyle(
                         fontSize: 28.sp,
-                        fontFamily: 'Amiri',
+                        fontFamily: 'Arial',
                         height: 1.8,
                         color: Colors.black87,
                         fontWeight: FontWeight.bold,
@@ -338,7 +551,7 @@ class ListenModeScreen extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        verse['transliteration'] ?? '',
+                        verse.transliteration,
                         style: TextStyle(
                           fontSize: 14.sp,
                           color: listenModeAccent,
@@ -353,7 +566,7 @@ class ListenModeScreen extends StatelessWidget {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        verse['translation'] ?? '',
+                        verse.translation,
                         style: TextStyle(
                           fontSize: 14.sp,
                           color: Colors.black87,
@@ -431,30 +644,54 @@ class ListenModeScreen extends StatelessWidget {
   }
 
   Widget _buildVoiceCommandButton(ListenModeController controller) {
-    return GestureDetector(
-      onTap: () => controller.showVoiceCommand(),
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 40.w),
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30.r),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.mic_none, color: Colors.black87, size: 20.sp),
-            SizedBox(width: 8.w),
-            Text(
-              'Tap for Voice Command',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Colors.black87,
-                fontWeight: FontWeight.w500,
+    return Obx(
+      () => GestureDetector(
+        onTap: () => controller.listenForCommand(),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: EdgeInsets.symmetric(horizontal: 40.w),
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: controller.isListening.value
+                ? Colors.redAccent
+                : Colors.white,
+            borderRadius: BorderRadius.circular(30.r),
+            boxShadow: [
+              if (controller.isListening.value)
+                BoxShadow(
+                  color: Colors.redAccent.withOpacity(0.5),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                controller.isListening.value ? Icons.mic : Icons.mic_none,
+                color: controller.isListening.value
+                    ? Colors.white
+                    : Colors.black87,
+                size: 20.sp,
               ),
-            ),
-          ],
+              SizedBox(width: 8.w),
+              Flexible(
+                child: Text(
+                  controller.commandStatus.value,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: controller.isListening.value
+                        ? Colors.white
+                        : Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

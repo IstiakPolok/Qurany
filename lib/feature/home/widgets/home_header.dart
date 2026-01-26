@@ -95,7 +95,7 @@ class HomeHeader extends StatelessWidget {
               child: Center(
                 child: DayProgressWidget(
                   currentDay: 1,
-                  totalDays: 3, // Based on the 3 segments in the image
+                  totalDays: 5, // Based on the 5 segments in the image
                 ),
               ),
             ),

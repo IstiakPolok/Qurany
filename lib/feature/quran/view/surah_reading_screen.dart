@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -5,11 +6,14 @@ import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/quran/view/listen_mode_screen.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
+import 'package:qurany/feature/quran/model/tafsir_model.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 // Controller
 class SurahReadingController extends GetxController {
   final QuranService _quranService = QuranService();
   final int surahId;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   RxInt selectedViewTab =
       0.obs; // 0 = Translation, 1 = Transliteration, 2 = Tafsir
@@ -25,12 +29,77 @@ class SurahReadingController extends GetxController {
   var verses = <VerseDetailModel>[].obs;
   Rx<AudioDetailModel?> audio = Rx<AudioDetailModel?>(null);
 
+  // Tafsir state
+  RxList<TafsirModel> tafsirs = <TafsirModel>[].obs;
+  RxBool isLoadingTafsir = false.obs;
+  RxInt tafsirPage = 1.obs;
+  RxBool hasMoreTafsir = true.obs;
+
   SurahReadingController({required this.surahId});
 
   @override
   void onInit() {
     super.onInit();
     fetchSurahDetails();
+    fetchTafsir();
+
+    // Listen to player state changes
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      isPlaying.value = state == PlayerState.playing;
+      if (state == PlayerState.completed) {
+        _playNextVerse();
+      }
+    });
+  }
+
+  void _playNextVerse() {
+    if (currentPlayingVerse.value == -1) return;
+
+    int currentIndex = verses.indexWhere(
+      (v) => v.verseId == currentPlayingVerse.value,
+    );
+    if (currentIndex != -1 && currentIndex < verses.length - 1) {
+      playVerse(verses[currentIndex + 1].verseId);
+    } else {
+      isPlaying.value = false;
+      currentPlayingVerse.value = -1;
+    }
+  }
+
+  void playNextVerse() => _playNextVerse();
+
+  void playPreviousVerse() {
+    if (currentPlayingVerse.value == -1) return;
+
+    int currentIndex = verses.indexWhere(
+      (v) => v.verseId == currentPlayingVerse.value,
+    );
+    if (currentIndex != -1 && currentIndex > 0) {
+      playVerse(verses[currentIndex - 1].verseId);
+    }
+  }
+
+  Future<void> changePlaybackSpeed() async {
+    List<double> speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+    int currentIndex = speeds.indexOf(playbackSpeed.value);
+    if (currentIndex == -1) currentIndex = 2; // Default to 1.0 if not found
+    double nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+    playbackSpeed.value = nextSpeed;
+
+    // Apply speed immediately if player is active (playing or paused with source)
+    if (currentPlayingVerse.value != -1) {
+      try {
+        await _audioPlayer.setPlaybackRate(nextSpeed);
+      } catch (e) {
+        print("Error setting playback speed: $e");
+      }
+    }
+  }
+
+  @override
+  void onClose() {
+    _audioPlayer.dispose();
+    super.onClose();
   }
 
   Future<void> fetchSurahDetails() async {
@@ -40,15 +109,59 @@ class SurahReadingController extends GetxController {
       final response = await _quranService.fetchSurahById(
         surahId,
         page: currentPage.value,
-        limit: 20,
+        limit: 10,
       );
       verses.assignAll(response.verses);
       audio.value = response.audio;
-      hasMoreVerses.value = response.verses.length >= 20;
+      hasMoreVerses.value = response.verses.length >= 10;
     } catch (e) {
       print("Error fetching surah details: $e");
     } finally {
       isLoading(false);
+    }
+  }
+
+  Future<void> fetchTafsir() async {
+    try {
+      isLoadingTafsir(true);
+      tafsirPage.value = 1;
+      final response = await _quranService.fetchTafsir(
+        surahId,
+        page: tafsirPage.value,
+        limit: 10,
+      );
+      tafsirs.assignAll(response.tafsirs);
+      hasMoreTafsir.value = response.tafsirs.length >= 10;
+    } catch (e) {
+      print("Error fetching tafsir: $e");
+    } finally {
+      isLoadingTafsir(false);
+    }
+  }
+
+  Future<void> loadMoreTafsir() async {
+    if (isLoadingMore.value || !hasMoreTafsir.value) return;
+
+    try {
+      isLoadingMore(true);
+      tafsirPage.value++;
+      final response = await _quranService.fetchTafsir(
+        surahId,
+        page: tafsirPage.value,
+        limit: 10,
+      );
+
+      if (response.tafsirs.isEmpty) {
+        hasMoreTafsir.value = false;
+      } else {
+        tafsirs.addAll(response.tafsirs);
+        hasMoreTafsir.value = response.tafsirs.length >= 10;
+      }
+    } catch (e) {
+      print("Error loading more tafsir: $e");
+      tafsirPage.value--; // Revert page on error
+    } finally {
+      isLoadingMore(false);
     }
   }
 
@@ -61,14 +174,14 @@ class SurahReadingController extends GetxController {
       final response = await _quranService.fetchSurahById(
         surahId,
         page: currentPage.value,
-        limit: 20,
+        limit: 10,
       );
 
       if (response.verses.isEmpty) {
         hasMoreVerses.value = false;
       } else {
         verses.addAll(response.verses);
-        hasMoreVerses.value = response.verses.length >= 20;
+        hasMoreVerses.value = response.verses.length >= 10;
       }
     } catch (e) {
       print("Error loading more verses: $e");
@@ -78,13 +191,68 @@ class SurahReadingController extends GetxController {
     }
   }
 
-  void togglePlayPause() {
-    isPlaying.value = !isPlaying.value;
+  void togglePlayPause() async {
+    if (isPlaying.value) {
+      await _audioPlayer.pause();
+    } else {
+      if (currentPlayingVerse.value != -1) {
+        // Resume
+        await _audioPlayer.resume();
+      } else {
+        // Start from beginning or handle logic
+      }
+    }
   }
 
-  void playVerse(int verseNumber) {
-    currentPlayingVerse.value = verseNumber;
-    isPlaying.value = true;
+  Future<void> playVerse(int verseId) async {
+    // If tapping the same verse that is playing/paused
+    if (currentPlayingVerse.value == verseId) {
+      togglePlayPause();
+      return;
+    }
+
+    try {
+      currentPlayingVerse.value = verseId;
+
+      // Find the verse object
+      final verse = verses.firstWhere((v) => v.verseId == verseId);
+
+      // Get preferred reciter
+      String preferredReciterName = await SharedPreferencesHelper.getReciter();
+      String audioKey = _mapReciterNameToKey(preferredReciterName);
+
+      String? audioUrl;
+
+      if (verse.audio.containsKey(audioKey)) {
+        audioUrl = verse.audio[audioKey]?.url;
+      } else if (verse.audio.isNotEmpty) {
+        // Fallback to first available
+        audioUrl = verse.audio.values.first.url;
+      }
+
+      if (audioUrl != null) {
+        await _audioPlayer.stop();
+        await _audioPlayer.setSourceUrl(audioUrl);
+        await _audioPlayer.setPlaybackRate(playbackSpeed.value);
+        await _audioPlayer.resume();
+      } else {
+        Get.snackbar("Error", "Audio not available for this verse");
+      }
+    } catch (e) {
+      print("Error playing verse: $e");
+      Get.snackbar("Error", "Failed to play audio");
+    }
+  }
+
+  String _mapReciterNameToKey(String name) {
+    // Determine key based on stored name
+    // Keys based on API response: mishary, abuBakar, nasser, yasser
+    if (name.contains("Mishary")) return "mishary";
+    if (name.contains("Abu Bakr")) return "abuBakar";
+    if (name.contains("Nasser")) return "nasser";
+    if (name.contains("Yasser")) return "yasser";
+    // Fallback default
+    return "mishary";
   }
 }
 
@@ -95,15 +263,17 @@ class SurahReadingScreen extends StatelessWidget {
   final String meaning;
   final String origin;
   final int ayaCount;
+  final String translation;
 
   const SurahReadingScreen({
     super.key,
     required this.surahId,
-    this.surahName = "Al-Faatiha",
-    this.arabicName = "الفاتحة",
-    this.meaning = "Al-Faatiha",
-    this.origin = "MECCAN",
-    this.ayaCount = 7,
+    required this.surahName,
+    required this.arabicName,
+    required this.meaning,
+    required this.origin,
+    required this.ayaCount,
+    required this.translation,
   });
 
   @override
@@ -415,7 +585,7 @@ class SurahReadingScreen extends StatelessWidget {
                           "الفاتحة",
                           style: TextStyle(
                             fontSize: 24.sp,
-                            fontFamily: 'Amiri',
+                            fontFamily: 'Arial',
                           ),
                         ),
                       ],
@@ -574,7 +744,7 @@ class SurahReadingScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "THE OPENER",
+                  translation.toUpperCase(),
                   style: TextStyle(
                     fontSize: 11.sp,
                     color: Colors.black,
@@ -600,7 +770,7 @@ class SurahReadingScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 28.sp,
                 color: primaryColor,
-                fontFamily: 'Amiri',
+                fontFamily: 'Arial',
               ),
               textDirection: TextDirection.rtl,
             ),
@@ -754,7 +924,7 @@ class SurahReadingScreen extends StatelessWidget {
 
   Widget _buildTafsirList(SurahReadingController controller) {
     return Obx(() {
-      if (controller.isLoading.value) {
+      if (controller.isLoadingTafsir.value && controller.tafsirs.isEmpty) {
         return const Center(
           child: Padding(
             padding: EdgeInsets.all(32.0),
@@ -762,11 +932,11 @@ class SurahReadingScreen extends StatelessWidget {
           ),
         );
       }
-      if (controller.verses.isEmpty) {
+      if (controller.tafsirs.isEmpty) {
         return const Center(
           child: Padding(
             padding: EdgeInsets.all(32.0),
-            child: Text("No verses found"),
+            child: Text("No tafsir found"),
           ),
         );
       }
@@ -778,17 +948,64 @@ class SurahReadingScreen extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: controller.verses.length + 1,
+            itemCount: controller.tafsirs.length + 1,
             itemBuilder: (context, index) {
-              if (index == controller.verses.length) {
+              if (index == controller.tafsirs.length) {
                 // Load More button
-                return _buildLoadMoreButton(controller);
+                return _buildLoadMoreTafsirButton(controller);
               }
-              final verse = controller.verses[index];
-              return _buildTafsirCard(verse, controller);
+              final tafsir = controller.tafsirs[index];
+              return _buildTafsirCard(tafsir, controller);
             },
           ),
         ],
+      );
+    });
+  }
+
+  Widget _buildLoadMoreTafsirButton(SurahReadingController controller) {
+    return Obx(() {
+      if (!controller.hasMoreTafsir.value) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          child: Center(
+            child: Text(
+              "No more tafsir",
+              style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+            ),
+          ),
+        );
+      }
+
+      if (controller.isLoadingMore.value) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          child: const Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+        child: Center(
+          child: ElevatedButton(
+            onPressed: () => controller.loadMoreTafsir(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 12.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+            ),
+            child: Text(
+              "Load More Tafsir",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
       );
     });
   }
@@ -938,21 +1155,26 @@ class SurahReadingScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Play button
-              GestureDetector(
-                onTap: () => controller.playVerse(verse.verseId),
-                child: Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F5E9),
-                    borderRadius: BorderRadius.circular(20.r),
+              Obx(() {
+                final isCurrent =
+                    controller.currentPlayingVerse.value == verse.verseId;
+                final isPlaying = controller.isPlaying.value;
+                return GestureDetector(
+                  onTap: () => controller.playVerse(verse.verseId),
+                  child: Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F5E9),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Icon(
+                      isCurrent && isPlaying ? Icons.pause : Icons.play_arrow,
+                      color: const Color(0xFF2E7D32),
+                      size: 20.sp,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.play_arrow,
-                    color: const Color(0xFF2E7D32),
-                    size: 20.sp,
-                  ),
-                ),
-              ),
+                );
+              }),
               SizedBox(width: 12.w),
               // Arabic text with verse number
               Expanded(
@@ -987,7 +1209,7 @@ class SurahReadingScreen extends StatelessWidget {
                             verse.text,
                             style: TextStyle(
                               fontSize: 22.sp,
-                              fontFamily: 'Amiri',
+                              fontFamily: 'Arial',
                               height: 1.8,
                             ),
                             textDirection: TextDirection.rtl,
@@ -1081,22 +1303,29 @@ class SurahReadingScreen extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
-                onTap: () => controller.playVerse(verse.verseId),
-                child: Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFAFAFA),
-                    borderRadius: BorderRadius.circular(50.r),
-                    border: Border.all(color: Colors.grey[100]!),
+              Obx(() {
+                final isCurrent =
+                    controller.currentPlayingVerse.value == verse.verseId;
+                final isPlaying = controller.isPlaying.value;
+                return GestureDetector(
+                  onTap: () => controller.playVerse(verse.verseId),
+                  child: Container(
+                    padding: EdgeInsets.all(8.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAFAFA),
+                      borderRadius: BorderRadius.circular(50.r),
+                      border: Border.all(color: Colors.grey[100]!),
+                    ),
+                    child: Icon(
+                      isCurrent && isPlaying
+                          ? Icons.pause
+                          : Icons.play_arrow_rounded,
+                      color: Colors.black87,
+                      size: 24.sp,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.black87,
-                    size: 24.sp,
-                  ),
-                ),
-              ),
+                );
+              }),
               SizedBox(width: 12.w),
               Expanded(
                 child: Row(
@@ -1108,7 +1337,7 @@ class SurahReadingScreen extends StatelessWidget {
                         verse.text,
                         style: TextStyle(
                           fontSize: 22.sp,
-                          fontFamily: 'Amiri',
+                          fontFamily: 'Arial',
                           height: 1.8,
                         ),
                         textDirection: TextDirection.rtl,
@@ -1143,9 +1372,9 @@ class SurahReadingScreen extends StatelessWidget {
 
           SizedBox(height: 16.h),
 
-          // Note: Transliteration not provided by API, showing translation instead
+          // Transliteration
           Text(
-            verse.translation,
+            verse.transliteration,
             style: TextStyle(
               fontSize: 15.sp,
               color: const Color(0xFF2E7D32),
@@ -1203,7 +1432,7 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   Widget _buildTafsirCard(
-    VerseDetailModel verse,
+    TafsirModel tafsir,
     SurahReadingController controller,
   ) {
     return Container(
@@ -1222,10 +1451,10 @@ class SurahReadingScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  verse.text,
+                  tafsir.verse,
                   style: TextStyle(
                     fontSize: 20.sp,
-                    fontFamily: 'Amiri',
+                    fontFamily: 'Arial',
                     height: 1.8,
                   ),
                   textDirection: TextDirection.rtl,
@@ -1242,7 +1471,7 @@ class SurahReadingScreen extends StatelessWidget {
                     height: 24.w,
                   ),
                   Text(
-                    verse.ayate,
+                    tafsir.ayate,
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 10.sp,
@@ -1260,7 +1489,7 @@ class SurahReadingScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Tafsir",
+                "Tafsir - Verse ${tafsir.verseId}",
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
@@ -1272,7 +1501,7 @@ class SurahReadingScreen extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            "Note: Tafsir details not provided by API. Showing translation.",
+            tafsir.text,
             style: TextStyle(
               fontSize: 14.sp,
               color: Colors.grey[800],
@@ -1303,13 +1532,16 @@ class SurahReadingScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // Speed button
-            Obx(
-              () => Text(
-                "${controller.playbackSpeed.value}x",
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+            GestureDetector(
+              onTap: () => controller.changePlaybackSpeed(),
+              child: Obx(
+                () => Text(
+                  "${controller.playbackSpeed.value}x",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -1317,7 +1549,14 @@ class SurahReadingScreen extends StatelessWidget {
             // Playback controls
             Row(
               children: [
-                Icon(Icons.skip_previous, color: Colors.grey[700], size: 28.sp),
+                GestureDetector(
+                  onTap: () => controller.playPreviousVerse(),
+                  child: Icon(
+                    Icons.skip_previous,
+                    color: Colors.grey[700],
+                    size: 28.sp,
+                  ),
+                ),
                 SizedBox(width: 16.w),
                 Obx(
                   () => GestureDetector(
@@ -1339,13 +1578,26 @@ class SurahReadingScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 16.w),
-                Icon(Icons.skip_next, color: Colors.grey[700], size: 28.sp),
+                GestureDetector(
+                  onTap: () => controller.playNextVerse(),
+                  child: Icon(
+                    Icons.skip_next,
+                    color: Colors.grey[700],
+                    size: 28.sp,
+                  ),
+                ),
               ],
             ),
 
             // Listen Mode button
             GestureDetector(
-              onTap: () => Get.to(() => const ListenModeScreen()),
+              onTap: () => Get.to(
+                () => ListenModeScreen(
+                  surahId: surahId,
+                  surahName: surahName,
+                  arabicName: arabicName,
+                ),
+              ),
               child: Icon(
                 Icons.headphones,
                 color: Colors.grey[600],

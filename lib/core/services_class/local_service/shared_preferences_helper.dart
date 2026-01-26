@@ -140,4 +140,62 @@ class SharedPreferencesHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_id');
   }
+
+  // Save compass style preference
+  static Future<void> saveCompassStyle(String style) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('compass_style', style);
+  }
+
+  // Retrieve compass style preference
+  static Future<String> getCompassStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('compass_style') ?? 'Classic'; // Default to Classic
+  }
+
+  // --- Preference Flow Helpers ---
+
+  // Language
+  static Future<void> saveLanguage(String language) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_language', language);
+  }
+
+  static Future<String> getLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('app_language') ?? 'English';
+  }
+
+  // Arabic Script
+  static Future<void> saveArabicScript(String script) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('arabic_script', script);
+  }
+
+  static Future<String> getArabicScript() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('arabic_script') ?? 'Imlaei';
+  }
+
+  // Reciter
+  static Future<void> saveReciter(String reciter) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('quran_reciter', reciter);
+  }
+
+  static Future<String> getReciter() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('quran_reciter') ?? 'Mishary Rashid Alafasy';
+  }
+
+  // Goals (List<String>)
+  static Future<void> saveGoals(List<String> goals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('user_goals', goals);
+  }
+
+  static Future<List<String>> getGoals() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('user_goals') ?? ['Memorize Quran'];
+  }
 }

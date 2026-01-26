@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
+import 'package:qurany/feature/quran/view/surah_reading_screen.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Removed as not used and caused error
 
 class QuranTabSection extends StatefulWidget {
@@ -17,20 +19,44 @@ class _QuranTabSectionState extends State<QuranTabSection> {
   final QuranService _quranService = QuranService();
   List<SurahModel> _allSurahs = [];
   List<SurahModel> _filteredSurahs = [];
+  List<JuzModel> _allJuz = [];
+  List<JuzModel> _filteredJuz = [];
   bool _isLoading = true;
+  bool _isLoadingJuz = false;
   String? _errorMessage;
   String _selectedTab = "Surah";
 
   // Pagination state
   int _currentPage = 1;
-  int _totalItems = 0;
-  final int _pageSize = 10;
+  int _totalItems = 114;
+  final int _pageSize = 114;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
     _fetchSurahs();
+    _fetchJuz();
+  }
+
+  Future<void> _fetchJuz() async {
+    try {
+      setState(() {
+        _isLoadingJuz = true;
+      });
+      final juzList = await _quranService.fetchJuz();
+      setState(() {
+        _allJuz = juzList;
+        _filteredJuz = juzList;
+        _isLoadingJuz = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingJuz = false;
+        });
+      }
+    }
   }
 
   Future<void> _fetchSurahs({int? page}) async {
@@ -76,10 +102,16 @@ class _QuranTabSectionState extends State<QuranTabSection> {
         final matchesName =
             surah.englishName.toLowerCase().contains(query) ||
             surah.arabicName.contains(query);
-        // Can add Juzz logic here if Juzz data exists.
-        // For now, if "Juzz" tab is selected, we might want to show different data,
-        // but based on "data from list" request and current model, we will stick to Surah search.
         return matchesName;
+      }).toList();
+
+      // Filter Juz based on surah names within them
+      _filteredJuz = _allJuz.where((juz) {
+        return juz.surahs.any(
+          (surah) =>
+              surah.englishName.toLowerCase().contains(query) ||
+              surah.arabicName.contains(query),
+        );
       }).toList();
     });
   }
@@ -96,67 +128,108 @@ class _QuranTabSectionState extends State<QuranTabSection> {
     int totalPages = (_totalItems / _pageSize).ceil();
     if (totalPages <= 1) return const SizedBox.shrink();
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Previous Button (optional, but good for UX)
-        if (_currentPage > 1)
-          IconButton(
-            onPressed: () => _fetchSurahs(page: _currentPage - 1),
-            icon: const Icon(Icons.chevron_left),
-          ),
-
-        // Page Numbers
-        ...List.generate(totalPages, (index) {
-          int pageNum = index + 1;
-          // Only show 5 pages at a time or something similar if total pages are many
-          // For now, simple list
-          if (pageNum == _currentPage) {
-            return Container(
-              margin: EdgeInsets.symmetric(horizontal: 4.w),
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                shape: BoxShape.circle,
-              ),
-              child: Text(
-                "$pageNum",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 16.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Previous Button
+          if (_currentPage > 1)
+            GestureDetector(
+              onTap: () => _fetchSurahs(page: _currentPage - 1),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  border: Border.all(color: primaryColor),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.chevron_left, color: primaryColor, size: 16.sp),
+                    SizedBox(width: 4.w),
+                    Text(
+                      "Previous",
+                      style: TextStyle(color: primaryColor, fontSize: 12.sp),
+                    ),
+                  ],
                 ),
               ),
-            );
-          } else if (pageNum == 1 ||
-              pageNum == totalPages ||
-              (pageNum >= _currentPage - 1 && pageNum <= _currentPage + 1)) {
-            return GestureDetector(
-              onTap: () => _fetchSurahs(page: pageNum),
-              child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 4.w),
-                padding: EdgeInsets.all(8.w),
-                child: Text("$pageNum"),
-              ),
-            );
-          } else if (pageNum == _currentPage - 2 ||
-              pageNum == _currentPage + 2) {
-            return const Text("...");
-          }
-          return const SizedBox.shrink();
-        }).where((w) => w is! SizedBox).toList(),
-
-        // Next Button
-        if (_currentPage < totalPages)
-          TextButton(
-            onPressed: () => _fetchSurahs(page: _currentPage + 1),
-            child: Row(
-              children: [
-                Text("Next", style: TextStyle(color: primaryColor)),
-                Icon(Icons.chevron_right, color: primaryColor),
-              ],
             ),
-          ),
-      ],
+
+          SizedBox(width: 12.w),
+
+          // Page Numbers
+          ...List.generate(totalPages, (index) {
+            int pageNum = index + 1;
+
+            // Show first page, last page, current page and adjacent pages
+            if (pageNum == 1 ||
+                pageNum == totalPages ||
+                (pageNum >= _currentPage - 1 && pageNum <= _currentPage + 1)) {
+              return GestureDetector(
+                onTap: () => _fetchSurahs(page: pageNum),
+                child: Container(
+                  margin: EdgeInsets.symmetric(horizontal: 4.w),
+                  padding: EdgeInsets.all(10.w),
+                  decoration: BoxDecoration(
+                    color: pageNum == _currentPage
+                        ? primaryColor
+                        : Colors.transparent,
+                    border: Border.all(color: primaryColor, width: 1.5),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    "$pageNum",
+                    style: TextStyle(
+                      color: pageNum == _currentPage
+                          ? Colors.white
+                          : primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.sp,
+                    ),
+                  ),
+                ),
+              );
+            } else if (pageNum == _currentPage - 2 ||
+                pageNum == _currentPage + 2) {
+              // Show ellipsis
+              return Container(
+                margin: EdgeInsets.symmetric(horizontal: 4.w),
+                child: Text(
+                  "...",
+                  style: TextStyle(color: Colors.grey, fontSize: 12.sp),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+
+          SizedBox(width: 12.w),
+
+          // Next Button
+          if (_currentPage < totalPages)
+            GestureDetector(
+              onTap: () => _fetchSurahs(page: _currentPage + 1),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      "Next",
+                      style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                    ),
+                    SizedBox(width: 4.w),
+                    Icon(Icons.chevron_right, color: Colors.white, size: 16.sp),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -260,15 +333,24 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                           _buildPagination(),
                         ],
                       ))
-              : ListView.separated(
-                  physics: const NeverScrollableScrollPhysics(),
-                  shrinkWrap: true,
-                  itemCount: JuzModel.sampleJuz.length,
-                  separatorBuilder: (_, __) => SizedBox(height: 16.h),
-                  itemBuilder: (context, index) {
-                    return _buildJuzItem(JuzModel.sampleJuz[index]);
-                  },
-                ),
+              : (_isLoadingJuz
+                    ? const Center(child: CircularProgressIndicator())
+                    : _filteredJuz.isEmpty
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20.0),
+                          child: Text("No Juz found"),
+                        ),
+                      )
+                    : ListView.separated(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        itemCount: _filteredJuz.length,
+                        separatorBuilder: (_, __) => SizedBox(height: 16.h),
+                        itemBuilder: (context, index) {
+                          return _buildJuzItem(_filteredJuz[index]);
+                        },
+                      )),
           SizedBox(height: 20.h),
         ],
       ),
@@ -313,73 +395,91 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           ),
           child: Column(
             children: juz.surahs.map((surah) {
-              return Padding(
-                padding: EdgeInsets.only(
-                  bottom: juz.surahs.last == surah ? 0 : 12.h,
-                ),
-                child: Row(
-                  children: [
-                    _buildStarNumber(surah.number),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              return GestureDetector(
+                onTap: () {
+                  Get.to(
+                    () => SurahReadingScreen(
+                      surahId: surah.number,
+                      surahName: surah.englishName,
+                      arabicName: surah.arabicName,
+                      translation: surah.translation,
+                      origin: surah.revelationType,
+                      ayaCount: surah.totalVerses,
+                      meaning: surah.translation,
+                    ),
+                  );
+                },
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: juz.surahs.last == surah ? 0 : 12.h,
+                  ),
+                  child: Row(
+                    children: [
+                      _buildStarNumber(surah.number),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              surah.englishName,
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              surah.revelationType,
+                              style: TextStyle(
+                                fontSize: 10.sp,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.done_all,
+                                  size: 12.sp,
+                                  color: Colors.green,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  "0 / 286 Aya", // Placeholder for actual progress
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            surah.englishName,
+                            surah.arabicName,
                             style: TextStyle(
-                              fontSize: 14.sp,
+                              fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
+                              fontFamily: 'Arial',
+                              color: primaryColor,
                             ),
                           ),
-                          SizedBox(height: 2.h),
                           Text(
-                            surah.revelationType,
+                            surah.versesRange,
                             style: TextStyle(
                               fontSize: 10.sp,
                               color: Colors.grey,
                             ),
                           ),
-                          SizedBox(height: 4.h),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.done_all,
-                                size: 12.sp,
-                                color: Colors.green,
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                "0 / 286 Aya", // Placeholder for actual progress
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          surah.arabicName,
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Amiri',
-                            color: primaryColor,
-                          ),
-                        ),
-                        Text(
-                          surah.versesRange,
-                          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }).toList(),
@@ -449,28 +549,51 @@ class _QuranTabSectionState extends State<QuranTabSection> {
   }
 
   Widget _buildSurahItem(SurahModel surah) {
-    return Container(
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        Get.to(
+          () => SurahReadingScreen(
+            surahId: surah.number,
+            surahName: surah.englishName,
+            arabicName: surah.arabicName,
+            translation: surah.translation,
+            origin: surah.revelationType,
+            ayaCount: surah.totalVerses,
+            meaning: surah.englishName,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Transform.rotate(
-                angle: 45 * 3.1415926535 / 180,
-                child: Container(
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Transform.rotate(
+                  angle: 45 * 3.1415926535 / 180,
+                  child: Container(
+                    width: 32.w,
+                    height: 32.w,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: primaryColor, width: 1.5),
+                      borderRadius: BorderRadius.circular(3.r),
+                    ),
+                  ),
+                ),
+                Container(
                   width: 32.w,
                   height: 32.w,
                   decoration: BoxDecoration(
@@ -478,80 +601,72 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                     borderRadius: BorderRadius.circular(3.r),
                   ),
                 ),
-              ),
-              Container(
-                width: 32.w,
-                height: 32.w,
-                decoration: BoxDecoration(
-                  border: Border.all(color: primaryColor, width: 1.5),
-                  borderRadius: BorderRadius.circular(3.r),
-                ),
-              ),
-              Text(
-                "${surah.number}",
-                style: TextStyle(
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.bold,
-                  color: primaryColor,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 Text(
-                  surah.englishName,
+                  "${surah.number}",
                   style: TextStyle(
+                    fontSize: 10.sp,
                     fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
+                    color: primaryColor,
                   ),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Text(
-                      surah.revelationType.toUpperCase(),
-                      style: TextStyle(color: Colors.grey, fontSize: 10.sp),
-                    ),
-                    SizedBox(width: 4.w),
-                  ],
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Icon(Icons.done_all, size: 14.sp, color: Colors.green),
-                    SizedBox(width: 4.w),
-                    Text(
-                      "${surah.revealedVerses} / ${surah.totalVerses} Aya",
-                      style: TextStyle(color: Colors.grey, fontSize: 10.sp),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                surah.arabicName,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.sp,
-                  fontFamily: 'Amiri', // Ensure font covers Arabic
-                  color: primaryColor,
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    surah.englishName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.sp,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Text(
+                        surah.revelationType.toUpperCase(),
+                        style: TextStyle(color: Colors.grey, fontSize: 10.sp),
+                      ),
+                      SizedBox(width: 4.w),
+                    ],
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(Icons.done_all, size: 14.sp, color: Colors.green),
+                      SizedBox(width: 4.w),
+                      Text(
+                        "${surah.revealedVerses} / ${surah.totalVerses} Aya",
+                        style: TextStyle(color: Colors.grey, fontSize: 10.sp),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  surah.arabicName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                    fontFamily: 'Arial', // Ensure font covers Arabic
+                    color: primaryColor,
+                  ),
                 ),
-              ),
-              Text(
-                "${surah.totalVerses} VERSES",
-                style: TextStyle(color: Colors.grey, fontSize: 10.sp),
-              ),
-            ],
-          ),
-        ],
+                Text(
+                  "${surah.totalVerses} VERSES",
+                  style: TextStyle(color: Colors.grey, fontSize: 10.sp),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

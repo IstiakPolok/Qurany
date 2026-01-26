@@ -368,7 +368,7 @@ class _BookmarksScreenState extends State<BookmarksScreen>
               ayah['arabic']!,
               style: TextStyle(
                 fontSize: 20.sp,
-                fontFamily: 'Amiri',
+                fontFamily: 'Arial',
                 height: 1.8,
               ),
               textAlign: TextAlign.right,

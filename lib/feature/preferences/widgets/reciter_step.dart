@@ -1,9 +1,9 @@
-import 'dart:ffi';
-
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class ReciterStep extends StatefulWidget {
   const ReciterStep({super.key});
@@ -14,14 +14,53 @@ class ReciterStep extends StatefulWidget {
 
 class _ReciterStepState extends State<ReciterStep> {
   String selectedReciter = 'Mishary Rashid Alafasy';
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
-  final List<String> reciters = [
-    "Mishary Rashid Alafasy",
-    "Abdul Basit Abdul Samad",
-    "Saad Al-Ghamdi",
-    "Maher Al Muaiqly",
-    "Ahmed Al Ajmy",
+  final List<Map<String, String>> reciters = [
+    {
+      "name": "Mishary Rashid Alafasy",
+      "path": "audio/Mishary Rashid Al-Afasy.mp3",
+    },
+    {"name": "Abu Bakr Al-Shatri", "path": "audio/Abu Bakr Al-Shatri.mp3"},
+    {"name": "Nasser Al-Qatami", "path": "audio/Nasser Al-Qatami.mp3"},
+    {"name": "Yasser Al-Dosari", "path": "audio/Yasser Al-Dosari.mp3"},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReciter();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadReciter() async {
+    final reciter = await SharedPreferencesHelper.getReciter();
+    if (mounted) {
+      setState(() {
+        selectedReciter = reciter;
+      });
+    }
+  }
+
+  Future<void> _selectReciter(String reciter, String audioPath) async {
+    setState(() {
+      selectedReciter = reciter;
+    });
+    await SharedPreferencesHelper.saveReciter(reciter);
+
+    // Play preview
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource(audioPath));
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +149,8 @@ class _ReciterStepState extends State<ReciterStep> {
             itemCount: reciters.length,
             separatorBuilder: (context, index) => SizedBox(height: 12.h),
             itemBuilder: (context, index) {
-              return _buildReciterOption(reciters[index]);
+              final reciter = reciters[index];
+              return _buildReciterOption(reciter['name']!, reciter['path']!);
             },
           ),
         ],
@@ -118,14 +158,10 @@ class _ReciterStepState extends State<ReciterStep> {
     );
   }
 
-  Widget _buildReciterOption(String name) {
+  Widget _buildReciterOption(String name, String path) {
     bool isSelected = selectedReciter == name;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedReciter = name;
-        });
-      },
+      onTap: () => _selectReciter(name, path),
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(

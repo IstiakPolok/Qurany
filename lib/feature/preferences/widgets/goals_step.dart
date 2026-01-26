@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class GoalsStep extends StatefulWidget {
   const GoalsStep({super.key});
@@ -12,6 +13,35 @@ class GoalsStep extends StatefulWidget {
 class _GoalsStepState extends State<GoalsStep> {
   // Using Set for multi-selection
   final Set<String> _selectedGoals = {'Memorize Quran'};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoals();
+  }
+
+  Future<void> _loadGoals() async {
+    final goals = await SharedPreferencesHelper.getGoals();
+    if (mounted) {
+      if (goals.isNotEmpty) {
+        setState(() {
+          _selectedGoals.clear();
+          _selectedGoals.addAll(goals);
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleGoal(String title) async {
+    setState(() {
+      if (_selectedGoals.contains(title)) {
+        _selectedGoals.remove(title);
+      } else {
+        _selectedGoals.add(title);
+      }
+    });
+    await SharedPreferencesHelper.saveGoals(_selectedGoals.toList());
+  }
 
   final List<Map<String, dynamic>> goals = [
     {'title': 'Memorize Quran', 'iconPath': 'assets/icons/MemorizeQuran.png'},
@@ -66,15 +96,7 @@ class _GoalsStepState extends State<GoalsStep> {
     bool isSelected = _selectedGoals.contains(title);
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            _selectedGoals.remove(title);
-          } else {
-            _selectedGoals.add(title);
-          }
-        });
-      },
+      onTap: () => _toggleGoal(title),
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(

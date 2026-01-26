@@ -3,11 +3,14 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_windows
   cloud_firestore
   connectivity_plus
   firebase_auth
   firebase_core
   geolocator_windows
+  permission_handler_windows
+  speech_to_text_windows
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

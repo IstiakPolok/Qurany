@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/feature/prayer/controller/prayer_controller.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 import '../../compass/widgets/classicCompass.dart';
 import '../../compass/widgets/modernCompass.dart';
@@ -19,14 +22,60 @@ class QiblaCompassScreen extends StatefulWidget {
 class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
   bool _showExpandedCompass = false;
   String _selectedCompass = 'Classic';
-  double _qiblaDirection = 261.0; // Default Qibla direction
-  double _distanceToMakkah = 345.66; // km
-  double _currentHeading = 245.0;
+  double _qiblaDirection = 0.0; // Will be updated from API
+  double _distanceToMakkah = 0.0; // Will be updated from API
+  double _currentHeading = 0.0;
+
+  PrayerController? prayerController;
 
   @override
   void initState() {
     super.initState();
+    _loadSavedCompassStyle();
+    _initializePrayerController();
     _determinePosition();
+  }
+
+  void _loadSavedCompassStyle() async {
+    final savedStyle = await SharedPreferencesHelper.getCompassStyle();
+    if (mounted) {
+      setState(() {
+        _selectedCompass = savedStyle;
+      });
+    }
+  }
+
+  void _saveCompassStyle(String style) async {
+    await SharedPreferencesHelper.saveCompassStyle(style);
+  }
+
+  void _initializePrayerController() {
+    try {
+      prayerController = Get.find<PrayerController>();
+      _updateQiblaFromAPI();
+    } catch (e) {
+      // PrayerController not found, initialize a new one
+      prayerController = Get.put(PrayerController());
+
+      // Listen for prayer data updates
+      ever(prayerController!.prayerData, (prayerData) {
+        if (prayerData != null) {
+          _updateQiblaFromAPI();
+        }
+      });
+    }
+  }
+
+  void _updateQiblaFromAPI() {
+    if (prayerController?.prayerData.value != null) {
+      final qiblaData = prayerController!.prayerData.value!.qibla;
+      if (mounted) {
+        setState(() {
+          _qiblaDirection = qiblaData.direction.degrees;
+          _distanceToMakkah = qiblaData.distance.value;
+        });
+      }
+    }
   }
 
   Future<void> _determinePosition() async {
@@ -205,26 +254,26 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           ),
         ),
         // Back button
-        Positioned(
-          top: 50.h,
-          left: 16.w,
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Icon(
-                Icons.arrow_back_ios_new,
-                size: 16.sp,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-        ),
+        // Positioned(
+        //   top: 50.h,
+        //   left: 16.w,
+        //   child: GestureDetector(
+        //     onTap: () => Navigator.pop(context),
+        //     child: Container(
+        //       padding: EdgeInsets.all(8.w),
+        //       decoration: BoxDecoration(
+        //         color: Colors.white,
+        //         shape: BoxShape.circle,
+        //         border: Border.all(color: Colors.grey[300]!),
+        //       ),
+        //       child: Icon(
+        //         Icons.arrow_back_ios_new,
+        //         size: 16.sp,
+        //         color: Colors.black87,
+        //       ),
+        //     ),
+        //   ),
+        // ),
         // Expand map button
         Positioned(
           top: 50.h,
@@ -247,58 +296,72 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
       color: const Color(0xFFFFF9F0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Next Prayer",
-                style: TextStyle(
-                  color: const Color(0xFF2E7D32),
-                  fontSize: 12.sp,
-                ),
-              ),
-              SizedBox(height: 4.h),
-              Row(
-                children: [
-                  Icon(
-                    Icons.wb_sunny_outlined,
-                    size: 18.sp,
-                    color: Colors.grey[600],
+      child: Obx(() {
+        if (prayerController == null) {
+          return const SizedBox();
+        }
+
+        final nextPrayer = prayerController!.getNextPrayerName();
+        final timeRemaining = prayerController!.getTimeRemaining();
+        final nextPrayerTime =
+            prayerController!.prayerData.value?.times[nextPrayer] ?? '00:00';
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Next Prayer",
+                  style: TextStyle(
+                    color: const Color(0xFF2E7D32),
+                    fontSize: 12.sp,
                   ),
-                  SizedBox(width: 6.w),
-                  Text(
-                    "Asr",
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
+                ),
+                SizedBox(height: 4.h),
+                Row(
+                  children: [
+                    Icon(
+                      _getPrayerIcon(nextPrayer),
+                      size: 18.sp,
+                      color: Colors.grey[600],
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                "11:55 AM",
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                "in 37m 13s",
-                style: TextStyle(
-                  color: const Color(0xFF2E7D32),
-                  fontSize: 12.sp,
+                    SizedBox(width: 6.w),
+                    Text(
+                      nextPrayer,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  nextPrayerTime,
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  "in $timeRemaining",
+                  style: TextStyle(
+                    color: const Color(0xFF2E7D32),
+                    fontSize: 12.sp,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      }),
     );
   }
 
@@ -310,19 +373,36 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(12.r),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildStatItem(
-            "${_distanceToMakkah.toStringAsFixed(2)} KM",
-            "To Makkah",
-          ),
-          Container(width: 1, height: 40.h, color: Colors.grey[400]),
-          _buildStatItem("${_currentHeading.toInt()}°", "Current Heading"),
-          Container(width: 1, height: 40.h, color: Colors.grey[400]),
-          _buildStatItem("${_qiblaDirection.toInt()}°", "Qibla direction"),
-        ],
-      ),
+      child: Obx(() {
+        // Show loading state if prayer data is not available
+        if (prayerController == null ||
+            prayerController!.prayerData.value == null) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildStatItem("Loading...", "To Makkah"),
+              Container(width: 1, height: 40.h, color: Colors.grey[400]),
+              _buildStatItem("${_currentHeading.toInt()}°", "Current Heading"),
+              Container(width: 1, height: 40.h, color: Colors.grey[400]),
+              _buildStatItem("Loading...", "Qibla direction"),
+            ],
+          );
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildStatItem(
+              "${_distanceToMakkah.toStringAsFixed(2)} KM",
+              "To Makkah",
+            ),
+            Container(width: 1, height: 40.h, color: Colors.grey[400]),
+            _buildStatItem("${_currentHeading.toInt()}°", "Current Heading"),
+            Container(width: 1, height: 40.h, color: Colors.grey[400]),
+            _buildStatItem("${_qiblaDirection.toInt()}°", "Qibla direction"),
+          ],
+        );
+      }),
     );
   }
 
@@ -485,6 +565,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
               setState(() {
                 _selectedCompass = label;
               });
+              _saveCompassStyle(label);
             },
       child: Column(
         children: [
@@ -542,6 +623,23 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         ],
       ),
     );
+  }
+
+  IconData _getPrayerIcon(String prayerName) {
+    switch (prayerName.toLowerCase()) {
+      case 'fajr':
+        return Icons.wb_twilight;
+      case 'dhuhr':
+        return Icons.wb_sunny;
+      case 'asr':
+        return Icons.cloud_outlined;
+      case 'maghrib':
+        return Icons.wb_twilight;
+      case 'isha':
+        return Icons.nights_stay_outlined;
+      default:
+        return Icons.wb_sunny_outlined;
+    }
   }
 
   Widget _buildPremiumBanner() {
