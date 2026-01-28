@@ -6,6 +6,11 @@ import 'package:qurany/feature/home/view/did_you_know_screen.dart';
 import 'package:qurany/feature/home/view/quranic_stories_screen.dart';
 import 'package:qurany/feature/home/view/reciters_screen.dart';
 import 'package:qurany/feature/home/view/azkar_screen.dart';
+import 'package:get/get.dart';
+import 'package:qurany/feature/home/controller/azkar_controller.dart';
+import 'package:qurany/feature/home/controller/history_controller.dart';
+import 'package:qurany/feature/home/view/azkar_detail_screen.dart';
+import 'package:qurany/feature/home/view/detail_screen.dart';
 
 class SectionHeader extends StatelessWidget {
   final String title;
@@ -85,11 +90,7 @@ class DidYouKnowSection extends StatelessWidget {
       'image':
           'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?q=80&w=500&auto=format&fit=crop',
     },
-    {
-      'title': "The Quran was revealed over 23 years",
-      'image':
-          'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?q=80&w=500&auto=format&fit=crop',
-    },
+
     {
       'title': "Surah Al-Ikhlas is equal to one-third of the Quran",
       'image':
@@ -186,199 +187,267 @@ class RecitersSection extends StatelessWidget {
 class StoriesSection extends StatelessWidget {
   const StoriesSection({super.key});
 
-  final List<Map<String, String>> stories = const [
-    {
-      'title': "Story of Prophet Yusuf",
-      'image':
-          'https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "Story of Prophet Musa",
-      'image':
-          'https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "Story of Prophet Ibrahim",
-      'image':
-          'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=500&auto=format&fit=crop',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return ReusableHorizontalSection(
-      title: "Quranic Stories",
-      onSeeAll: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const QuranicStoriesScreen()),
+    final HistoryController controller = Get.put(HistoryController());
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return SizedBox(
+          height: 200.h,
+          child: const Center(child: CircularProgressIndicator()),
         );
-      },
-      height: 200.h,
-      itemCount: stories.length,
-      itemBuilder: (context, index) {
-        final story = stories[index];
-        return Container(
-          width: 220.w,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12.r)),
-          child: Stack(
-            children: [
-              Image.network(
-                story['image']!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey.shade300,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey,
+      }
+
+      if (controller.historyList.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return ReusableHorizontalSection(
+        title: "Quranic Stories",
+        onSeeAll: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const QuranicStoriesScreen(),
+            ),
+          );
+        },
+        height: 200.h,
+        itemCount: controller.historyList.length,
+        itemBuilder: (context, index) {
+          final story = controller.historyList[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailScreen(
+                    data: {
+                      'title': story.name,
+                      'image': story.image,
+                      'description': story.description,
+                    },
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              width: 220.w,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Stack(
+                children: [
+                  Image.network(
+                    story.image,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey.shade300,
+                        child: const Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.8),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
-                  );
-                },
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                    padding: EdgeInsets.all(12.w),
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      story.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-                padding: EdgeInsets.all(12.w),
-                alignment: Alignment.bottomLeft,
-                child: Text(
-                  story['title']!,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
+            ),
+          );
+        },
+      );
+    });
   }
 }
 
 class AzkarSection extends StatelessWidget {
   const AzkarSection({super.key});
 
-  final List<Map<String, dynamic>> azkar = const [
-    {
-      'title': "Morning Azkar",
-      'time': "08:00 AM",
-      'image':
-          'https://images.unsplash.com/photo-1531353826977-0941b4779a1c?q=80&w=500&auto=format&fit=crop',
-      'color': Color(0xFFFFE0B2),
-    },
-    {
-      'title': "Evening Azkar",
-      'time': "05:00 PM",
-      'image':
-          'https://images.unsplash.com/photo-1506466010722-395aa2bef877?q=80&w=500&auto=format&fit=crop',
-      'color': Color(0xFFC5CAE9),
-    },
-    {
-      'title': "Before Sleep",
-      'time': "10:00 PM",
-      'image':
-          'https://images.unsplash.com/photo-1531353826977-0941b4779a1c?q=80&w=500&auto=format&fit=crop',
-      'color': Color(0xFFD1C4E9),
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return ReusableHorizontalSection(
-      title: "Azkar",
-      onSeeAll: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AzkarScreen()),
+    final AzkarController controller = Get.put(AzkarController());
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return SizedBox(
+          height: 200.h,
+          child: const Center(child: CircularProgressIndicator()),
         );
-      },
-      height: 200.h,
-      itemCount: azkar.length,
-      itemBuilder: (context, index) {
-        final item = azkar[index];
-        return Container(
-          width: 220.w,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            color: item['color'],
-          ),
-          child: Stack(
+      }
+
+      final azkarGroups = controller.uniqueAzkarGroups;
+
+      if (azkarGroups.isEmpty) {
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          child: Column(
             children: [
-              Image.network(
-                item['image'],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: item['color'],
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey,
-                      ),
+              SectionHeader(
+                title: "Azkar",
+                onSeeAll: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AzkarScreen(),
                     ),
                   );
                 },
               ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Colors.black.withOpacity(0.7), Colors.transparent],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(12.w),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['title'],
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14.sp,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              item['time'],
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
+              SizedBox(
+                height: 80.h,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "No Azkar available yet",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      SizedBox(height: 8.h),
+                      GestureDetector(
+                        onTap: () => controller.fetchAllAzkar(),
+                        child: Text(
+                          "Retry",
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
         );
-      },
-    );
+      }
+
+      return ReusableHorizontalSection(
+        title: "Azkar",
+        onSeeAll: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AzkarScreen()),
+          );
+        },
+        height: 180.h,
+        itemCount: azkarGroups.length,
+        itemBuilder: (context, index) {
+          final item = azkarGroups[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AzkarDetailScreen(
+                    categoryData: {
+                      'title': item['title'],
+                      'time': item['time'],
+                      'duration': item['duration'],
+                      'image': item['image'],
+                    },
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              width: 220.w,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+                color: Colors.grey[200],
+              ),
+              child: Stack(
+                children: [
+                  Image.network(
+                    item['image'],
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: const Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.7),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                    padding: EdgeInsets.all(12.w),
+                    alignment: Alignment.bottomLeft,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['title'],
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.sp,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          item['duration'],
+                          style: TextStyle(
+                            fontSize: 10.sp,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    });
   }
 }

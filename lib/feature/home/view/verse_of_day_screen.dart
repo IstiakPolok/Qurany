@@ -156,7 +156,7 @@ class VerseOfDayScreen extends StatelessWidget {
 
                     // Arabic Text
                     Text(
-                      verse.data.verse.text,
+                      verse.data.verse.verse.text,
                       textAlign: TextAlign.center,
                       textDirection: TextDirection.rtl,
                       style: GoogleFonts.amiri(
@@ -168,9 +168,7 @@ class VerseOfDayScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 24.h),
 
-                    // Note: Translation is not provided by API
-                    // You could add another API call to get translation
-                    // or display a placeholder message
+                    // Display Translation from API
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
@@ -178,12 +176,12 @@ class VerseOfDayScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Text(
-                        "Translation not available from API",
+                        verse.data.verse.verse.translation,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14.sp,
-                          fontStyle: FontStyle.italic,
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          height: 1.5,
                         ),
                       ),
                     ),

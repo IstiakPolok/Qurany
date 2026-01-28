@@ -1,56 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:qurany/feature/home/controller/history_controller.dart';
 
 import 'detail_screen.dart';
 
 class QuranicStoriesScreen extends StatelessWidget {
   const QuranicStoriesScreen({super.key});
 
-  final List<Map<String, String>> items = const [
-    {
-      'title': "Story of Prophet Yusuf",
-      'image':
-          'https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "The People of the Cave",
-      'image':
-          'https://images.unsplash.com/photo-1542353436-312f0e1f67ff?q=80&w=500&auto=format&fit=crop', // Cave texture
-    },
-    {
-      'title': "Musa & Al-Khidr",
-      'image':
-          'https://images.unsplash.com/photo-1584281723358-461f7555806e?q=80&w=500&auto=format&fit=crop', // Open book with light
-    },
-    {
-      'title': "The Story of Maryam",
-      'image':
-          'https://images.unsplash.com/photo-1609599006353-e629aaabfeae?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "Prophet Ibrahim's Test",
-      'image':
-          'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "Prophet Nuh and the Ark",
-      'image':
-          'https://images.unsplash.com/photo-1602693822003-8d689b0d1e0d?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "The Story of Yunus",
-      'image':
-          'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=500&auto=format&fit=crop',
-    },
-    {
-      'title': "The Story of Dhul-Qarnayn",
-      'image':
-          'https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=500&auto=format&fit=crop',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final HistoryController controller = Get.find<HistoryController>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0), // Cream background
       appBar: AppBar(
@@ -58,7 +19,7 @@ class QuranicStoriesScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         leading: Padding(
-          padding: EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(8.0),
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
@@ -83,106 +44,122 @@ class QuranicStoriesScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: GridView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12.w,
-          mainAxisSpacing: 12.h,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DetailScreen(data: item),
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (controller.historyList.isEmpty) {
+          return const Center(child: Text("No stories found"));
+        }
+
+        return GridView.builder(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12.w,
+            mainAxisSpacing: 12.h,
+            childAspectRatio: 0.8,
+          ),
+          itemCount: controller.historyList.length,
+          itemBuilder: (context, index) {
+            final item = controller.historyList[index];
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailScreen(
+                      data: {
+                        'title': item.name,
+                        'image': item.image,
+                        'description': item.description,
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16.r),
                 ),
-              );
-            },
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.r),
-              ),
-              child: Stack(
-                children: [
-                  Image.network(
-                    item['image']!,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade300,
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: Colors.grey,
-                            size: 30.sp,
+                child: Stack(
+                  children: [
+                    Image.network(
+                      item.image,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey.shade300,
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey,
+                              size: 30.sp,
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  // Gradient Overlay
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.8),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.6],
-                      ),
+                        );
+                      },
                     ),
-                  ),
-                  // Text
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: EdgeInsets.all(12.w),
-                      child: Text(
-                        item['title']!,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  // Bookmark Icon
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Container(
-                      margin: EdgeInsets.all(10.w),
-                      padding: EdgeInsets.all(6.w),
+                    // Gradient Overlay
+                    Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.bookmark_border,
-                        size: 18.sp,
-                        color: Colors.black54,
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.8),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.6],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    // Text
+                    Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Padding(
+                        padding: EdgeInsets.all(12.w),
+                        child: Text(
+                          item.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    // Bookmark Icon
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: Container(
+                        margin: EdgeInsets.all(10.w),
+                        padding: EdgeInsets.all(6.w),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.bookmark_border,
+                          size: 18.sp,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      }),
     );
   }
 }

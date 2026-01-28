@@ -4,8 +4,11 @@ import 'package:qurany/core/network_caller/endpoints.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/model/random_verse_model.dart';
+import 'package:qurany/feature/home/model/azkar_model.dart';
+import 'package:qurany/feature/home/model/history_model.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
 import 'package:qurany/feature/quran/model/tafsir_model.dart';
+import 'package:qurany/feature/quran/model/bookmarked_verse_model.dart';
 import 'package:flutter/foundation.dart';
 
 class SurahResponse {
@@ -228,6 +231,317 @@ class QuranService {
       if (kDebugMode) {
         print('Error fetching Juz: $e');
       }
+      rethrow;
+    }
+  }
+
+  Future<List<SurahModel>> fetchBookmarkedSurahs() async {
+    final url = Uri.parse('$baseUrl/api/auth/bookmark/surah/');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('Fetching bookmarked surahs from: $url');
+        print('Token: $token');
+      }
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        if (kDebugMode) {
+          print('Raw response body: ${response.body}');
+        }
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (kDebugMode) {
+          print('Parsed body: $body');
+          print('Success: ${body['success']}');
+        }
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          if (kDebugMode) {
+            print('Data list length: ${data.length}');
+            print(
+              'First item if exists: ${data.isNotEmpty ? data[0] : "empty"}',
+            );
+          }
+          final surahs = data.map((e) {
+            if (kDebugMode) {
+              print('Parsing surah item: $e');
+            }
+            return SurahModel.fromJson(e);
+          }).toList();
+          if (kDebugMode) {
+            print('Parsed ${surahs.length} bookmarked surahs');
+          }
+          return surahs;
+        } else {
+          throw Exception(
+            body['message'] ?? 'Failed to load bookmarked surahs',
+          );
+        }
+      } else {
+        throw Exception(
+          'Failed to load bookmarked surahs: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching bookmarked surahs: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> toggleBookmarkSurah(int surahId) async {
+    final url = Uri.parse('$baseUrl/api/auth/bookmark/surah/$surahId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('Toggling bookmark for surah $surahId at: $url');
+      }
+      final response = await http.patch(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Toggle bookmark response status: ${response.statusCode}');
+        print('Toggle bookmark response body: ${response.body}');
+      }
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        return body['success'] == true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling bookmark: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<List<BookmarkedVerseModel>> fetchBookmarkedVerses() async {
+    final url = Uri.parse('$baseUrl/api/auth/bookmark/verse');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('Fetching bookmarked verses from: $url');
+        print('Token: $token');
+      }
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        if (kDebugMode) {
+          print('Raw response body: ${response.body}');
+        }
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (kDebugMode) {
+          print('Parsed body: $body');
+          print('Success: ${body['success']}');
+        }
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          if (kDebugMode) {
+            print('Data list length: ${data.length}');
+          }
+          final verses = data.map((e) {
+            if (kDebugMode) {
+              print('Parsing verse item: $e');
+            }
+            return BookmarkedVerseModel.fromJson(e);
+          }).toList();
+          if (kDebugMode) {
+            print('Parsed ${verses.length} bookmarked verses');
+          }
+          return verses;
+        } else {
+          throw Exception(
+            body['message'] ?? 'Failed to load bookmarked verses',
+          );
+        }
+      } else {
+        throw Exception(
+          'Failed to load bookmarked verses: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching bookmarked verses: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteBookmarkedVerse(int surahId, int verseId) async {
+    final url = Uri.parse('$baseUrl/api/auth/bookmark/verse/$surahId/$verseId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print(
+          'Deleting bookmarked verse $verseId from surah $surahId at: $url',
+        );
+      }
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print(
+          'Delete bookmarked verse response status: ${response.statusCode}',
+        );
+        print('Delete bookmarked verse response body: ${response.body}');
+      }
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        return body['success'] == true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting bookmarked verse: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> toggleBookmarkVerse(int surahId, int verseId) async {
+    final url = Uri.parse('$baseUrl/api/auth/bookmark/verse/$surahId/$verseId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print(
+          'Toggling bookmark for verse $verseId in surah $surahId at: $url',
+        );
+      }
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Toggle bookmark verse response status: ${response.statusCode}');
+        print('Toggle bookmark verse response body: ${response.body}');
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        return body['success'] == true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling bookmark verse: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<List<AzkarModel>> fetchAzkar() async {
+    final url = Uri.parse(azkarEndpoint);
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          return data.map((e) => AzkarModel.fromJson(e)).toList();
+        } else {
+          throw Exception(body['message'] ?? 'Failed to load azkar');
+        }
+      } else {
+        throw Exception('Failed to load azkar: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<AzkarModel>> fetchAzkarByGroup(String time) async {
+    final url = Uri.parse('$azkarGroupEndpoint/$time');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          return data.map((e) => AzkarModel.fromJson(e)).toList();
+        } else {
+          throw Exception(body['message'] ?? 'Failed to load azkar group');
+        }
+      } else {
+        throw Exception('Failed to load azkar group: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<HistoryModel>> fetchHistory() async {
+    final url = Uri.parse(historyEndpoint);
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          final List<dynamic> data = body['data'];
+          return data.map((e) => HistoryModel.fromJson(e)).toList();
+        } else {
+          throw Exception(body['message'] ?? 'Failed to load history');
+        }
+      } else {
+        throw Exception('Failed to load history: ${response.statusCode}');
+      }
+    } catch (e) {
       rethrow;
     }
   }

@@ -9,13 +9,23 @@ import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+import '../../../core/const/static_surah_data.dart';
+
 /// Controller for Listen Mode (Commuter Mode) screen
 class ListenModeController extends GetxController {
   final int surahId;
-  ListenModeController({this.surahId = 1});
+  ListenModeController({required this.surahId});
 
   final QuranService _quranService = QuranService();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _player1 = AudioPlayer();
+  final AudioPlayer _player2 = AudioPlayer();
+  final RxInt _activePlayerIndex = 1.obs;
+
+  AudioPlayer get _activePlayer =>
+      _activePlayerIndex.value == 1 ? _player1 : _player2;
+  AudioPlayer get _inactivePlayer =>
+      _activePlayerIndex.value == 1 ? _player2 : _player1;
+
   final stt.SpeechToText _speech = stt.SpeechToText();
 
   RxInt currentVerseIndex = 0.obs;
@@ -23,6 +33,9 @@ class ListenModeController extends GetxController {
   RxString currentSurahName = 'AL-FATIHAH'.obs;
   RxInt totalVerses = 0.obs;
   RxBool isLoading = true.obs;
+  RxBool isLoadingMore = false.obs;
+  RxInt currentPage = 1.obs;
+  RxBool hasMoreVerses = true.obs;
 
   // Voice Command State
   RxBool isListening = false.obs;
@@ -35,20 +48,40 @@ class ListenModeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _setTotalVerses();
     _configureAudioSession();
     _initSpeech();
     fetchSurahDetails();
 
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      isPlaying.value = state == PlayerState.playing;
-      if (state == PlayerState.completed) {
-        nextVerse();
-      }
-    });
+    _setupPlayerListeners(_player1);
+    _setupPlayerListeners(_player2);
 
     // Update currentVerseModel when index or verses change
     ever(currentVerseIndex, (_) => _updateCurrentVerse());
     ever(verses, (_) => _updateCurrentVerse());
+  }
+
+  void _setupPlayerListeners(AudioPlayer player) {
+    player.onPlayerStateChanged.listen((state) {
+      if (player == _activePlayer) {
+        isPlaying.value = state == PlayerState.playing;
+        if (state == PlayerState.completed) {
+          nextVerse();
+        }
+      }
+    });
+  }
+
+  void _setTotalVerses() {
+    try {
+      final surah = StaticSurahData.getAllSurahs().firstWhere(
+        (s) => s.number == surahId,
+      );
+      totalVerses.value = surah.totalVerses;
+      currentSurahName.value = surah.englishName.toUpperCase();
+    } catch (e) {
+      print("Error setting total verses: $e");
+    }
   }
 
   Future<void> _configureAudioSession() async {
@@ -71,7 +104,8 @@ class ListenModeController extends GetxController {
         audioFocus: AndroidAudioFocus.none,
       ),
     );
-    await _audioPlayer.setAudioContext(audioContext);
+    await _player1.setAudioContext(audioContext);
+    await _player2.setAudioContext(audioContext);
   }
 
   Future<void> _initSpeech() async {
@@ -168,31 +202,22 @@ class ListenModeController extends GetxController {
 
   @override
   void onClose() {
-    _audioPlayer.dispose();
+    _player1.dispose();
+    _player2.dispose();
     super.onClose();
   }
 
   Future<void> fetchSurahDetails() async {
     try {
       isLoading(true);
-      // Fetch all verses? Or paginate?
-      // For listen mode, we probably want a playlist.
-      // Fetching first 10 or 20 for now. Better to implement lazy loading if list is long.
-      // But for simplicity/demo, fetch what we can.
+      currentPage.value = 1;
       final response = await _quranService.fetchSurahById(
         surahId,
-        page: 1,
-        limit: 50, // Fetch a chunk appropriate for listening context
+        page: currentPage.value,
+        limit: 50,
       );
       verses.assignAll(response.verses);
-      totalVerses.value = response
-          .verses
-          .length; // Approximate if not full fetch, but serves UI
-
-      // Auto play if data loaded? Optional.
-      if (verses.isNotEmpty) {
-        // Prepare first verse
-      }
+      hasMoreVerses.value = verses.length < totalVerses.value;
     } catch (e) {
       print("Error fetching surah for listen mode: $e");
     } finally {
@@ -200,11 +225,37 @@ class ListenModeController extends GetxController {
     }
   }
 
+  Future<void> loadMoreVerses() async {
+    if (isLoadingMore.value || !hasMoreVerses.value) return;
+
+    try {
+      isLoadingMore(true);
+      currentPage.value++;
+      final response = await _quranService.fetchSurahById(
+        surahId,
+        page: currentPage.value,
+        limit: 50,
+      );
+
+      if (response.verses.isNotEmpty) {
+        verses.addAll(response.verses);
+        hasMoreVerses.value = verses.length < totalVerses.value;
+      } else {
+        hasMoreVerses.value = false;
+      }
+    } catch (e) {
+      print("Error loading more verses: $e");
+      currentPage.value--;
+    } finally {
+      isLoadingMore(false);
+    }
+  }
+
   Future<void> togglePlayPause() async {
     if (verses.isEmpty) return;
 
     if (isPlaying.value) {
-      await _audioPlayer.pause();
+      await _activePlayer.pause();
     } else {
       // If nothing is playing, play current index
       await _playCurrentVerse();
@@ -214,11 +265,27 @@ class ListenModeController extends GetxController {
   Future<void> nextVerse() async {
     if (currentVerseIndex.value < verses.length - 1) {
       currentVerseIndex.value++;
-      await _playCurrentVerse();
+      // Pre-fetch if we're near the end of current list
+      if (currentVerseIndex.value >= verses.length - 5) {
+        loadMoreVerses();
+      }
+
+      // If the inactive player has preloaded the next verse, switch and play
+      _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
+      await _activePlayer.resume();
+
+      // Preload the following one
+      _preloadNextVerse(currentVerseIndex.value);
+    } else if (hasMoreVerses.value) {
+      // Reached the end but more are available, load and then play
+      await loadMoreVerses();
+      if (currentVerseIndex.value < verses.length - 1) {
+        currentVerseIndex.value++;
+        await _playCurrentVerse();
+      }
     } else {
       // Loop or stop? Stop for now.
       isPlaying.value = false;
-      // currentVerseIndex.value = 0; // Optional: Reset
     }
   }
 
@@ -232,29 +299,51 @@ class ListenModeController extends GetxController {
   Future<void> _playCurrentVerse() async {
     if (verses.isEmpty) return;
 
-    final verse = verses[currentVerseIndex.value];
-
     try {
-      // Get preferred reciter
-      String preferredReciterName = await SharedPreferencesHelper.getReciter();
-      String audioKey = _mapReciterNameToKey(preferredReciterName);
+      // Stop all players before starting fresh point
+      await _player1.stop();
+      await _player2.stop();
 
-      String? audioUrl;
-
-      if (verse.audio.containsKey(audioKey)) {
-        audioUrl = verse.audio[audioKey]?.url;
-      } else if (verse.audio.isNotEmpty) {
-        audioUrl = verse.audio.values.first.url;
-      }
+      String? audioUrl = await _getAudioUrlForVerse(currentVerseIndex.value);
 
       if (audioUrl != null) {
-        await _audioPlayer.stop(); // Stop previous
-        await _audioPlayer.setSourceUrl(audioUrl);
-        await _audioPlayer.resume();
+        await _activePlayer.setSourceUrl(audioUrl);
+        await _activePlayer.resume();
+
+        // Preload next
+        _preloadNextVerse(currentVerseIndex.value);
       }
     } catch (e) {
       print("Error playing verse in listen mode: $e");
     }
+  }
+
+  Future<void> _preloadNextVerse(int index) async {
+    if (index < verses.length - 1) {
+      String? nextUrl = await _getAudioUrlForVerse(index + 1);
+      if (nextUrl != null) {
+        await _inactivePlayer.setSourceUrl(nextUrl);
+      }
+    }
+  }
+
+  Future<String?> _getAudioUrlForVerse(int index) async {
+    if (index < 0 || index >= verses.length) return null;
+    final verse = verses[index];
+
+    try {
+      String preferredReciterName = await SharedPreferencesHelper.getReciter();
+      String audioKey = _mapReciterNameToKey(preferredReciterName);
+
+      if (verse.audio.containsKey(audioKey)) {
+        return verse.audio[audioKey]?.url;
+      } else if (verse.audio.isNotEmpty) {
+        return verse.audio.values.first.url;
+      }
+    } catch (e) {
+      print("Error getting audio URL: $e");
+    }
+    return null;
   }
 
   String _mapReciterNameToKey(String name) {
@@ -340,9 +429,9 @@ class ListenModeScreen extends StatelessWidget {
 
   const ListenModeScreen({
     super.key,
-    this.surahId = 1,
-    this.surahName = 'Al-Fatihah',
-    this.arabicName = 'الفاتحة',
+    required this.surahId,
+    required this.surahName,
+    required this.arabicName,
   });
 
   @override

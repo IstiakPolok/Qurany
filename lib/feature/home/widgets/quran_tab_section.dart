@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/core/const/static_surah_data.dart';
+import 'package:qurany/core/const/static_juz_data.dart';
 import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/view/surah_reading_screen.dart';
@@ -29,7 +31,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
   // Pagination state
   int _currentPage = 1;
   int _totalItems = 114;
-  final int _pageSize = 114;
+  final int _pageSize = 10;
 
   @override
   void initState() {
@@ -44,7 +46,11 @@ class _QuranTabSectionState extends State<QuranTabSection> {
       setState(() {
         _isLoadingJuz = true;
       });
-      final juzList = await _quranService.fetchJuz();
+      // Use static data instead of API call
+      await Future.delayed(
+        const Duration(milliseconds: 100),
+      ); // Simulate loading
+      final juzList = StaticJuzData.getAllJuz();
       setState(() {
         _allJuz = juzList;
         _filteredJuz = juzList;
@@ -68,14 +74,24 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           _currentPage = page;
         }
       });
-      final response = await _quranService.fetchSurahs(
-        page: _currentPage,
-        limit: _pageSize,
+      // Use static data instead of API call
+      await Future.delayed(
+        const Duration(milliseconds: 100),
+      ); // Simulate loading
+      final allSurahs = StaticSurahData.getAllSurahs();
+
+      // Calculate pagination
+      final startIndex = (_currentPage - 1) * _pageSize;
+      final endIndex = startIndex + _pageSize;
+      final paginatedSurahs = allSurahs.sublist(
+        startIndex,
+        endIndex > allSurahs.length ? allSurahs.length : endIndex,
       );
+
       setState(() {
-        _allSurahs = response.surahs;
-        _filteredSurahs = response.surahs;
-        _totalItems = response.total;
+        _allSurahs = allSurahs;
+        _filteredSurahs = paginatedSurahs;
+        _totalItems = allSurahs.length;
         _isLoading = false;
       });
     } catch (e) {
@@ -97,6 +113,12 @@ class _QuranTabSectionState extends State<QuranTabSection> {
 
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) {
+      // Reset to current page when search is cleared
+      _fetchSurahs();
+      return;
+    }
+
     setState(() {
       _filteredSurahs = _allSurahs.where((surah) {
         final matchesName =
@@ -130,105 +152,113 @@ class _QuranTabSectionState extends State<QuranTabSection> {
 
     return Container(
       padding: EdgeInsets.symmetric(vertical: 16.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Previous Button
-          if (_currentPage > 1)
-            GestureDetector(
-              onTap: () => _fetchSurahs(page: _currentPage - 1),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  border: Border.all(color: primaryColor),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.chevron_left, color: primaryColor, size: 16.sp),
-                    SizedBox(width: 4.w),
-                    Text(
-                      "Previous",
-                      style: TextStyle(color: primaryColor, fontSize: 12.sp),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          SizedBox(width: 12.w),
-
-          // Page Numbers
-          ...List.generate(totalPages, (index) {
-            int pageNum = index + 1;
-
-            // Show first page, last page, current page and adjacent pages
-            if (pageNum == 1 ||
-                pageNum == totalPages ||
-                (pageNum >= _currentPage - 1 && pageNum <= _currentPage + 1)) {
-              return GestureDetector(
-                onTap: () => _fetchSurahs(page: pageNum),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Previous Button
+            if (_currentPage > 1)
+              GestureDetector(
+                onTap: () => _fetchSurahs(page: _currentPage - 1),
                 child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: 4.w),
-                  padding: EdgeInsets.all(10.w),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
                   decoration: BoxDecoration(
-                    color: pageNum == _currentPage
-                        ? primaryColor
-                        : Colors.transparent,
-                    border: Border.all(color: primaryColor, width: 1.5),
+                    border: Border.all(color: primaryColor),
                     borderRadius: BorderRadius.circular(8.r),
                   ),
-                  child: Text(
-                    "$pageNum",
-                    style: TextStyle(
-                      color: pageNum == _currentPage
-                          ? Colors.white
-                          : primaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.sp,
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.chevron_left,
+                        color: primaryColor,
+                        size: 16.sp,
+                      ),
+                    ],
                   ),
                 ),
-              );
-            } else if (pageNum == _currentPage - 2 ||
-                pageNum == _currentPage + 2) {
-              // Show ellipsis
-              return Container(
-                margin: EdgeInsets.symmetric(horizontal: 4.w),
-                child: Text(
-                  "...",
-                  style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          }),
+              ),
 
-          SizedBox(width: 12.w),
+            SizedBox(width: 12.w),
 
-          // Next Button
-          if (_currentPage < totalPages)
-            GestureDetector(
-              onTap: () => _fetchSurahs(page: _currentPage + 1),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      "Next",
-                      style: TextStyle(color: Colors.white, fontSize: 12.sp),
+            // Page Numbers
+            ...List.generate(totalPages, (index) {
+              int pageNum = index + 1;
+
+              // Show first page, last page, current page and adjacent pages
+              if (pageNum == 1 ||
+                  pageNum == totalPages ||
+                  (pageNum >= _currentPage - 1 &&
+                      pageNum <= _currentPage + 1)) {
+                return GestureDetector(
+                  onTap: () => _fetchSurahs(page: pageNum),
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    padding: EdgeInsets.all(10.w),
+                    decoration: BoxDecoration(
+                      color: pageNum == _currentPage
+                          ? primaryColor
+                          : Colors.transparent,
+                      border: Border.all(color: primaryColor, width: 1.5),
+                      borderRadius: BorderRadius.circular(8.r),
                     ),
-                    SizedBox(width: 4.w),
-                    Icon(Icons.chevron_right, color: Colors.white, size: 16.sp),
-                  ],
+                    child: Text(
+                      "$pageNum",
+                      style: TextStyle(
+                        color: pageNum == _currentPage
+                            ? Colors.white
+                            : primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ),
+                );
+              } else if (pageNum == _currentPage - 2 ||
+                  pageNum == _currentPage + 2) {
+                // Show ellipsis
+                return Container(
+                  //  margin: EdgeInsets.symmetric(horizontal: 4.w),
+                  child: Text(
+                    "...",
+                    style: TextStyle(color: Colors.grey, fontSize: 12.sp),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+
+            SizedBox(width: 12.w),
+
+            // Next Button
+            if (_currentPage < totalPages)
+              GestureDetector(
+                onTap: () => _fetchSurahs(page: _currentPage + 1),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 8.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.chevron_right,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

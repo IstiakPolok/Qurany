@@ -13,7 +13,18 @@ import 'package:qurany/core/services_class/local_service/shared_preferences_help
 class SurahReadingController extends GetxController {
   final QuranService _quranService = QuranService();
   final int surahId;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final String surahName;
+  final String arabicName;
+  final int totalAyaCount;
+
+  final AudioPlayer _player1 = AudioPlayer();
+  final AudioPlayer _player2 = AudioPlayer();
+  final RxInt _activePlayerIndex = 1.obs;
+
+  AudioPlayer get _activePlayer =>
+      _activePlayerIndex.value == 1 ? _player1 : _player2;
+  AudioPlayer get _inactivePlayer =>
+      _activePlayerIndex.value == 1 ? _player2 : _player1;
 
   RxInt selectedViewTab =
       0.obs; // 0 = Translation, 1 = Transliteration, 2 = Tafsir
@@ -35,7 +46,12 @@ class SurahReadingController extends GetxController {
   RxInt tafsirPage = 1.obs;
   RxBool hasMoreTafsir = true.obs;
 
-  SurahReadingController({required this.surahId});
+  SurahReadingController({
+    required this.surahId,
+    required this.surahName,
+    required this.arabicName,
+    required this.totalAyaCount,
+  });
 
   @override
   void onInit() {
@@ -43,32 +59,87 @@ class SurahReadingController extends GetxController {
     fetchSurahDetails();
     fetchTafsir();
 
-    // Listen to player state changes
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      isPlaying.value = state == PlayerState.playing;
-      if (state == PlayerState.completed) {
-        _playNextVerse();
+    _setupPlayerListeners(_player1);
+    _setupPlayerListeners(_player2);
+  }
+
+  void _setupPlayerListeners(AudioPlayer player) {
+    player.onPlayerStateChanged.listen((state) {
+      if (player == _activePlayer) {
+        isPlaying.value = state == PlayerState.playing;
+        if (state == PlayerState.completed) {
+          _playNextVerse();
+        }
       }
     });
   }
 
-  void _playNextVerse() {
+  // Save reading progress whenever a verse is played
+  Future<void> _saveReadingProgress(int verseId) async {
+    await SharedPreferencesHelper.saveRecentReading(
+      surahId: surahId,
+      surahName: surahName,
+      arabicName: arabicName,
+      lastVerseId: verseId,
+      totalVerses: totalAyaCount,
+    );
+  }
+
+  void _playNextVerse() async {
     if (currentPlayingVerse.value == -1) return;
 
     int currentIndex = verses.indexWhere(
       (v) => v.verseId == currentPlayingVerse.value,
     );
     if (currentIndex != -1 && currentIndex < verses.length - 1) {
-      playVerse(verses[currentIndex + 1].verseId);
+      final nextVerse = verses[currentIndex + 1];
+
+      // The inactive player should already have preloaded the next verse
+      _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
+      currentPlayingVerse.value = nextVerse.verseId;
+
+      await _activePlayer.setPlaybackRate(playbackSpeed.value);
+      await _activePlayer.resume();
+
+      // Preload the following verse
+      _preloadNextVerse(currentIndex + 1);
     } else {
       isPlaying.value = false;
       currentPlayingVerse.value = -1;
     }
   }
 
+  Future<void> _preloadNextVerse(int currentIndex) async {
+    if (currentIndex < verses.length - 1) {
+      final followingVerse = verses[currentIndex + 1];
+      String? nextUrl = await _getAudioUrlForVerse(followingVerse.verseId);
+      if (nextUrl != null) {
+        // Set source on the player that is NOT currently playing
+        await _inactivePlayer.setSourceUrl(nextUrl);
+      }
+    }
+  }
+
+  Future<String?> _getAudioUrlForVerse(int verseId) async {
+    try {
+      final verse = verses.firstWhere((v) => v.verseId == verseId);
+      String preferredReciterName = await SharedPreferencesHelper.getReciter();
+      String audioKey = _mapReciterNameToKey(preferredReciterName);
+
+      if (verse.audio.containsKey(audioKey)) {
+        return verse.audio[audioKey]?.url;
+      } else if (verse.audio.isNotEmpty) {
+        return verse.audio.values.first.url;
+      }
+    } catch (e) {
+      print("Error getting audio URL: $e");
+    }
+    return null;
+  }
+
   void playNextVerse() => _playNextVerse();
 
-  void playPreviousVerse() {
+  void playPreviousVerse() async {
     if (currentPlayingVerse.value == -1) return;
 
     int currentIndex = verses.indexWhere(
@@ -86,10 +157,10 @@ class SurahReadingController extends GetxController {
     double nextSpeed = speeds[(currentIndex + 1) % speeds.length];
     playbackSpeed.value = nextSpeed;
 
-    // Apply speed immediately if player is active (playing or paused with source)
+    // Apply speed immediately to active player
     if (currentPlayingVerse.value != -1) {
       try {
-        await _audioPlayer.setPlaybackRate(nextSpeed);
+        await _activePlayer.setPlaybackRate(nextSpeed);
       } catch (e) {
         print("Error setting playback speed: $e");
       }
@@ -98,8 +169,34 @@ class SurahReadingController extends GetxController {
 
   @override
   void onClose() {
-    _audioPlayer.dispose();
+    _player1.dispose();
+    _player2.dispose();
     super.onClose();
+  }
+
+  Future<void> toggleBookmark(int verseId) async {
+    try {
+      final success = await _quranService.toggleBookmarkVerse(surahId, verseId);
+      if (success) {
+        Get.snackbar(
+          "Success",
+          "Bookmark updated",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.black,
+        );
+      } else {
+        Get.snackbar(
+          "Error",
+          "Failed to update bookmark",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.black,
+        );
+      }
+    } catch (e) {
+      print("Error toggling bookmark: $e");
+    }
   }
 
   Future<void> fetchSurahDetails() async {
@@ -114,6 +211,12 @@ class SurahReadingController extends GetxController {
       verses.assignAll(response.verses);
       audio.value = response.audio;
       hasMoreVerses.value = response.verses.length >= 10;
+
+      // Save reading progress with the last verse fetched
+      if (response.verses.isNotEmpty) {
+        final lastVerse = response.verses.last;
+        await _saveReadingProgress(lastVerse.verseId);
+      }
     } catch (e) {
       print("Error fetching surah details: $e");
     } finally {
@@ -182,6 +285,10 @@ class SurahReadingController extends GetxController {
       } else {
         verses.addAll(response.verses);
         hasMoreVerses.value = response.verses.length >= 10;
+
+        // Save reading progress with the last verse fetched
+        final lastVerse = response.verses.last;
+        await _saveReadingProgress(lastVerse.verseId);
       }
     } catch (e) {
       print("Error loading more verses: $e");
@@ -193,13 +300,15 @@ class SurahReadingController extends GetxController {
 
   void togglePlayPause() async {
     if (isPlaying.value) {
-      await _audioPlayer.pause();
+      await _activePlayer.pause();
     } else {
       if (currentPlayingVerse.value != -1) {
         // Resume
-        await _audioPlayer.resume();
-      } else {
-        // Start from beginning or handle logic
+        await _activePlayer.setPlaybackRate(playbackSpeed.value);
+        await _activePlayer.resume();
+      } else if (verses.isNotEmpty) {
+        // Start from first verse if nothing is playing
+        playVerse(verses.first.verseId);
       }
     }
   }
@@ -212,29 +321,21 @@ class SurahReadingController extends GetxController {
     }
 
     try {
+      // Stop all players before starting fresh
+      await _player1.stop();
+      await _player2.stop();
+
       currentPlayingVerse.value = verseId;
-
-      // Find the verse object
-      final verse = verses.firstWhere((v) => v.verseId == verseId);
-
-      // Get preferred reciter
-      String preferredReciterName = await SharedPreferencesHelper.getReciter();
-      String audioKey = _mapReciterNameToKey(preferredReciterName);
-
-      String? audioUrl;
-
-      if (verse.audio.containsKey(audioKey)) {
-        audioUrl = verse.audio[audioKey]?.url;
-      } else if (verse.audio.isNotEmpty) {
-        // Fallback to first available
-        audioUrl = verse.audio.values.first.url;
-      }
+      String? audioUrl = await _getAudioUrlForVerse(verseId);
 
       if (audioUrl != null) {
-        await _audioPlayer.stop();
-        await _audioPlayer.setSourceUrl(audioUrl);
-        await _audioPlayer.setPlaybackRate(playbackSpeed.value);
-        await _audioPlayer.resume();
+        await _activePlayer.setSourceUrl(audioUrl);
+        await _activePlayer.setPlaybackRate(playbackSpeed.value);
+        await _activePlayer.resume();
+
+        // Find index and preload next
+        int index = verses.indexWhere((v) => v.verseId == verseId);
+        _preloadNextVerse(index);
       } else {
         Get.snackbar("Error", "Audio not available for this verse");
       }
@@ -279,7 +380,12 @@ class SurahReadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final SurahReadingController controller = Get.put(
-      SurahReadingController(surahId: surahId),
+      SurahReadingController(
+        surahId: surahId,
+        surahName: surahName,
+        arabicName: arabicName,
+        totalAyaCount: ayaCount,
+      ),
       tag: surahId.toString(),
     );
 
@@ -1264,10 +1370,13 @@ class SurahReadingScreen extends StatelessWidget {
                     height: 18.sp,
                   ),
                   SizedBox(width: 16.w),
-                  Image.asset(
-                    'assets/icons/4.material-symbols_bookmark-outline-rounded.png',
-                    width: 18.sp,
-                    height: 18.sp,
+                  GestureDetector(
+                    onTap: () => controller.toggleBookmark(verse.verseId),
+                    child: Image.asset(
+                      'assets/icons/4.material-symbols_bookmark-outline-rounded.png',
+                      width: 18.sp,
+                      height: 18.sp,
+                    ),
                   ),
                 ],
               ),
@@ -1591,13 +1700,16 @@ class SurahReadingScreen extends StatelessWidget {
 
             // Listen Mode button
             GestureDetector(
-              onTap: () => Get.to(
-                () => ListenModeScreen(
-                  surahId: surahId,
-                  surahName: surahName,
-                  arabicName: arabicName,
-                ),
-              ),
+              onTap: () {
+                Get.delete<ListenModeController>();
+                Get.to(
+                  () => ListenModeScreen(
+                    surahId: surahId,
+                    surahName: surahName,
+                    arabicName: arabicName,
+                  ),
+                );
+              },
               child: Icon(
                 Icons.headphones,
                 color: Colors.grey[600],

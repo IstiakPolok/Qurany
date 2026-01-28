@@ -19,16 +19,22 @@ class SurahModel {
 
   factory SurahModel.fromJson(Map<String, dynamic> json) {
     return SurahModel(
-      number: json['id'] ?? 0,
-
-      // change beacuse of backend can 't change'
+      number: _parseInt(json['id']) ?? _parseInt(json['surahId']) ?? 0,
       englishName: json['transliteration'] ?? '',
       arabicName: json['name'] ?? '',
       revelationType: (json['type'] as String? ?? '').toUpperCase(),
-      totalVerses: json['total_verses'] ?? 0,
-      revealedVerses: json['total_verses_read'] ?? 0,
+      totalVerses: _parseInt(json['total_verses']) ?? 0,
+      revealedVerses: _parseInt(json['total_verses_read']) ?? 0,
       translation: json['translation'] ?? '',
     );
+  }
+
+  // Helper method to parse int from dynamic (handles both int and String)
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   static List<SurahModel> get sampleSurahs => [
@@ -199,16 +205,16 @@ class JuzSurahModel {
   });
 
   factory JuzSurahModel.fromJson(Map<String, dynamic> json) {
-    int verses = json['total_verses'] ?? 0;
+    int verses = SurahModel._parseInt(json['total_verses']) ?? 0;
     return JuzSurahModel(
-      number: json['id'] ?? 0,
+      number: SurahModel._parseInt(json['id']) ?? 0,
       englishName: json['transliteration'] ?? '',
       arabicName: json['name'] ?? '',
       revelationType: (json['type'] as String? ?? '').toUpperCase(),
       versesRange: '$verses VERSES',
       translation: json['translation'] ?? '',
       totalVerses: verses,
-      juzId: json['juzId'] ?? 0,
+      juzId: SurahModel._parseInt(json['juzId']) ?? 0,
     );
   }
 }

@@ -56,7 +56,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Azkar
-            const AzkarSection(),
+            AzkarSection(),
             const SizedBox(height: 24),
 
             // Quran Tabs & List

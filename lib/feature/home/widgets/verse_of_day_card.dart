@@ -20,12 +20,12 @@ class VerseOfDayCard extends StatelessWidget {
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        height: 250.h,
+        constraints: BoxConstraints(minHeight: 180.h),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.r),
           image: const DecorationImage(
             image: AssetImage('assets/image/VerseOfDayCard.png'),
-            fit: BoxFit.fill,
+            fit: BoxFit.cover,
           ),
         ),
         child: Padding(
@@ -111,39 +111,45 @@ class VerseOfDayCard extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 12.h),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Image.asset(
-                                'assets/icons/123.png',
-                                width: 24.w,
-                                height: 24.h,
+                          Image.asset(
+                            'assets/icons/123.png',
+                            width: 30.w,
+                            height: 30.h,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              verse.data.verse.verse.text,
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.bold,
+                                height: 1.5,
                               ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: Text(
-                                  verse.data.verse.text,
-                                  textDirection: TextDirection.rtl,
-                                  textAlign: TextAlign.right,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      verse.data.verse.verse.translation,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
                       ),
                     ),
                   ),
