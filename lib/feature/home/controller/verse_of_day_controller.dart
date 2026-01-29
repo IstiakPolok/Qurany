@@ -32,10 +32,7 @@ class VerseOfDayController extends GetxController {
   // Helper method to get surah name
   String getSurahName() {
     if (randomVerse.value == null) return 'Unknown';
-    return SurahNames.getSurahName(
-      randomVerse.value!.data.verse.surahId,
-      lang: 'en',
-    );
+    return randomVerse.value!.data.verse.transliteration;
   }
 
   // Helper method to get verse reference

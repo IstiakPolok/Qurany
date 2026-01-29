@@ -1,8 +1,10 @@
 import 'dart:ui';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 
@@ -22,28 +24,76 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   final double _beadSpacing = 35.0; // Spacing between beads
   late Path _beadPath;
   ui.PathMetric? _pathMetric;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  PlayerState _playerState = PlayerState.stopped;
+  int? _currentlyPlayingIndex;
 
   final List<Map<String, String>> _dhikrList = [
     {
-      'arabic': 'أستغفرُ اللهَ ربي وأتوبُ إليهِ',
-      'translation':
-          'I seek forgiveness from Allah, my Lord, for every sin and I turn to Him in repentance.',
+      "arabic": "سُبْحَانَ الله",
+      "meaning": "Glory be to Allah",
+      "audio": "assets/audio/subhanallah.mp3",
     },
     {
-      'arabic': 'اللهم اغفر لي ذنوبي كلها',
-      'translation': 'O Allah, forgive me all my sins.',
+      "arabic": "الْحَمْدُ لِلّٰهِ",
+      "meaning": "All praise is due to Allah",
+      "audio": "assets/audio/subhanallah.mp3",
     },
     {
-      'arabic': 'أسألك ربي كل خير',
-      'translation': 'I ask You, my Lord, for all that is good.',
+      "arabic": "اللهُ أَكْبَرُ",
+      "meaning": "Allah is the Greatest",
+      "audio": "assets/audio/subhanallah.mp3",
     },
     {
-      'arabic': 'أعوذ بك من عذاب النار',
-      'translation': 'I seek refuge in You from the punishment of the Fire.',
+      "arabic": "لَا إِلٰهَ إِلَّا الله",
+      "meaning": "There is no deity except Allah",
+      "audio": "assets/audio/subhanallah.mp3",
     },
     {
-      'arabic': 'اللهم اجعلني من التوابين',
-      'translation': 'O Allah, make me one of those who repent.',
+      "arabic": "أَسْتَغْفِرُ الله",
+      "meaning": "I seek forgiveness from Allah",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic": "سُبْحَانَ اللهِ وَبِحَمْدِهِ",
+      "meaning": "Glory be to Allah and all praise is due to Him",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic": "لا حول ولاقوة إلا بالله",
+      "meaning": "There is no power nor strength except with Allah",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic": "حسبي الله لا إله إلا هو",
+      "meaning": "Allah is sufficient for me; there is no deity except Him",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic": "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ",
+      "meaning":
+          "O Allah! Send blessings upon Muhammad and the family of Muhammad",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic": "سُبْحَانَ اللهِ وَبِحَمْدِهِ، سُبْحَانَ اللهِ الْعَظِيم",
+      "meaning":
+          "Glory be to Allah and all praise is due to Him; Glory be to Allah the Almighty",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic":
+          "لا إِلٰهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِير",
+      "meaning":
+          "There is no deity except Allah alone; He has no partner. His is the dominion and His is the praise, and He is over all things competent",
+      "audio": "assets/audio/subhanallah.mp3",
+    },
+    {
+      "arabic":
+          "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيم",
+      "meaning":
+          "In the name of Allah, with whose name nothing in the earth or the heaven can cause harm, and He is the All-Hearing, All-Knowing",
+      "audio": "assets/audio/subhanallah.mp3",
     },
   ];
   int? _selectedDhikrIndex;
@@ -51,8 +101,43 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   @override
   void initState() {
     super.initState();
+    _loadPreferences();
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _playerState = state;
+          if (state == PlayerState.completed || state == PlayerState.stopped) {
+            _currentlyPlayingIndex = null;
+          }
+        });
+      }
+    });
     // Initialize standard path for metrics calculation (will be updated in build with actual constraints)
     // Defer actual path creation to build/layout where we have dimensions
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _counter = prefs.getInt('electronic_tasbih_counter') ?? 0;
+        _round = prefs.getInt('electronic_tasbih_round') ?? 1;
+        _targetCount = prefs.getInt('electronic_tasbih_target') ?? 100;
+        _selectedDhikrIndex = prefs.getInt('electronic_tasbih_dhikr_index');
+      });
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('electronic_tasbih_counter', _counter);
+    await prefs.setInt('electronic_tasbih_round', _round);
+    await prefs.setInt('electronic_tasbih_target', _targetCount);
+    if (_selectedDhikrIndex != null) {
+      await prefs.setInt('electronic_tasbih_dhikr_index', _selectedDhikrIndex!);
+    } else {
+      await prefs.remove('electronic_tasbih_dhikr_index');
+    }
   }
 
   void _calculatePath(Size size) {
@@ -66,7 +151,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       size.width * 0.8,
       -size.height * 0.9 + verticalShift, // Much higher peak for stronger arc
       size.width * 1.25,
-      size.height * 0.01 + verticalShift, // End point (right outside)
+      size.height * 0.01 + verticalShift,
     );
     _beadPath = path;
     _pathMetric = _beadPath.computeMetrics().first;
@@ -99,6 +184,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         HapticFeedback.mediumImpact();
       }
     });
+    _savePreferences();
   }
 
   void _decrementCounter() {
@@ -107,6 +193,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       setState(() {
         _counter--;
       });
+      _savePreferences();
     }
   }
 
@@ -115,6 +202,41 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       _counter = 0;
       _round = 1;
     });
+    _savePreferences();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playAudio(int index) async {
+    final audioPath = _dhikrList[index]['audio']!;
+    debugPrint("Attempting to play: $audioPath at index $index");
+    try {
+      String path = audioPath;
+      if (path.startsWith('assets/')) {
+        path = path.substring(7);
+      }
+      debugPrint("Resolved asset path: $path");
+
+      if (_playerState == PlayerState.playing &&
+          _currentlyPlayingIndex == index) {
+        await _audioPlayer.stop();
+        setState(() {
+          _currentlyPlayingIndex = null;
+        });
+      } else {
+        await _audioPlayer.stop(); // Stop any currently playing audio
+        await _audioPlayer.play(AssetSource(path));
+        setState(() {
+          _currentlyPlayingIndex = index;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error playing audio: $e");
+    }
   }
 
   void _showEditDialog() {
@@ -389,6 +511,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                             _round = tempRound;
                             _counter = tempCustomCount;
                           });
+                          _savePreferences();
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -511,7 +634,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       );
     }
     final String arabic = _dhikrList[_selectedDhikrIndex!]['arabic']!;
-    final String translation = _dhikrList[_selectedDhikrIndex!]['translation']!;
+    final String meaning = _dhikrList[_selectedDhikrIndex!]['meaning']!;
+    final bool isPlaying =
+        _playerState == PlayerState.playing &&
+        _currentlyPlayingIndex == _selectedDhikrIndex;
+
     return Column(
       children: [
         Row(
@@ -525,6 +652,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                 color: Colors.black87,
               ),
             ),
+            Spacer(),
+
             GestureDetector(
               onTap: _showDhikrPicker,
               child: Text(
@@ -536,6 +665,10 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   decoration: TextDecoration.underline,
                 ),
               ),
+            ),
+            IconButton(
+              onPressed: _showClearDialog,
+              icon: Icon(Icons.delete_outline, color: Colors.black87),
             ),
           ],
         ),
@@ -557,7 +690,14 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.play_arrow, color: Colors.green, size: 32.sp),
+              GestureDetector(
+                onTap: () => _playAudio(_selectedDhikrIndex!),
+                child: Icon(
+                  isPlaying ? Icons.pause_circle_filled : Icons.play_arrow,
+                  color: Colors.green,
+                  size: 32.sp,
+                ),
+              ),
               SizedBox(width: 12.w),
               Expanded(
                 child: Column(
@@ -573,7 +713,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      translation,
+                      meaning,
                       style: TextStyle(
                         fontSize: 13.sp,
                         color: Colors.grey[700],
@@ -599,94 +739,158 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16.w,
-            right: 16.w,
-            top: 24.h,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back_ios_new),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        "Select Dhikr",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18.sp,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 40), // for symmetry
-                ],
+        // Use StatefulBuilder so the bottom sheet can rebuild independently
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            // Helper to handle play within sheet
+            Future<void> playAudioInSheet(int index) async {
+              await _playAudio(index);
+              // Update sheet state to reflect icon change
+              setSheetState(() {});
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16.w,
+                right: 16.w,
+                top: 24.h,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
               ),
-              SizedBox(height: 12.h),
-              ...List.generate(_dhikrList.length, (index) {
-                final dhikr = _dhikrList[index];
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedDhikrIndex = index;
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    margin: EdgeInsets.only(bottom: 14.h),
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14.r),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Icon(
-                          Icons.play_circle_fill,
-                          color: Colors.green,
-                          size: 28.sp,
+                        IconButton(
+                          icon: Icon(Icons.arrow_back_ios_new),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        SizedBox(width: 12.w),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          child: Center(
+                            child: Text(
+                              "Select Dhikr",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 40), // for symmetry
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    ...List.generate(_dhikrList.length, (index) {
+                      final dhikr = _dhikrList[index];
+                      final bool isPlayingThis =
+                          _playerState == PlayerState.playing &&
+                          _currentlyPlayingIndex == index;
+                      return GestureDetector(
+                        onTap: () {
+                          // Stop audio if playing when selecting a new dhikr
+                          if (_playerState == PlayerState.playing) {
+                            _playAudio(index); // This toggles it off
+                          }
+                          setState(() {
+                            _selectedDhikrIndex = index;
+                          });
+                          _savePreferences();
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          margin: EdgeInsets.only(bottom: 14.h),
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                dhikr['arabic']!,
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
+                              GestureDetector(
+                                onTap: () => playAudioInSheet(index),
+                                child: Icon(
+                                  isPlayingThis
+                                      ? Icons.pause_circle_filled
+                                      : Icons.play_circle_fill,
+                                  color: Colors.green,
+                                  size: 28.sp,
                                 ),
                               ),
-                              SizedBox(height: 8.h),
-                              Text(
-                                dhikr['translation']!,
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey[700],
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      dhikr['arabic']!,
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(
+                                        fontFamily: 'Arial',
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 8.h),
+                                    Text(
+                                      dhikr['meaning']!,
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        color: Colors.grey[700],
+                                      ),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ],
                                 ),
-                                textAlign: TextAlign.left,
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _clearData() {
+    setState(() {
+      _counter = 0;
+      _round = 1;
+      _selectedDhikrIndex = null;
+    });
+    _savePreferences();
+  }
+
+  void _showClearDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Clear Data"),
+          content: const Text(
+            "Are you sure you want to clear your count and Dhikr?",
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                _clearData();
+                Navigator.pop(context);
+              },
+              child: const Text("Clear", style: TextStyle(color: Colors.red)),
+            ),
+          ],
         );
       },
     );

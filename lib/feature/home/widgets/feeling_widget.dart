@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'package:qurany/feature/home/widgets/feeling_bottom_sheet.dart';
 import 'dart:math';
 
@@ -12,6 +13,19 @@ class FeelingWidget extends StatefulWidget {
 
 class _FeelingWidgetState extends State<FeelingWidget> {
   Map<String, String>? _selectedFeeling;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedFeeling();
+  }
+
+  Future<void> _loadSavedFeeling() async {
+    final savedFeeling = await SharedPreferencesHelper.getFeeling();
+    setState(() {
+      _selectedFeeling = savedFeeling;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,17 +43,8 @@ class _FeelingWidgetState extends State<FeelingWidget> {
             ),
           ),
         ),
-        SizedBox(height: 10.h),
         GestureDetector(
           onTap: () async {
-            if (_selectedFeeling != null) {
-              return; // Do nothing if already selected, or maybe re-open?
-            }
-            // Assuming we only open sheet if nothing selected, or if user wants to change?
-            // User request usually implies tapping "How do you feel" opens sheet.
-            // If already selected, maybe tapping the pill removes it?
-            // Design shows 'X' to remove.
-
             final result = await showModalBottomSheet<Map<String, String>>(
               context: context,
               backgroundColor: Colors.transparent,
@@ -48,10 +53,10 @@ class _FeelingWidgetState extends State<FeelingWidget> {
             );
 
             if (result != null) {
-              setState(() {
-                _selectedFeeling = result;
-              });
+              await SharedPreferencesHelper.saveFeeling(result);
             }
+            // Always reload to sync with SharedPreferences (handles Clear and Dismiss)
+            await _loadSavedFeeling();
           },
           child: _selectedFeeling != null
               ? _buildSelectedState()
@@ -143,7 +148,8 @@ class _FeelingWidgetState extends State<FeelingWidget> {
             ),
           ),
           GestureDetector(
-            onTap: () {
+            onTap: () async {
+              await SharedPreferencesHelper.clearFeeling();
               setState(() {
                 _selectedFeeling = null;
               });

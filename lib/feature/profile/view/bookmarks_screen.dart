@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import '../../quran/view/quran_screen.dart';
+import '../../home/model/surah_model.dart';
+import '../../quran/model/bookmarked_verse_model.dart';
 
 class BookmarksScreen extends StatefulWidget {
   const BookmarksScreen({super.key});
@@ -24,6 +28,14 @@ class _BookmarksScreenState extends State<BookmarksScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: tabs.length, vsync: this);
+
+    // Initialize QuranController if not already registered and fetch data
+    if (!Get.isRegistered<QuranController>()) {
+      Get.put(QuranController());
+    }
+    final QuranController controller = Get.find<QuranController>();
+    controller.fetchFavoriteSurahs(forceRefresh: true);
+    controller.fetchBookmarkedVerses(forceRefresh: true);
   }
 
   @override
@@ -152,60 +164,58 @@ class _BookmarksScreenState extends State<BookmarksScreen>
 
   // ==================== SURAH TAB ====================
   Widget _buildSurahTab() {
-    final surahs = [
-      {
-        'name': 'Al-Fatiah',
-        'arabic': 'الفاتحة',
-        'location': 'MECCAN',
-        'verses': '7 Ayat',
-      },
-      {
-        'name': 'Al-Baqarah',
-        'arabic': 'البقرة',
-        'location': 'MEDINAN',
-        'verses': '286 VERSES',
-      },
-      {
-        'name': "Al 'Imran",
-        'arabic': 'آل عمران',
-        'location': 'MEDINAN',
-        'verses': '200 VERSES',
-      },
-    ];
+    final QuranController controller = Get.find<QuranController>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Saved Ayah",
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12.h),
-              _buildSearchBar(),
-            ],
-          ),
-        ),
-        SizedBox(height: 16.h),
-        Expanded(
-          child: ListView.builder(
+    return Obx(() {
+      final favSurahs = controller.filteredFavoriteSurahs;
+      final isLoadingSurahs = controller.isLoadingFavorites.value;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: surahs.length,
-            itemBuilder: (context, index) {
-              final surah = surahs[index];
-              return _buildSurahItem(surah, index + 1);
-            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Bookmarked Surah",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                _buildSearchBar(controller),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+          SizedBox(height: 16.h),
+          Expanded(
+            child: isLoadingSurahs
+                ? const Center(child: CircularProgressIndicator())
+                : favSurahs.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.h),
+                      child: Text("No bookmarked surahs found"),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    itemCount: favSurahs.length,
+                    itemBuilder: (context, index) {
+                      final surah = favSurahs[index];
+                      return _buildSurahItem(surah, controller);
+                    },
+                  ),
+          ),
+        ],
+      );
+    });
   }
 
-  Widget _buildSurahItem(Map<String, String> surah, int number) {
+  Widget _buildSurahItem(SurahModel surah, QuranController controller) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(12.w),
@@ -223,10 +233,15 @@ class _BookmarksScreenState extends State<BookmarksScreen>
               color: const Color(0xFFE8F5E9),
               borderRadius: BorderRadius.circular(8.r),
             ),
-            child: Icon(
-              Icons.menu_book_outlined,
-              color: const Color(0xFF2E7D32),
-              size: 20.sp,
+            child: Center(
+              child: Text(
+                surah.number.toString(),
+                style: TextStyle(
+                  color: const Color(0xFF2E7D32),
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
           SizedBox(width: 12.w),
@@ -236,7 +251,7 @@ class _BookmarksScreenState extends State<BookmarksScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  surah['name']!,
+                  surah.englishName,
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
@@ -244,7 +259,7 @@ class _BookmarksScreenState extends State<BookmarksScreen>
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  '${surah['location']} • ${surah['verses']}',
+                  '${surah.revelationType} • ${surah.totalVerses} VERSES',
                   style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
                 ),
               ],
@@ -252,8 +267,46 @@ class _BookmarksScreenState extends State<BookmarksScreen>
           ),
           // Arabic name
           Text(
-            surah['arabic']!,
-            style: TextStyle(fontSize: 18.sp, fontFamily: 'Amiri'),
+            surah.arabicName,
+            style: TextStyle(fontSize: 18.sp, fontFamily: 'Arial'),
+          ),
+          SizedBox(width: 8.w),
+          // Remove bookmark button
+          GestureDetector(
+            onTap: () {
+              Get.dialog(
+                AlertDialog(
+                  title: const Text("Remove Bookmark"),
+                  content: Text(
+                    "Are you sure you want to remove ${surah.englishName} from your bookmarks?",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Get.back();
+                        controller.removeFavoriteSurah(surah.number);
+                      },
+                      child: const Text(
+                        "Remove",
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: Icon(
+              Icons.bookmark,
+              color: const Color(0xFF2E7D32),
+              size: 18.sp,
+            ),
           ),
         ],
       ),
@@ -262,64 +315,60 @@ class _BookmarksScreenState extends State<BookmarksScreen>
 
   // ==================== AYAH TAB ====================
   Widget _buildAyahTab() {
-    final ayahs = [
-      {
-        'surah': 'Al-Baqarah',
-        'verse': 'Verse 255',
-        'date': 'Saved 2 days ago',
-        'arabic': 'بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ',
-        'translation':
-            'In the Name of Allah—the Most Compassionate, Most Merciful.',
-      },
-      {
-        'surah': 'Al-Imran',
-        'verse': 'Verse 19',
-        'date': 'Saved 2 days ago',
-        'arabic': 'إِنَّ الدِّينَ عِندَ اللّٰهِ',
-        'translation': 'Indeed, the religion in the sight of Allah is Islam.',
-      },
-      {
-        'surah': 'An-Nisa',
-        'verse': 'Verse 36',
-        'date': 'Saved 3 days ago',
-        'arabic': 'وَاعْبُدُوا اللّٰهَ وَلَا تُشْرِكُوا بِهِ شَيْئًا',
-        'translation':
-            'And worship Allah and do not associate anything with Him.',
-      },
-    ];
+    final QuranController controller = Get.find<QuranController>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Saved Ayah",
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12.h),
-              _buildSearchBar(),
-            ],
-          ),
-        ),
-        SizedBox(height: 16.h),
-        Expanded(
-          child: ListView.builder(
+    return Obx(() {
+      final favVerses = controller.filteredBookmarkedVerses;
+      final isLoadingVerses = controller.isLoadingBookmarkedVerses.value;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: ayahs.length,
-            itemBuilder: (context, index) {
-              return _buildAyahItem(ayahs[index]);
-            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Bookmarked Ayah",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                _buildSearchBar(controller),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+          SizedBox(height: 16.h),
+          Expanded(
+            child: isLoadingVerses
+                ? const Center(child: CircularProgressIndicator())
+                : favVerses.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.h),
+                      child: Text("No bookmarked verses found"),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    itemCount: favVerses.length,
+                    itemBuilder: (context, index) {
+                      return _buildAyahItem(favVerses[index], controller);
+                    },
+                  ),
+          ),
+        ],
+      );
+    });
   }
 
-  Widget _buildAyahItem(Map<String, String> ayah) {
+  Widget _buildAyahItem(
+    BookmarkedVerseModel verse,
+    QuranController controller,
+  ) {
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
       padding: EdgeInsets.all(16.w),
@@ -333,30 +382,39 @@ class _BookmarksScreenState extends State<BookmarksScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${ayah['surah']} • ${ayah['verse']}',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "${verse.name} • Verse ${verse.verseId}",
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    ayah['date']!,
-                    style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-              Container(
-                padding: EdgeInsets.all(6.w),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32),
-                  borderRadius: BorderRadius.circular(4.r),
+                    SizedBox(height: 2.h),
+                    Text(
+                      controller.getFormattedSavedDate(verse.createdAt),
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
                 ),
-                child: Icon(Icons.bookmark, size: 14.sp, color: Colors.white),
+              ),
+              GestureDetector(
+                onTap: () => controller.removeBookmarkedVerse(
+                  verse.surahId,
+                  verse.verseId,
+                  verse.name,
+                ),
+                child: Icon(
+                  Icons.bookmark,
+                  color: const Color(0xFF2E7D32),
+                  size: 20.sp,
+                ),
               ),
             ],
           ),
@@ -365,10 +423,10 @@ class _BookmarksScreenState extends State<BookmarksScreen>
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              ayah['arabic']!,
+              verse.text,
               style: TextStyle(
                 fontSize: 20.sp,
-                fontFamily: 'Amiri',
+                fontFamily: 'Arial',
                 height: 1.8,
               ),
               textAlign: TextAlign.right,
@@ -377,7 +435,7 @@ class _BookmarksScreenState extends State<BookmarksScreen>
           SizedBox(height: 12.h),
           // Translation
           Text(
-            ayah['translation']!,
+            verse.translation,
             style: TextStyle(
               fontSize: 13.sp,
               color: Colors.grey[700],
@@ -426,8 +484,6 @@ class _BookmarksScreenState extends State<BookmarksScreen>
                 "Saved Quranic Stories",
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 12.h),
-              _buildSearchBar(),
             ],
           ),
         ),
@@ -551,8 +607,6 @@ class _BookmarksScreenState extends State<BookmarksScreen>
                 "Saved Azkar",
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 12.h),
-              _buildSearchBar(),
             ],
           ),
         ),
@@ -677,8 +731,6 @@ class _BookmarksScreenState extends State<BookmarksScreen>
                 "Saved Knowledge Informations",
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 12.h),
-              _buildSearchBar(),
             ],
           ),
         ),
@@ -763,7 +815,7 @@ class _BookmarksScreenState extends State<BookmarksScreen>
   }
 
   // ==================== COMMON WIDGETS ====================
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(QuranController controller) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       decoration: BoxDecoration(
@@ -774,9 +826,16 @@ class _BookmarksScreenState extends State<BookmarksScreen>
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              "Search",
-              style: TextStyle(fontSize: 14.sp, color: Colors.grey[400]),
+            child: TextField(
+              controller: controller.searchTextController,
+              decoration: InputDecoration(
+                hintText: "Search",
+                hintStyle: TextStyle(fontSize: 14.sp, color: Colors.grey[400]),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              style: TextStyle(fontSize: 14.sp),
             ),
           ),
           Icon(Icons.search, color: Colors.grey[400], size: 20.sp),

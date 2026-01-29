@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// import 'package:qurany/core/const/app_colors.dart'; // Removed unused import
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class FeelingBottomSheet extends StatefulWidget {
   const FeelingBottomSheet({super.key});
@@ -11,6 +11,21 @@ class FeelingBottomSheet extends StatefulWidget {
 
 class _FeelingBottomSheetState extends State<FeelingBottomSheet> {
   Map<String, String>? _selectedFeeling;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentFeeling();
+  }
+
+  Future<void> _loadCurrentFeeling() async {
+    final current = await SharedPreferencesHelper.getFeeling();
+    if (current != null) {
+      setState(() {
+        _selectedFeeling = current;
+      });
+    }
+  }
 
   final List<Map<String, String>> _feelings = [
     {"emoji": "😃", "label": "Happy"},
@@ -47,7 +62,8 @@ class _FeelingBottomSheetState extends State<FeelingBottomSheet> {
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
-              onTap: () {
+              onTap: () async {
+                await SharedPreferencesHelper.clearFeeling();
                 setState(() {
                   _selectedFeeling = null;
                 });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class LanguageStep extends StatefulWidget {
   const LanguageStep({super.key});
@@ -11,6 +12,28 @@ class LanguageStep extends StatefulWidget {
 
 class _LanguageStepState extends State<LanguageStep> {
   String selectedLanguage = 'English';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final lang = await SharedPreferencesHelper.getLanguage();
+    if (mounted) {
+      setState(() {
+        selectedLanguage = lang;
+      });
+    }
+  }
+
+  Future<void> _selectLanguage(String lang) async {
+    setState(() {
+      selectedLanguage = lang;
+    });
+    await SharedPreferencesHelper.saveLanguage(lang);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -104,11 +127,7 @@ class _LanguageStepState extends State<LanguageStep> {
   Widget _buildarbicLanguageItem(String name, String sub) {
     final isSelected = selectedLanguage == name;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedLanguage = name;
-        });
-      },
+      onTap: () => _selectLanguage(name),
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(
@@ -156,11 +175,7 @@ class _LanguageStepState extends State<LanguageStep> {
   Widget _buildLanguageItem(String name, String sub) {
     final isSelected = selectedLanguage == name;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedLanguage = name;
-        });
-      },
+      onTap: () => _selectLanguage(name),
       child: Container(
         padding: EdgeInsets.all(12.w),
         decoration: BoxDecoration(

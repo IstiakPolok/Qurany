@@ -41,15 +41,44 @@ class RandomVerseData {
 class Verse {
   final int verseId;
   final int surahId;
-  final String text;
+  final String surah;
+  final String transliteration;
+  final String ayate;
+  final InnerVerse verse;
 
-  Verse({required this.verseId, required this.surahId, required this.text});
+  Verse({
+    required this.verseId,
+    required this.surahId,
+    required this.surah,
+    required this.transliteration,
+    required this.ayate,
+    required this.verse,
+  });
 
   factory Verse.fromJson(Map<String, dynamic> json) {
     return Verse(
       verseId: json['verseId'] ?? 0,
       surahId: json['surahId'] ?? 0,
+      surah: json['surah'] ?? '',
+      transliteration: json['transliteration'] ?? '',
+      ayate: json['ayate'] ?? '',
+      verse: InnerVerse.fromJson(json['verse'] ?? {}),
+    );
+  }
+}
+
+class InnerVerse {
+  final int id;
+  final String text;
+  final String translation;
+
+  InnerVerse({required this.id, required this.text, required this.translation});
+
+  factory InnerVerse.fromJson(Map<String, dynamic> json) {
+    return InnerVerse(
+      id: json['id'] ?? 0,
       text: json['text'] ?? '',
+      translation: json['translation'] ?? '',
     );
   }
 }

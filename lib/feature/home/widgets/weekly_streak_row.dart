@@ -7,8 +7,9 @@ class WeeklyStreakRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Current day is Thursday (T) based on image, but we can make it dynamic or fixed for now.
-    // Let's assume M T W T F S S
+    // Dynamic day calculation
+    final now = DateTime.now();
+    final currentDayIndex = now.weekday - 1; // 0 = Monday, 6 = Sunday
     final List<String> days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     return Padding(
@@ -16,8 +17,9 @@ class WeeklyStreakRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(days.length, (index) {
-          final isCompleted = index == 0; // Monday checked
-          final isCurrent = index == 1; // Tuesday current
+          // For now, assume days before today are completed for the UI visualization
+          final isCompleted = index < currentDayIndex;
+          final isCurrent = index == currentDayIndex;
 
           return Column(
             children: [

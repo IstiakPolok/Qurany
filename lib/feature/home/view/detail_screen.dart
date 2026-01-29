@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 class DetailScreen extends StatelessWidget {
   final Map<String, String> data;
@@ -102,41 +103,37 @@ class DetailScreen extends StatelessWidget {
                             Text(
                               data['title'] ?? '',
                               style: TextStyle(
-                                fontSize: 20.sp,
+                                fontSize: 24.sp,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                                 height: 1.3,
                               ),
                             ),
                             SizedBox(height: 16.h),
-                            Text(
-                              "Masjid e Quba, or Quba Mosque, is the first mosque in Islam, built in 1 AH (622 CE) in Medina, Saudi Arabia, by Prophet Muhammad (peace be upon him). It is a highly significant site for Muslims, known for its spiritual importance and as the first location where Prophet Muhammad and Abu Bakr stayed upon their migration from Makkah. Today, the mosque has undergone several renovations, with the current structure featuring six main domes and four minarets, and is capable of holding around 30,000 worshippers.",
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: Colors.black87,
-                                height: 1.6,
+                            MarkdownBody(
+                              data: data['description'] ?? '',
+                              selectable: true,
+                              styleSheet: MarkdownStyleSheet(
+                                p: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.black87,
+                                  height: 1.6,
+                                ),
+                                h1: TextStyle(
+                                  fontSize: 22.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                                h2: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                                listBullet: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.black87,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 24.h),
-                            _buildBulletPoint(
-                              "Historical Significance",
-                              "It is considered the first mosque in Islamic history, built by Prophet Muhammad and his companions as they migrated from Makkah to Medina.",
-                            ),
-                            _buildBulletPoint(
-                              "Location",
-                              "The mosque is situated in Medina, Saudi Arabia, about 5 to 6 kilometers from the Prophet's Mosque (Masjid-e-Nabavi).",
-                            ),
-                            _buildBulletPoint(
-                              "Religious Virtue",
-                              "There is a specific reward for those who pray there. It is said that \"Whoever performs wudu in his house, then comes to Masjid Quba and offers one prayer therein, will have a reward like that for 'Umrah'.\"",
-                            ),
-                            _buildBulletPoint(
-                              "Architecture",
-                              "The original mosque was simple but has been renovated multiple times. The current structure is a masterpiece of Islamic architecture with 6 main domes and 4 minarets, notes Wikipedia.",
-                            ),
-                            _buildBulletPoint(
-                              "Current Usage",
-                              "The mosque is a place of worship that hosts prayers, including Friday prayers and both Eid prayers, and is a major site for pilgrims.",
                             ),
                           ],
                         ),
@@ -180,27 +177,6 @@ class DetailScreen extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBulletPoint(String title, String content) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16.h),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(height: 1.6, fontSize: 14.sp, color: Colors.black87),
-          children: [
-            TextSpan(
-              text: "• $title: ",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            TextSpan(text: content),
-          ],
-        ),
       ),
     );
   }

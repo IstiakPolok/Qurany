@@ -7,6 +7,7 @@ class SharedPreferencesHelper {
   static const String _categoriesKey = "categories";
   static const String _isWelcomeDialogShownKey =
       'isDriverVerificationDialogShown';
+  static const String _feelingKey = 'user_feeling';
 
   // Save categories (id and name only)
   static Future<void> saveCategories(
@@ -139,5 +140,134 @@ class SharedPreferencesHelper {
   static Future<String?> getUserId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_id');
+  }
+
+  // Save compass style preference
+  static Future<void> saveCompassStyle(String style) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('compass_style', style);
+  }
+
+  // Retrieve compass style preference
+  static Future<String> getCompassStyle() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('compass_style') ?? 'Classic'; // Default to Classic
+  }
+
+  // --- Preference Flow Helpers ---
+
+  // Language
+  static Future<void> saveLanguage(String language) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('app_language', language);
+  }
+
+  static Future<String> getLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('app_language') ?? 'English';
+  }
+
+  // Arabic Script
+  static Future<void> saveArabicScript(String script) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('arabic_script', script);
+  }
+
+  static Future<String> getArabicScript() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('arabic_script') ?? 'Imlaei';
+  }
+
+  // Reciter
+  static Future<void> saveReciter(String reciter) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('quran_reciter', reciter);
+  }
+
+  static Future<String> getReciter() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('quran_reciter') ?? 'Mishary Rashid Alafasy';
+  }
+
+  // Goals (List<String>)
+  static Future<void> saveGoals(List<String> goals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('user_goals', goals);
+  }
+
+  static Future<List<String>> getGoals() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList('user_goals') ?? ['Memorize Quran'];
+  }
+
+  // Feeling
+  static Future<void> saveFeeling(Map<String, String> feeling) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_feelingKey, jsonEncode(feeling));
+  }
+
+  static Future<Map<String, String>?> getFeeling() async {
+    final prefs = await SharedPreferences.getInstance();
+    final feelingJson = prefs.getString(_feelingKey);
+    if (feelingJson != null) {
+      return Map<String, String>.from(jsonDecode(feelingJson));
+    }
+    return null;
+  }
+
+  static Future<void> clearFeeling() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_feelingKey);
+  }
+
+  // Recent Reading History
+  static const String _recentReadingKey = 'recent_reading_history';
+
+  static Future<void> saveRecentReading({
+    required int surahId,
+    required String surahName,
+    required String arabicName,
+    required int lastVerseId,
+    required int totalVerses,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Get existing history
+    List<Map<String, dynamic>> history = await getRecentReadingHistory();
+
+    // Remove existing entry for this surah if it exists
+    history.removeWhere((item) => item['surahId'] == surahId);
+
+    // Add new entry at the beginning
+    history.insert(0, {
+      'surahId': surahId,
+      'surahName': surahName,
+      'arabicName': arabicName,
+      'lastVerseId': lastVerseId,
+      'totalVerses': totalVerses,
+      'lastReadAt': DateTime.now().toIso8601String(),
+    });
+
+    // Keep only the last 3 items
+    if (history.length > 3) {
+      history = history.sublist(0, 3);
+    }
+
+    // Save back to preferences
+    await prefs.setString(_recentReadingKey, jsonEncode(history));
+  }
+
+  static Future<List<Map<String, dynamic>>> getRecentReadingHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final historyJson = prefs.getString(_recentReadingKey);
+    if (historyJson != null) {
+      return List<Map<String, dynamic>>.from(jsonDecode(historyJson));
+    }
+    return [];
+  }
+
+  static Future<void> clearRecentReadingHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_recentReadingKey);
   }
 }

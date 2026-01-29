@@ -1,626 +1,582 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:qurany/feature/prayer/view/electronic_tasbih_screen.dart';
 import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
 import 'package:qurany/feature/profile/view/prayer_notification_setting_sheet.dart';
+import '../../../core/services/location_service.dart';
+import '../controller/prayer_controller.dart';
 import 'islamic_calendar_screen.dart';
 
-class PrayerScreen extends StatefulWidget {
+class PrayerScreen extends StatelessWidget {
   const PrayerScreen({super.key});
 
   @override
-  State<PrayerScreen> createState() => _PrayerScreenState();
-}
-
-class _PrayerScreenState extends State<PrayerScreen> {
-  DateTime _selectedDate = DateTime.now();
-  late Timer _timer;
-  DateTime _currentTime = DateTime.now();
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _currentTime = DateTime.now();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  void _changeDate(int offset) {
-    setState(() {
-      _selectedDate = _selectedDate.add(Duration(days: offset));
-    });
-  }
-
-  String _getFormattedGregorianDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final selected = DateTime(date.year, date.month, date.day);
-
-    String prefix = "";
-    if (selected == today) {
-      prefix = "Today, ";
-    } else if (selected == today.add(const Duration(days: 1))) {
-      prefix = "Tomorrow, ";
-    } else if (selected == today.subtract(const Duration(days: 1))) {
-      prefix = "Yesterday, ";
-    } else {
-      return DateFormat('EEEE, d MMMM').format(date);
-    }
-    return "$prefix${DateFormat('d MMMM').format(date)}";
-  }
-
-  String _getFormattedHijriDate(DateTime date) {
-    final hDate = HijriCalendar.fromDate(date);
-    return "${hDate.hDay} ${hDate.longMonthName} ${hDate.hYear}";
-  }
-
-  // Mock data for prayer times
-  final List<Map<String, dynamic>> _prayerTimes = [
-    {
-      'name': 'Fajar',
-      'time': '4:37 AM',
-      'icon':
-          'assets/icons/navprayerIcons.png', // Placeholder, use suitable sun/moon icons
-      'isPassed': true,
-      'isNext': false,
-    },
-    {
-      'name': 'Dhohr',
-      'time': '11:55 AM',
-      'icon': 'assets/icons/navprayerIcons.png',
-      'isPassed': false,
-      'isNext': true,
-    },
-    {
-      'name': 'Asr',
-      'time': '3:00 PM',
-      'icon': 'assets/icons/navprayerIcons.png',
-      'isPassed': false,
-      'isNext': false,
-    },
-    {
-      'name': 'Maghreb',
-      'time': '5:55 PM',
-      'icon': 'assets/icons/navprayerIcons.png',
-      'isPassed': false,
-      'isNext': false,
-    },
-    {
-      'name': 'Isha',
-      'time': '7:55 PM',
-      'icon': 'assets/icons/navprayerIcons.png',
-      'isPassed': false,
-      'isNext': false,
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final double topSectionHeight = (screenHeight * 0.52).clamp(380.0, 500.0);
+    final PrayerController controller = Get.put(PrayerController());
+    final LocationService locationService = Get.find<LocationService>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Top Section (Background, Header, Timeline)
-            Container(
-              height: topSectionHeight,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage(
-                    'assets/image/prayerBG.png',
-                  ), // Need a suitable mosque image in assets. If not, color fallback
-                  fit: BoxFit.cover,
+      body: Obx(() {
+        // Show loading indicator while location or prayer data is loading
+        if ((controller.isLoading.value &&
+                controller.prayerData.value == null) ||
+            locationService.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Show error state if there's an error
+        if (controller.error.value.isNotEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.grey[600]),
+                SizedBox(height: 16.h),
+                Text(
+                  'Prayer Times Unavailable',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700],
+                  ),
                 ),
+                SizedBox(height: 8.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 40.w),
+                  child: Text(
+                    controller.error.value,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                ElevatedButton.icon(
+                  onPressed: () => controller.refreshPrayerTimes(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Try Again'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              // Top Section (Background, Header, Timeline)
+              _buildTopSection(context, controller, locationService),
+
+              // Action Cards
+              _buildActionCards(context),
+
+              // Today's Prayer Times
+              _buildPrayerTimesSection(context, controller),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildTopSection(
+    BuildContext context,
+    PrayerController controller,
+    LocationService locationService,
+  ) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double topSectionHeight = (screenHeight * 0.52).clamp(380.0, 500.0);
+
+    return Container(
+      height: topSectionHeight,
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/image/prayerBG.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Gradient Overlay
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.1),
+                  Colors.black.withOpacity(0.3),
+                ],
               ),
-              child: Stack(
+            ),
+          ),
+
+          // Content
+          Padding(
+            padding: EdgeInsets.only(
+              left: 20.w,
+              right: 20.w,
+              top: MediaQuery.of(context).padding.top + 10.h,
+              bottom: 4.h,
+            ),
+            child: Column(
+              children: [
+                // Location Header
+                _buildLocationHeader(locationService),
+
+                SizedBox(height: 16.h),
+
+                // Date Navigation
+                _buildDateNavigation(context, controller),
+
+                SizedBox(height: 16.h),
+
+                // Time
+                FittedBox(
+                  child: Text(
+                    DateFormat('HH:mm').format(controller.currentTime.value),
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 56.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 8.h),
+
+                // Countdown Badge
+                _buildCountdownBadge(controller),
+
+                const Spacer(),
+
+                // Timeline Row
+                _buildTimeline(controller),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationHeader(LocationService locationService) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: GestureDetector(
+            onTap: () => locationService.refreshLocation(),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Gradient Overlay for visibility
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.1),
-                          Colors.black.withOpacity(0.3),
-                        ],
+                  Obx(
+                    () => locationService.isLoading.value
+                        ? SizedBox(
+                            width: 16.sp,
+                            height: 16.sp,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            Icons.location_on_outlined,
+                            color: Colors.white,
+                            size: 16.sp,
+                          ),
+                  ),
+                  SizedBox(width: 8.w),
+                  Flexible(
+                    child: Obx(
+                      () => Text(
+                        locationService.currentLocation.value,
+                        style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
+                  SizedBox(width: 4.w),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                    size: 16.sp,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Stack(
+          children: [
+            Icon(
+              Icons.notifications_outlined,
+              color: Colors.white,
+              size: 28.sp,
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: EdgeInsets.all(4.w),
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  "2",
+                  style: TextStyle(color: Colors.white, fontSize: 8.sp),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-                  // Content
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: 20.w,
-                      right: 20.w,
-                      top: MediaQuery.of(context).padding.top + 10.h,
-                      bottom: 4.h,
+  Widget _buildDateNavigation(
+    BuildContext context,
+    PrayerController controller,
+  ) {
+    return Obx(() {
+      final date = controller.selectedDate.value;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: () => controller.previousDay(),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white70,
+              size: 14.sp,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const IslamicCalendarScreen(),
+                ),
+              );
+            },
+            child: Column(
+              children: [
+                Text(
+                  DateFormat('EEEE, d MMMM').format(date),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  controller.getFormattedHijriDate(),
+                  style: TextStyle(color: Colors.white70, fontSize: 12.sp),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 4.w),
+          IconButton(
+            onPressed: () => controller.nextDay(),
+            icon: Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 14.sp,
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildCountdownBadge(PrayerController controller) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.black45,
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              "${controller.getNextPrayerName()} will begin in",
+              style: TextStyle(color: Colors.white, fontSize: 12.sp),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Text(
+              controller.getTimeRemaining(),
+              style: TextStyle(color: Colors.white, fontSize: 12.sp),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeline(PrayerController controller) {
+    if (controller.prayerData.value == null) return const SizedBox();
+
+    final times = controller.prayerData.value!.times;
+    final timelineItems = [
+      {
+        'name': 'Fajr',
+        'time': times['Fajr'] ?? '00:00',
+        'icon': Icons.wb_twilight,
+      },
+      {
+        'name': 'Sunrise',
+        'time': times['Sunrise'] ?? '00:00',
+        'icon': Icons.wb_sunny_outlined,
+      },
+      {
+        'name': 'Dhuhr',
+        'time': times['Dhuhr'] ?? '00:00',
+        'icon': Icons.wb_sunny,
+      },
+      {
+        'name': 'Asr',
+        'time': times['Asr'] ?? '00:00',
+        'icon': Icons.cloud_outlined,
+      },
+      {
+        'name': 'Maghrib',
+        'time': times['Maghrib'] ?? '00:00',
+        'icon': Icons.wb_twilight,
+      },
+      {
+        'name': 'Isha',
+        'time': times['Isha'] ?? '00:00',
+        'icon': Icons.nights_stay_outlined,
+      },
+    ];
+
+    final nextPrayer = controller.getNextPrayerName();
+
+    return SizedBox(
+      height: 110.h,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(timelineItems.length, (index) {
+          final item = timelineItems[index];
+          bool isSelected = item['name'] == nextPrayer;
+
+          return Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    vertical: 12.h,
+                    horizontal: 8.w,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF4E4B45)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        item['icon'] as IconData,
+                        color: isSelected ? Colors.white : Colors.white70,
+                        size: 16.sp,
+                      ),
+                      SizedBox(height: 6.h),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          item['name'] as String,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontSize: isSelected ? 11.sp : 9.sp,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          item['time'] as String,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontSize: isSelected ? 10.sp : 8.sp,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Transform.translate(
+                    offset: Offset(0, -6.h),
+                    child: CustomPaint(
+                      size: Size(16.w, 10.h),
+                      painter: TrianglePainter(),
                     ),
-                    child: Column(
+                  )
+                else
+                  SizedBox(height: 10.h),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildActionCards(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const QiblaCompassScreen(),
+                  ),
+                );
+              },
+              child: _buildActionCard(
+                imagePath: "assets/icons/qibladirctioninprayerIcons.png",
+                title: "Locate",
+                subtitle: "Qibla",
+                color: const Color(0xFFE2E9D8),
+              ),
+            ),
+          ),
+          SizedBox(width: 12.w),
+          _buildPrayerProgressCard(),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ElectronicTasbihScreen(),
+                  ),
+                );
+              },
+              child: _buildActionCard(
+                imagePath: "assets/icons/electrictasbihinpracyericon.png",
+                title: "Electronic",
+                subtitle: "Tasbih",
+                color: const Color(0xFFE2E9D8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrayerProgressCard() {
+    return Expanded(
+      child: Container(
+        height: 115.h,
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 16.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE2E9D8),
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: GetBuilder<PrayerController>(
+          builder: (controller) {
+            // Count how many prayers have passed today
+            final passedPrayers = [
+              'Fajr',
+              'Dhuhr',
+              'Asr',
+              'Maghrib',
+              'Isha',
+            ].where((prayer) => controller.isPrayerPassed(prayer)).length;
+
+            final progress = passedPrayers / 5.0;
+
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 70.w,
+                      height: 70.w,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.white,
+                        color: const Color(0xFF2E7D32),
+                        strokeWidth: 10.w,
+                      ),
+                    ),
+                    Column(
                       children: [
-                        // Location Header
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Flexible(
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w,
-                                  vertical: 8.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white24,
-                                  borderRadius: BorderRadius.circular(20.r),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.location_on_outlined,
-                                      color: Colors.white,
-                                      size: 16.sp,
-                                    ),
-                                    SizedBox(width: 8.w),
-                                    Flexible(
-                                      child: Text(
-                                        "Abu Dhabi, Dubai",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14.sp,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    SizedBox(width: 4.w),
-                                    Icon(
-                                      Icons.keyboard_arrow_down,
-                                      color: Colors.white,
-                                      size: 16.sp,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Stack(
-                              children: [
-                                Icon(
-                                  Icons.notifications_outlined,
-                                  color: Colors.white,
-                                  size: 28.sp,
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: EdgeInsets.all(4.w),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.green,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      "2",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8.sp,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        SizedBox(height: 16.h),
-
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _changeDate(-1),
-                              behavior: HitTestBehavior.opaque,
-                              child: Padding(
-                                padding: EdgeInsets.all(8.w),
-                                child: Icon(
-                                  Icons.arrow_back_ios,
-                                  color: Colors.white70,
-                                  size: 14.sp,
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const IslamicCalendarScreen(),
-                                  ),
-                                );
-                              },
-                              behavior: HitTestBehavior.opaque,
-                              child: Column(
-                                children: [
-                                  Text(
-                                    _getFormattedGregorianDate(_selectedDate),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4.h),
-                                  Text(
-                                    _getFormattedHijriDate(_selectedDate),
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12.sp,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 4.w),
-                            GestureDetector(
-                              onTap: () => _changeDate(1),
-                              behavior: HitTestBehavior.opaque,
-                              child: Padding(
-                                padding: EdgeInsets.all(8.w),
-                                child: Icon(
-                                  Icons.arrow_forward_ios,
-                                  color: Colors.white70,
-                                  size: 14.sp,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        SizedBox(height: 16.h),
-
-                        // Time
-                        FittedBox(
-                          child: Text(
-                            DateFormat('HH:mm').format(_currentTime),
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 56.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        Text(
+                          "$passedPrayers/5",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18.sp,
                           ),
                         ),
-
-                        SizedBox(height: 8.h),
-
-                        // Countdown Badge
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16.w,
-                            vertical: 8.h,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.black45,
-                            borderRadius: BorderRadius.circular(20.r),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  "Dhohr will begin in",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.sp,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              SizedBox(width: 8.w),
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8.w,
-                                  vertical: 4.h,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white24,
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Text(
-                                  "-00:37:25",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.sp,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const Spacer(),
-
-                        // Timeline Row (No Scroll)
-                        SizedBox(
-                          height: 110.h,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(6, (index) {
-                              // Data for the timeline
-                              final List<Map<String, dynamic>> timelineItems = [
-                                {
-                                  'name': 'Fajar',
-                                  'time': '04:37 AM',
-                                  'icon': Icons.wb_twilight,
-                                },
-                                {
-                                  'name': 'Sunrise',
-                                  'time': '05:55 AM',
-                                  'icon': Icons.wb_sunny_outlined,
-                                },
-                                {
-                                  'name': 'Dhohr',
-                                  'time': '11:55 AM',
-                                  'icon': Icons.wb_sunny,
-                                },
-                                {
-                                  'name': 'Asr',
-                                  'time': '03:00 PM',
-                                  'icon': Icons.cloud_outlined,
-                                },
-                                {
-                                  'name': 'Maghreb',
-                                  'time': '05:55 PM',
-                                  'icon': Icons.wb_twilight,
-                                },
-                                {
-                                  'name': 'Isha',
-                                  'time': '07:55 PM',
-                                  'icon': Icons.nights_stay_outlined,
-                                },
-                              ];
-
-                              bool isSelected = index == 2; // Dhohr active
-                              final item = timelineItems[index];
-
-                              return Expanded(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 12.h,
-                                        horizontal: 8.w,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? const Color(0xFF4E4B45)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(
-                                          12.r,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            item['icon'] as IconData,
-                                            color: isSelected
-                                                ? Colors.white
-                                                : Colors.white70,
-                                            size: 16.sp,
-                                          ),
-                                          SizedBox(height: 6.h),
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            child: Text(
-                                              item['name'] as String,
-                                              style: TextStyle(
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : Colors.white70,
-                                                fontSize: isSelected
-                                                    ? 11.sp
-                                                    : 9.sp,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.bold
-                                                    : FontWeight.w400,
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(height: 2.h),
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            child: Text(
-                                              (item['time'] as String)
-                                                  .replaceFirst(' AM', 'am')
-                                                  .replaceFirst(' PM', 'pm'),
-                                              style: TextStyle(
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : Colors.white70,
-                                                fontSize: isSelected
-                                                    ? 10.sp
-                                                    : 8.sp,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.bold
-                                                    : FontWeight.w400,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (isSelected)
-                                      Transform.translate(
-                                        offset: Offset(0, -6.h),
-                                        child: CustomPaint(
-                                          size: Size(16.w, 10.h),
-                                          painter: TrianglePainter(),
-                                        ),
-                                      )
-                                    else
-                                      SizedBox(height: 10.h),
-                                  ],
-                                ),
-                              );
-                            }),
+                        Text(
+                          "Prayed",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12.sp,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Action Cards
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 24.h),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const QiblaCompassScreen(),
-                          ),
-                        );
-                      },
-                      child: _buildActionCard(
-                        imagePath:
-                            "assets/icons/qibladirctioninprayerIcons.png",
-                        title: "Locate",
-                        subtitle: "Qibla",
-                        color: const Color(0xFFE2E9D8),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: Container(
-                      height: 115.h,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 16.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE2E9D8),
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              SizedBox(
-                                width: 70.w,
-                                height: 70.w,
-                                child: CircularProgressIndicator(
-                                  value: 0.2, // 1/5
-                                  backgroundColor: Colors.white,
-                                  color: const Color(0xFF2E7D32),
-                                  strokeWidth: 10.w,
-                                ),
-                              ),
-                              Column(
-                                children: [
-                                  Text(
-                                    "1/5",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18.sp,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Prayed",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12.sp,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const ElectronicTasbihScreen(),
-                          ),
-                        );
-                      },
-                      child: _buildActionCard(
-                        imagePath:
-                            "assets/icons/electrictasbihinpracyericon.png",
-                        title: "Electronic",
-                        subtitle: "Tasbih",
-                        color: const Color(0xFFE2E9D8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Today's Prayer Times
-            Container(
-              padding: EdgeInsets.all(24.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Today's Prayer Times",
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  ...List.generate(_prayerTimes.length, (index) {
-                    return _buildPrayerItem(_prayerTimes[index]);
-                  }),
-                  SizedBox(height: 80.h), // Bottom text padding
-                ],
-              ),
-            ),
-          ],
+                  ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -645,7 +601,6 @@ class _PrayerScreenState extends State<PrayerScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(imagePath, width: 40.w, height: 40.w),
-
           Text(
             title,
             style: TextStyle(color: Colors.grey[600], fontSize: 14.sp),
@@ -667,9 +622,58 @@ class _PrayerScreenState extends State<PrayerScreen> {
     );
   }
 
-  Widget _buildPrayerItem(Map<String, dynamic> data) {
-    bool isNext = data['isNext'];
-    bool isChecked = data['isPassed'];
+  Widget _buildPrayerTimesSection(
+    BuildContext context,
+    PrayerController controller,
+  ) {
+    if (controller.prayerData.value == null) return const SizedBox();
+
+    final times = controller.prayerData.value!.times;
+    final prayerItems = [
+      {'name': 'Fajr', 'time': times['Fajr'] ?? '00:00'},
+      {'name': 'Dhuhr', 'time': times['Dhuhr'] ?? '00:00'},
+      {'name': 'Asr', 'time': times['Asr'] ?? '00:00'},
+      {'name': 'Maghrib', 'time': times['Maghrib'] ?? '00:00'},
+      {'name': 'Isha', 'time': times['Isha'] ?? '00:00'},
+    ];
+
+    return Container(
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Today's Prayer Times",
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          ...prayerItems.map(
+            (item) => _buildPrayerItem(context, item, controller),
+          ),
+          SizedBox(height: 80.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrayerItem(
+    BuildContext context,
+    Map<String, String> data,
+    PrayerController controller,
+  ) {
+    final nextPrayer = controller.getNextPrayerName();
+    bool isNext = data['name'] == nextPrayer;
+
+    // Check if this prayer has passed using the controller
+    bool isPassed = controller.isPrayerPassed(data['name']!);
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -679,7 +683,6 @@ class _PrayerScreenState extends State<PrayerScreen> {
         borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.grey[200]!, width: 1),
         boxShadow: [
-          // Subtle shadow
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 4,
@@ -690,10 +693,10 @@ class _PrayerScreenState extends State<PrayerScreen> {
       child: Row(
         children: [
           Icon(
-            Icons.wb_sunny_outlined,
+            _getPrayerIcon(data['name']!),
             size: 24.sp,
-            color: Colors.grey[700],
-          ), // Placeholder icon
+            color: isPassed ? const Color(0xFF2E7D32) : Colors.grey[700],
+          ),
           SizedBox(width: 12.w),
           Expanded(
             flex: 3,
@@ -701,15 +704,17 @@ class _PrayerScreenState extends State<PrayerScreen> {
               children: [
                 Flexible(
                   child: Text(
-                    data['name'],
+                    data['name']!,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
+                      color: isPassed
+                          ? const Color(0xFF2E7D32)
+                          : Colors.black87,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-
                 IconButton(
                   onPressed: () {
                     showModalBottomSheet(
@@ -717,7 +722,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (context) => PrayerNotificationSettingSheet(
-                        prayerName: data['name'],
+                        prayerName: data['name']!,
                       ),
                     );
                   },
@@ -733,7 +738,6 @@ class _PrayerScreenState extends State<PrayerScreen> {
               ],
             ),
           ),
-
           Expanded(
             flex: 5,
             child: Row(
@@ -748,44 +752,44 @@ class _PrayerScreenState extends State<PrayerScreen> {
                       ),
                       margin: EdgeInsets.only(right: 8.w),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: const Color(0xFF2E7D32).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4.r),
                       ),
                       child: Text(
-                        "in 37m 13s",
+                        "Next",
                         style: TextStyle(
                           fontSize: 10.sp,
-                          color: Colors.grey[600],
+                          color: const Color(0xFF2E7D32),
+                          fontWeight: FontWeight.bold,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
                 Text(
-                  data['time'],
+                  data['time']!,
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
+                    color: isPassed ? const Color(0xFF2E7D32) : Colors.black87,
                   ),
                 ),
                 SizedBox(width: 12.w),
-
-                // Checkbox (custom for style match)
                 Container(
                   width: 24.w,
                   height: 24.w,
                   decoration: BoxDecoration(
-                    color: isChecked
+                    color: isPassed
                         ? const Color(0xFF2E7D32)
                         : Colors.transparent,
                     border: Border.all(
-                      color: isChecked
+                      color: isPassed
                           ? const Color(0xFF2E7D32)
                           : Colors.grey[400]!,
                     ),
                     borderRadius: BorderRadius.circular(4.r),
                   ),
-                  child: isChecked
+                  child: isPassed
                       ? Icon(Icons.check, color: Colors.white, size: 16.sp)
                       : null,
                 ),
@@ -795,6 +799,23 @@ class _PrayerScreenState extends State<PrayerScreen> {
         ],
       ),
     );
+  }
+
+  IconData _getPrayerIcon(String prayerName) {
+    switch (prayerName.toLowerCase()) {
+      case 'fajr':
+        return Icons.wb_twilight;
+      case 'dhuhr':
+        return Icons.wb_sunny;
+      case 'asr':
+        return Icons.cloud_outlined;
+      case 'maghrib':
+        return Icons.wb_twilight;
+      case 'isha':
+        return Icons.nights_stay_outlined;
+      default:
+        return Icons.wb_sunny_outlined;
+    }
   }
 }
 

@@ -4,29 +4,17 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:hijri/hijri_calendar.dart';
 import '../../../core/const/app_colors.dart';
+import '../../../core/const/static_surah_data.dart';
+import '../../../core/const/static_juz_data.dart';
 import '../../../core/services/location_service.dart';
+import '../../../core/services_class/local_service/shared_preferences_helper.dart';
+import '../../bottom_nav_bar/screen/bottom_nav_bar.dart';
 import '../../home/model/surah_model.dart';
 import '../../home/services/quran_service.dart';
+import '../model/bookmarked_verse_model.dart';
 import 'surah_reading_screen.dart';
 import 'listen_mode_screen.dart';
 import 'memorization_screen.dart';
-
-// Sample Favorite Ayah
-class FavoriteAyah {
-  final String surahName;
-  final int verseNumber;
-  final String arabicText;
-  final String translation;
-  final String savedDate;
-
-  FavoriteAyah({
-    required this.surahName,
-    required this.verseNumber,
-    required this.arabicText,
-    required this.translation,
-    required this.savedDate,
-  });
-}
 
 // Controller
 class QuranController extends GetxController {
@@ -39,7 +27,19 @@ class QuranController extends GetxController {
 
   // Data
   var surahs = <SurahModel>[].obs;
+  var juzList = <JuzModel>[].obs;
+  var favoriteSurahs = <SurahModel>[].obs;
+  var bookmarkedVerses = <BookmarkedVerseModel>[].obs;
+  var recentReadingHistory = <Map<String, dynamic>>[].obs;
   var isLoading = true.obs;
+  var isLoadingJuz = false.obs;
+  var isLoadingFavorites = false.obs;
+  var isLoadingBookmarkedVerses = false.obs;
+
+  bool _isSurahsFetched = false;
+  bool _isJuzFetched = false;
+  bool _isFavoriteSurahsFetched = false;
+  bool _isBookmarkedVersesFetched = false;
 
   List<SurahModel> get filteredSurahs {
     if (searchQuery.value.isEmpty) {
@@ -56,8 +56,6 @@ class QuranController extends GetxController {
         )
         .toList();
   }
-
-  final List<JuzModel> juzList = JuzModel.sampleJuz;
 
   List<JuzModel> get filteredJuzList {
     if (searchQuery.value.isEmpty) {
@@ -78,6 +76,22 @@ class QuranController extends GetxController {
         .toList();
   }
 
+  List<SurahModel> get filteredFavoriteSurahs {
+    if (searchQuery.value.isEmpty) {
+      return favoriteSurahs;
+    }
+    return favoriteSurahs
+        .where(
+          (surah) =>
+              surah.englishName.toLowerCase().contains(
+                searchQuery.value.toLowerCase(),
+              ) ||
+              surah.arabicName.contains(searchQuery.value) ||
+              surah.number.toString().contains(searchQuery.value),
+        )
+        .toList();
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -85,6 +99,28 @@ class QuranController extends GetxController {
       searchQuery.value = searchTextController.text;
     });
     fetchSurahs();
+    fetchJuz();
+
+    // Initial fetch
+    fetchFavoriteSurahs(forceRefresh: true);
+    fetchBookmarkedVerses(forceRefresh: true);
+    fetchRecentReadingHistory();
+
+    // Listen to bottom navigation changes to reload when user comes back to this screen
+    try {
+      if (Get.isRegistered<BottomNavbarController>()) {
+        ever(Get.find<BottomNavbarController>().currentIndex, (index) {
+          if (index == 1) {
+            // Quran tab selected
+            fetchFavoriteSurahs(forceRefresh: true);
+            fetchBookmarkedVerses(forceRefresh: true);
+            fetchRecentReadingHistory();
+          }
+        });
+      }
+    } catch (e) {
+      print("Error setting up BottomNavbar listener: $e");
+    }
   }
 
   @override
@@ -94,14 +130,114 @@ class QuranController extends GetxController {
   }
 
   Future<void> fetchSurahs() async {
+    if (_isSurahsFetched) return;
     try {
       isLoading(true);
-      final response = await _quranService.fetchSurahs(page: 1, limit: 114);
-      surahs.assignAll(response.surahs);
+      // Use static data instead of API call
+      await Future.delayed(
+        const Duration(milliseconds: 100),
+      ); // Simulate loading
+      surahs.assignAll(StaticSurahData.getAllSurahs());
+      _isSurahsFetched = true;
     } catch (e) {
-      print("Error fetching surahs: $e");
+      print("Error loading surahs: $e");
     } finally {
       isLoading(false);
+    }
+  }
+
+  Future<void> fetchJuz() async {
+    if (_isJuzFetched) return;
+    try {
+      isLoadingJuz(true);
+      // Use static data instead of API call
+      await Future.delayed(
+        const Duration(milliseconds: 100),
+      ); // Simulate loading
+      juzList.assignAll(StaticJuzData.getAllJuz());
+      _isJuzFetched = true;
+    } catch (e) {
+      print("Error fetching juz: $e");
+    } finally {
+      isLoadingJuz(false);
+    }
+  }
+
+  Future<void> fetchFavoriteSurahs({bool forceRefresh = false}) async {
+    if (_isFavoriteSurahsFetched && !forceRefresh) return;
+    try {
+      isLoadingFavorites(true);
+      print("📚 Fetching bookmarked surahs...");
+      final response = await _quranService.fetchBookmarkedSurahs();
+      print("✅ Received ${response.length} bookmarked surahs");
+      response.forEach((surah) {
+        print(
+          "  - Surah ${surah.number}: ${surah.englishName} (${surah.arabicName})",
+        );
+        print(
+          "    Type: ${surah.revelationType}, Verses: ${surah.totalVerses}",
+        );
+      });
+      favoriteSurahs.assignAll(response);
+      _isFavoriteSurahsFetched = true;
+      print("💾 Assigned to favoriteSurahs observable");
+    } catch (e) {
+      print("❌ Error fetching favorite surahs: $e");
+      print("Stack trace: ${StackTrace.current}");
+    } finally {
+      isLoadingFavorites(false);
+    }
+  }
+
+  Future<void> removeFavoriteSurah(int surahId) async {
+    try {
+      final success = await _quranService.toggleBookmarkSurah(surahId);
+      if (success) {
+        await fetchFavoriteSurahs(forceRefresh: true);
+        Get.snackbar(
+          "Success",
+          "Surah removed from favorites",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.black,
+        );
+      } else {
+        Get.snackbar(
+          "Error",
+          "Failed to remove surah from favorites",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.black,
+        );
+      }
+    } catch (e) {
+      print("Error removing favorite: $e");
+    }
+  }
+
+  Future<void> toggleFavorite(SurahModel surah) async {
+    try {
+      final success = await _quranService.toggleBookmarkSurah(surah.number);
+      if (success) {
+        await fetchFavoriteSurahs(forceRefresh: true);
+        Get.snackbar(
+          "Success",
+          "Favorite list updated",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.withOpacity(0.1),
+          colorText: Colors.black,
+        );
+      } else {
+        Get.snackbar(
+          "Error",
+          "Failed to update favorite",
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.black,
+        );
+      }
+    } catch (e) {
+      print("Error toggling favorite: $e");
     }
   }
 
@@ -135,46 +271,123 @@ class QuranController extends GetxController {
     return "${hDate.hDay} ${hDate.longMonthName} ${hDate.hYear}";
   }
 
-  final List<FavoriteAyah> favoriteAyahs = [
-    FavoriteAyah(
-      surahName: "Al-Fatiha",
-      verseNumber: 255,
-      arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-      translation:
-          "In the Name of Allah—the Most Compassionate, Most Merciful.",
-      savedDate: "Saved 2 days ago",
-    ),
-    FavoriteAyah(
-      surahName: "Al-Imran",
-      verseNumber: 19,
-      arabicText: "إِنَّ الدِّينَ عِندَ اللَّهِ الْإِسْلَامُ",
-      translation: "Indeed, the religion in the sight of Allah is Islam.",
-      savedDate: "Saved 2 days ago",
-    ),
-    FavoriteAyah(
-      surahName: "An-Nisa",
-      verseNumber: 36,
-      arabicText: "وَاعْبُدُوا اللَّهَ وَلَا تُشْرِكُوا بِهِ شَيْئًا",
-      translation: "And worship Allah and do not associate anything with Him.",
-      savedDate: "Saved 3 days ago",
-    ),
-  ];
-
-  List<FavoriteAyah> get filteredFavoriteAyahs {
-    if (searchQuery.value.isEmpty) {
-      return favoriteAyahs;
+  Future<void> fetchBookmarkedVerses({bool forceRefresh = false}) async {
+    if (_isBookmarkedVersesFetched && !forceRefresh) return;
+    try {
+      isLoadingBookmarkedVerses(true);
+      print("📚 Fetching bookmarked verses...");
+      final response = await _quranService.fetchBookmarkedVerses();
+      print("✅ Received ${response.length} bookmarked verses");
+      bookmarkedVerses.assignAll(response);
+      _isBookmarkedVersesFetched = true;
+      print("💾 Assigned to bookmarkedVerses observable");
+    } catch (e) {
+      print("❌ Error fetching bookmarked verses: $e");
+      print("Stack trace: ${StackTrace.current}");
+    } finally {
+      isLoadingBookmarkedVerses(false);
     }
-    return favoriteAyahs
+  }
+
+  Future<void> removeBookmarkedVerse(
+    int surahId,
+    int verseId,
+    String verseName,
+  ) async {
+    try {
+      Get.dialog(
+        AlertDialog(
+          title: const Text("Remove Favorite"),
+          content: Text(
+            "Are you sure you want to remove verse $verseId of $verseName from your favorites?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Get.back();
+                final success = await _quranService.deleteBookmarkedVerse(
+                  surahId,
+                  verseId,
+                );
+                if (success) {
+                  await fetchBookmarkedVerses(forceRefresh: true);
+                  Get.snackbar(
+                    "Success",
+                    "Verse removed from favorites",
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.green.withOpacity(0.1),
+                    colorText: Colors.black,
+                  );
+                } else {
+                  Get.snackbar(
+                    "Error",
+                    "Failed to remove verse from favorites",
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red.withOpacity(0.1),
+                    colorText: Colors.black,
+                  );
+                }
+              },
+              child: const Text("Remove", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print("Error in removeBookmarkedVerse: $e");
+    }
+  }
+
+  List<BookmarkedVerseModel> get filteredBookmarkedVerses {
+    if (searchQuery.value.isEmpty) {
+      return bookmarkedVerses;
+    }
+    return bookmarkedVerses
         .where(
-          (a) =>
-              a.surahName.toLowerCase().contains(
-                searchQuery.value.toLowerCase(),
-              ) ||
-              a.translation.toLowerCase().contains(
+          (v) =>
+              v.name.toLowerCase().contains(searchQuery.value.toLowerCase()) ||
+              v.translation.toLowerCase().contains(
                 searchQuery.value.toLowerCase(),
               ),
         )
         .toList();
+  }
+
+  Future<void> fetchRecentReadingHistory() async {
+    try {
+      final history = await SharedPreferencesHelper.getRecentReadingHistory();
+      recentReadingHistory.assignAll(history);
+    } catch (e) {
+      print("Error fetching recent reading history: $e");
+    }
+  }
+
+  String getFormattedSavedDate(String createdAt) {
+    try {
+      final date = DateTime.parse(createdAt);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays == 0) {
+        return "Saved today";
+      } else if (difference.inDays == 1) {
+        return "Saved yesterday";
+      } else if (difference.inDays < 7) {
+        return "Saved ${difference.inDays} days ago";
+      } else if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return "Saved $weeks ${weeks == 1 ? 'week' : 'weeks'} ago";
+      } else {
+        final months = (difference.inDays / 30).floor();
+        return "Saved $months ${months == 1 ? 'month' : 'months'} ago";
+      }
+    } catch (e) {
+      return "Saved recently";
+    }
   }
 }
 
@@ -206,60 +419,58 @@ class QuranScreen extends StatelessWidget {
               ),
             ),
             // Main content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(controller),
-                  SizedBox(height: 60.h),
-                  _buildLastReadCard(context, controller),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(controller),
+                SizedBox(height: 60.h),
+                _buildLastReadCard(context, controller),
 
-                  SizedBox(height: 16.h),
+                SizedBox(height: 16.h),
 
-                  // Mode buttons
-                  _buildModeButtons(controller),
+                // Mode buttons
+                _buildModeButtons(controller),
 
-                  SizedBox(height: 24.h),
+                SizedBox(height: 24.h),
 
-                  // Quran section
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Text(
-                      "Quran",
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                // Quran section
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    "Quran",
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ),
 
-                  SizedBox(height: 12.h),
+                SizedBox(height: 12.h),
 
-                  // Search bar
-                  _buildSearchBar(controller),
+                // Search bar
+                _buildSearchBar(controller),
 
-                  SizedBox(height: 16.h),
+                SizedBox(height: 16.h),
 
-                  // Tab bar
-                  _buildTabBar(controller),
+                // Tab bar
+                _buildTabBar(controller),
 
-                  SizedBox(height: 16.h),
+                SizedBox(height: 16.h),
 
-                  // Content based on selected tab
-                  Obx(() {
-                    switch (controller.selectedTab.value) {
-                      case 0:
-                        return _buildSurahList(controller);
-                      case 1:
-                        return _buildJuzList(controller);
-                      case 2:
-                        return _buildFavoritesList(context, controller);
-                      default:
-                        return _buildSurahList(controller);
-                    }
-                  }),
-                ],
-              ),
+                // Content based on selected tab
+                Obx(() {
+                  switch (controller.selectedTab.value) {
+                    case 0:
+                      return _buildSurahList(controller);
+                    case 1:
+                      return _buildJuzList(controller);
+                    case 2:
+                      return _buildFavoritesList(context, controller);
+                    default:
+                      return _buildSurahList(controller);
+                  }
+                }),
+              ],
             ),
           ],
         ),
@@ -425,135 +636,174 @@ class QuranScreen extends StatelessWidget {
   }
 
   Widget _buildLastReadCard(BuildContext context, QuranController controller) {
-    // Progress value for last read (0.0 - 1.0)
-    final double progress = 0.05;
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Last Read",
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.menu_book,
-                      size: 16.sp,
-                      color: const Color(0xFF2E7D32),
-                    ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      "Al-Faatiha : 1 - 3",
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
+    return Obx(() {
+      // Default values
+      String surahName = "Al-Faatiha";
+      String arabicName = "الفاتحة";
+      int surahId = 1;
+      int lastVerseId = 1;
+      int totalVerses = 7;
+      double progress = 0.0;
+      String origin = "MECCAN";
+      String translation = "The Opener";
+
+      // If we have reading history, use the most recent one
+      if (controller.recentReadingHistory.isNotEmpty) {
+        final lastRead = controller.recentReadingHistory.first;
+        surahId = lastRead['surahId'] ?? 1;
+        surahName = lastRead['surahName'] ?? "Al-Faatiha";
+        arabicName = lastRead['arabicName'] ?? "الفاتحة";
+        lastVerseId = lastRead['lastVerseId'] ?? 1;
+        totalVerses = lastRead['totalVerses'] ?? 7;
+        progress = ((lastVerseId / totalVerses) * 100).clamp(0.0, 100.0) / 100;
+
+        // Find surah details from static data for navigation
+        final surahDetails = StaticSurahData.getAllSurahs().firstWhere(
+          (s) => s.number == surahId,
+          orElse: () => StaticSurahData.getAllSurahs().first,
+        );
+        origin = surahDetails.revelationType;
+        translation = surahDetails.translation;
+      }
+
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 16.w),
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Last Read",
+                    style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.menu_book,
+                        size: 16.sp,
+                        color: const Color(0xFF2E7D32),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-                GestureDetector(
-                  onTap: () {
-                    // Navigate based on selected mode
-                    if (controller.selectedMode.value == 1) {
-                      // Commuter / Listen Mode
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ListenModeScreen(),
-                        ),
-                      );
-                    } else if (controller.selectedMode.value == 2) {
-                      // Memorization Mode
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MemorizationScreen(),
-                        ),
-                      );
-                    } else {
-                      // Default to Read Mode (SurahReadingScreen)
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SurahReadingScreen(
-                            surahId: 1,
-                            surahName: "Al-Faatiha",
-                            arabicName: "الفاتحة",
-                            meaning: "Al-Faatiha",
-                            origin: "MECCAN",
-                            ayaCount: 7,
+                      SizedBox(width: 6.w),
+                      Flexible(
+                        child: Text(
+                          "$surahName : $lastVerseId",
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 20.w,
-                      vertical: 8.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    child: Text(
-                      "Continue",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                  GestureDetector(
+                    onTap: () {
+                      // Navigate based on selected mode
+                      if (controller.selectedMode.value == 1) {
+                        // Commuter / Listen Mode
+                        Get.delete<ListenModeController>();
+                        Get.to(
+                          () => ListenModeScreen(
+                            surahId: surahId,
+                            surahName: surahName,
+                            arabicName: arabicName,
+                          ),
+                        )?.then((_) {
+                          controller.fetchFavoriteSurahs(forceRefresh: true);
+                          controller.fetchBookmarkedVerses(forceRefresh: true);
+                        });
+                      } else if (controller.selectedMode.value == 2) {
+                        // Memorization Mode
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MemorizationScreen(),
+                          ),
+                        ).then((_) {
+                          controller.fetchFavoriteSurahs(forceRefresh: true);
+                          controller.fetchBookmarkedVerses(forceRefresh: true);
+                        });
+                      } else {
+                        // Default to Read Mode (SurahReadingScreen)
+                        Get.delete<SurahReadingController>();
+                        Get.to(
+                          () => SurahReadingScreen(
+                            surahId: surahId,
+                            surahName: surahName,
+                            arabicName: arabicName,
+                            meaning: surahName,
+                            origin: origin,
+                            ayaCount: totalVerses,
+                            translation: translation,
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20.w,
+                        vertical: 8.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2E7D32),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        "Continue",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Progress circle
-          SizedBox(
-            width: 60.w,
-            height: 60.w,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: progress,
-                  strokeWidth: 4,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: const AlwaysStoppedAnimation(Color(0xFF2E7D32)),
-                ),
-                Text(
-                  "${(progress * 100).round()}%",
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.bold,
+            // Progress circle
+            SizedBox(
+              width: 60.w,
+              height: 60.w,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: progress,
+                    strokeWidth: 4,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: const AlwaysStoppedAnimation(Color(0xFF2E7D32)),
                   ),
-                ),
-              ],
+                  Text(
+                    "${(progress * 100).round()}%",
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildModeButtons(QuranController controller) {
@@ -765,31 +1015,43 @@ class QuranScreen extends StatelessWidget {
       onTap: () {
         if (controller.selectedMode.value == 1) {
           // Commuter / Listen Mode
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ListenModeScreen()),
-          );
+          Get.delete<ListenModeController>();
+          Get.to(
+            () => ListenModeScreen(
+              surahId: surah.number,
+              surahName: surah.englishName,
+              arabicName: surah.arabicName,
+            ),
+          )?.then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         } else if (controller.selectedMode.value == 2) {
           // Memorization Mode
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MemorizationScreen()),
-          );
+          ).then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         } else {
           // Default to Read Mode (SurahReadingScreen)
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SurahReadingScreen(
-                surahId: surah.number,
-                surahName: surah.englishName,
-                arabicName: surah.arabicName,
-                meaning: surah.englishName,
-                origin: surah.revelationType,
-                ayaCount: surah.totalVerses,
-              ),
+          Get.delete<SurahReadingController>();
+          Get.to(
+            () => SurahReadingScreen(
+              surahId: surah.number,
+              surahName: surah.englishName,
+              arabicName: surah.arabicName,
+              meaning: surah.englishName,
+              origin: surah.revelationType,
+              ayaCount: surah.totalVerses,
+              translation: surah.translation,
             ),
-          );
+          )?.then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         }
       },
       child: Container(
@@ -886,7 +1148,7 @@ class QuranScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
-                    fontFamily: 'Amiri',
+                    fontFamily: 'Arial',
                   ),
                 ),
                 Text(
@@ -912,6 +1174,7 @@ class QuranScreen extends StatelessWidget {
   }
 
   void _showSurahMenu(BuildContext context, SurahModel surah) {
+    final QuranController controller = Get.find<QuranController>();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -923,14 +1186,22 @@ class QuranScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: Icon(
-                Icons.bookmark_border,
-                color: const Color(0xFF2E7D32),
-              ),
-              title: const Text("Favorite"),
-              onTap: () => Navigator.pop(context),
-            ),
+            Obx(() {
+              final isFav = controller.favoriteSurahs.any(
+                (s) => s.number == surah.number,
+              );
+              return ListTile(
+                leading: Icon(
+                  isFav ? Icons.bookmark : Icons.bookmark_border,
+                  color: const Color(0xFF2E7D32),
+                ),
+                title: Text(isFav ? "Unfavorite" : "Favorite"),
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.toggleFavorite(surah);
+                },
+              );
+            }),
             ListTile(
               leading: Icon(Icons.share_outlined, color: Colors.grey[600]),
               title: const Text("Share"),
@@ -949,12 +1220,15 @@ class QuranScreen extends StatelessWidget {
 
   Widget _buildJuzList(QuranController controller) {
     return Obx(() {
+      if (controller.isLoadingJuz.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
       final list = controller.filteredJuzList;
       if (list.isEmpty) {
         return Center(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 20.0.h),
-            child: Text("No items found"),
+            child: Text("No Juz found"),
           ),
         );
       }
@@ -1022,31 +1296,43 @@ class QuranScreen extends StatelessWidget {
       onTap: () {
         if (controller.selectedMode.value == 1) {
           // Commuter / Listen Mode
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ListenModeScreen()),
-          );
+          Get.delete<ListenModeController>();
+          Get.to(
+            () => ListenModeScreen(
+              surahId: surah.number,
+              surahName: surah.englishName,
+              arabicName: surah.arabicName,
+            ),
+          )?.then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         } else if (controller.selectedMode.value == 2) {
           // Memorization Mode
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MemorizationScreen()),
-          );
+          ).then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         } else {
           // Default to Read Mode (SurahReadingScreen)
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SurahReadingScreen(
-                surahId: surah.number,
-                surahName: surah.englishName,
-                arabicName: surah.arabicName,
-                meaning: surah.englishName,
-                origin: surah.revelationType,
-                ayaCount: 0,
-              ),
+          Get.delete<SurahReadingController>();
+          Get.to(
+            () => SurahReadingScreen(
+              surahId: surah.number,
+              surahName: surah.englishName,
+              arabicName: surah.arabicName,
+              meaning: surah.englishName,
+              origin: surah.revelationType,
+              ayaCount: surah.totalVerses,
+              translation: surah.translation,
             ),
-          );
+          )?.then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         }
       },
       child: Padding(
@@ -1134,48 +1420,67 @@ class QuranScreen extends StatelessWidget {
   }
 
   Widget _buildFavoritesList(BuildContext context, QuranController controller) {
-    final favAyahs = controller.filteredFavoriteAyahs;
-    final favSurahs = controller.filteredSurahs.take(3).toList();
+    return Obx(() {
+      final favVerses = controller.filteredBookmarkedVerses;
+      final favSurahs = controller.filteredFavoriteSurahs;
+      final isLoadingVerses = controller.isLoadingBookmarkedVerses.value;
+      final isLoadingSurahs = controller.isLoadingFavorites.value;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (favAyahs.isNotEmpty) ...[
-            Text(
-              "Favorite Ayah",
-              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 12.h),
-            // Favorite ayahs
-            ...favAyahs.map((ayah) => _buildFavoriteAyahItem(ayah)),
-            SizedBox(height: 24.h),
-          ],
-          if (favSurahs.isNotEmpty) ...[
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (favVerses.isNotEmpty || isLoadingVerses) ...[
+              Text(
+                "Favorite Ayah",
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12.h),
+              // Favorite verses
+              if (isLoadingVerses)
+                const Center(child: CircularProgressIndicator())
+              else if (favVerses.isNotEmpty)
+                ...favVerses.map(
+                  (verse) => _buildFavoriteAyahItem(verse, controller),
+                )
+              else
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20.h),
+                    child: Text("No favorite verses found"),
+                  ),
+                ),
+              SizedBox(height: 24.h),
+            ],
             Text(
               "Favorite Surah",
               style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12.h),
-            // Favorite surahs (first 3)
-            ...favSurahs.map(
-              (surah) => _buildFavoriteSurahItem(surah, context, controller),
-            ),
-          ],
-          if (favAyahs.isEmpty && favSurahs.isEmpty)
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20.h),
-                child: Text("No favorites found"),
+            if (isLoadingSurahs)
+              const Center(child: CircularProgressIndicator())
+            else if (favSurahs.isNotEmpty)
+              ...favSurahs.map(
+                (surah) => _buildFavoriteSurahItem(surah, context, controller),
+              )
+            else
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
+                  child: Text("No favorite surahs found"),
+                ),
               ),
-            ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
-  Widget _buildFavoriteAyahItem(FavoriteAyah ayah) {
+  Widget _buildFavoriteAyahItem(
+    BookmarkedVerseModel verse,
+    QuranController controller,
+  ) {
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
       padding: EdgeInsets.all(16.w),
@@ -1189,40 +1494,57 @@ class QuranScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "${ayah.surahName} • Verse ${ayah.verseNumber}",
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "${verse.name} • Verse ${verse.verseId}",
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    ayah.savedDate,
-                    style: TextStyle(fontSize: 11.sp, color: Colors.grey[500]),
-                  ),
-                ],
+                    Text(
+                      controller.getFormattedSavedDate(verse.createdAt),
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Icon(Icons.bookmark, color: const Color(0xFF2E7D32), size: 20.sp),
+              GestureDetector(
+                onTap: () => controller.removeBookmarkedVerse(
+                  verse.surahId,
+                  verse.verseId,
+                  verse.name,
+                ),
+                child: Icon(
+                  Icons.bookmark,
+                  color: const Color(0xFF2E7D32),
+                  size: 20.sp,
+                ),
+              ),
             ],
           ),
           SizedBox(height: 12.h),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              ayah.arabicText,
+              verse.text,
               style: TextStyle(
                 fontSize: 18.sp,
-                fontFamily: 'Amiri',
+                fontFamily: 'Arial',
                 height: 1.8,
               ),
+              textAlign: TextAlign.right,
             ),
           ),
           SizedBox(height: 8.h),
           Text(
-            ayah.translation,
+            verse.translation,
             style: TextStyle(
               fontSize: 13.sp,
               color: Colors.grey[700],
@@ -1243,31 +1565,43 @@ class QuranScreen extends StatelessWidget {
       onTap: () {
         if (controller.selectedMode.value == 1) {
           // Commuter / Listen Mode
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ListenModeScreen()),
-          );
+          Get.delete<ListenModeController>();
+          Get.to(
+            () => ListenModeScreen(
+              surahId: surah.number,
+              surahName: surah.englishName,
+              arabicName: surah.arabicName,
+            ),
+          )?.then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         } else if (controller.selectedMode.value == 2) {
           // Memorization Mode
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MemorizationScreen()),
-          );
+          ).then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         } else {
           // Default to Read Mode (SurahReadingScreen)
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SurahReadingScreen(
-                surahId: surah.number,
-                surahName: surah.englishName,
-                arabicName: surah.arabicName,
-                meaning: surah.englishName,
-                origin: surah.revelationType,
-                ayaCount: surah.totalVerses,
-              ),
+          Get.delete<SurahReadingController>();
+          Get.to(
+            () => SurahReadingScreen(
+              surahId: surah.number,
+              surahName: surah.englishName,
+              arabicName: surah.arabicName,
+              meaning: surah.englishName,
+              origin: surah.revelationType,
+              ayaCount: surah.totalVerses,
+              translation: surah.translation,
             ),
-          );
+          )?.then((_) {
+            controller.fetchFavoriteSurahs(forceRefresh: true);
+            controller.fetchBookmarkedVerses(forceRefresh: true);
+          });
         }
       },
       child: Container(
@@ -1354,7 +1688,42 @@ class QuranScreen extends StatelessWidget {
               ],
             ),
             SizedBox(width: 8.w),
-            Icon(Icons.bookmark, color: const Color(0xFF2E7D32), size: 18.sp),
+            GestureDetector(
+              onTap: () {
+                Get.dialog(
+                  AlertDialog(
+                    title: const Text("Remove Favorite"),
+                    content: Text(
+                      "Are you sure you want to remove ${surah.englishName} from your favorites?",
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: const Text(
+                          "Cancel",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Get.back();
+                          controller.removeFavoriteSurah(surah.number);
+                        },
+                        child: const Text(
+                          "Remove",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Icon(
+                Icons.bookmark,
+                color: const Color(0xFF2E7D32),
+                size: 18.sp,
+              ),
+            ),
           ],
         ),
       ),
