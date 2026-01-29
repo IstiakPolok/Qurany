@@ -14,21 +14,29 @@ class PrayerService {
   Future<PrayerTimeModel?> getPrayerTimes({
     required double latitude,
     required double longitude,
+    DateTime? date, // Added date parameter
     int method = _defaultMethod,
     int school = _defaultSchool,
     String calendar = _defaultCalendar,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/prayer-time/').replace(
-        queryParameters: {
-          'lat': latitude.toString(),
-          'lon': longitude.toString(),
-          'method': method.toString(),
-          'school': school.toString(),
-          'calender': calendar,
-          'api_key': 'UKJeeyx8saSEziuhNKjpVw7DaPK8zzJ2TQNyghA4FwYDI31K',
-        },
-      );
+      final Map<String, String> queryParams = {
+        'lat': latitude.toString(),
+        'lon': longitude.toString(),
+        'method': method.toString(),
+        'school': school.toString(),
+        'calender': calendar,
+        'api_key': 'UKJeeyx8saSEziuhNKjpVw7DaPK8zzJ2TQNyghA4FwYDI31K',
+      };
+
+      if (date != null) {
+        queryParams['date'] =
+            '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      }
+
+      final uri = Uri.parse(
+        '$_baseUrl/prayer-time/',
+      ).replace(queryParameters: queryParams);
 
       print('Fetching prayer times from: $uri');
 

@@ -13,6 +13,7 @@ class PrayerController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
   final Rx<DateTime> currentTime = DateTime.now().obs;
+  final Rx<DateTime> selectedDate = DateTime.now().obs;
 
   Timer? _timer;
 
@@ -28,6 +29,11 @@ class PrayerController extends GetxController {
         _loadPrayerTimes();
       }
     });
+
+    // Listen to date changes
+    ever(selectedDate, (_) {
+      _loadPrayerTimes();
+    });
   }
 
   @override
@@ -40,6 +46,14 @@ class PrayerController extends GetxController {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       currentTime.value = DateTime.now();
     });
+  }
+
+  void nextDay() {
+    selectedDate.value = selectedDate.value.add(const Duration(days: 1));
+  }
+
+  void previousDay() {
+    selectedDate.value = selectedDate.value.subtract(const Duration(days: 1));
   }
 
   Future<void> _loadPrayerTimes() async {
@@ -57,6 +71,7 @@ class PrayerController extends GetxController {
       final data = await _prayerService.getPrayerTimes(
         latitude: position.latitude,
         longitude: position.longitude,
+        date: selectedDate.value,
       );
 
       if (data != null) {
@@ -163,8 +178,8 @@ class PrayerController extends GetxController {
   String getFormattedHijriDate() {
     final data = prayerData.value;
     if (data == null) {
-      // Fallback to current date formatting
-      return DateFormat('d MMMM yyyy').format(currentTime.value);
+      // Fallback to selected date formatting
+      return DateFormat('d MMMM yyyy').format(selectedDate.value);
     }
 
     final hijri = data.date.hijri;

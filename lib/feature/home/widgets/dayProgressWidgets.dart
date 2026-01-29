@@ -36,8 +36,8 @@ class DayProgressWidget extends StatelessWidget {
             height: effectiveSize * 0.75,
             child: CustomPaint(
               painter: _SegmentedArcPainter(
-                totalSegments: 3, // Visual segments (gaps)
-                filledSegments: 1, // How many are green
+                totalSegments: totalDays, // Use totalDays here
+                filledSegments: currentDay, // Use currentDay here
                 activeColor: const Color(0xFF2E7D32), // Dark Green
                 inactiveColor: Colors.grey.withOpacity(0.3),
               ),

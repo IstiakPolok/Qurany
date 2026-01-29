@@ -26,7 +26,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   ui.PathMetric? _pathMetric;
   final AudioPlayer _audioPlayer = AudioPlayer();
   PlayerState _playerState = PlayerState.stopped;
-  String? _currentlyPlayingPath;
+  int? _currentlyPlayingIndex;
 
   final List<Map<String, String>> _dhikrList = [
     {
@@ -107,7 +107,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         setState(() {
           _playerState = state;
           if (state == PlayerState.completed || state == PlayerState.stopped) {
-            _currentlyPlayingPath = null;
+            _currentlyPlayingIndex = null;
           }
         });
       }
@@ -211,8 +211,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     super.dispose();
   }
 
-  Future<void> _playAudio(String audioPath) async {
-    debugPrint("Attempting to play: $audioPath");
+  Future<void> _playAudio(int index) async {
+    final audioPath = _dhikrList[index]['audio']!;
+    debugPrint("Attempting to play: $audioPath at index $index");
     try {
       String path = audioPath;
       if (path.startsWith('assets/')) {
@@ -221,16 +222,16 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       debugPrint("Resolved asset path: $path");
 
       if (_playerState == PlayerState.playing &&
-          _currentlyPlayingPath == audioPath) {
+          _currentlyPlayingIndex == index) {
         await _audioPlayer.stop();
         setState(() {
-          _currentlyPlayingPath = null;
+          _currentlyPlayingIndex = null;
         });
       } else {
         await _audioPlayer.stop(); // Stop any currently playing audio
         await _audioPlayer.play(AssetSource(path));
         setState(() {
-          _currentlyPlayingPath = audioPath;
+          _currentlyPlayingIndex = index;
         });
       }
     } catch (e) {
@@ -634,9 +635,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     }
     final String arabic = _dhikrList[_selectedDhikrIndex!]['arabic']!;
     final String meaning = _dhikrList[_selectedDhikrIndex!]['meaning']!;
-    final String audio = _dhikrList[_selectedDhikrIndex!]['audio']!;
     final bool isPlaying =
-        _playerState == PlayerState.playing && _currentlyPlayingPath == audio;
+        _playerState == PlayerState.playing &&
+        _currentlyPlayingIndex == _selectedDhikrIndex;
 
     return Column(
       children: [
@@ -690,7 +691,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               GestureDetector(
-                onTap: () => _playAudio(audio),
+                onTap: () => _playAudio(_selectedDhikrIndex!),
                 child: Icon(
                   isPlaying ? Icons.pause_circle_filled : Icons.play_arrow,
                   color: Colors.green,
@@ -742,8 +743,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         return StatefulBuilder(
           builder: (context, setSheetState) {
             // Helper to handle play within sheet
-            Future<void> playAudioInSheet(String path) async {
-              await _playAudio(path);
+            Future<void> playAudioInSheet(int index) async {
+              await _playAudio(index);
               // Update sheet state to reflect icon change
               setSheetState(() {});
             }
@@ -785,12 +786,12 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       final dhikr = _dhikrList[index];
                       final bool isPlayingThis =
                           _playerState == PlayerState.playing &&
-                          _currentlyPlayingPath == dhikr['audio'];
+                          _currentlyPlayingIndex == index;
                       return GestureDetector(
                         onTap: () {
                           // Stop audio if playing when selecting a new dhikr
                           if (_playerState == PlayerState.playing) {
-                            _playAudio(dhikr['audio']!); // This toggles it off
+                            _playAudio(index); // This toggles it off
                           }
                           setState(() {
                             _selectedDhikrIndex = index;
@@ -809,7 +810,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               GestureDetector(
-                                onTap: () => playAudioInSheet(dhikr['audio']!),
+                                onTap: () => playAudioInSheet(index),
                                 child: Icon(
                                   isPlayingThis
                                       ? Icons.pause_circle_filled

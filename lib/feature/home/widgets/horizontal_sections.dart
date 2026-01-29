@@ -12,6 +12,8 @@ import 'package:qurany/feature/home/controller/history_controller.dart';
 import 'package:qurany/feature/home/view/azkar_detail_screen.dart';
 import 'package:qurany/feature/home/view/detail_screen.dart';
 
+import 'package:qurany/feature/home/controller/knowledge_controller.dart';
+
 class SectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback onSeeAll;
@@ -84,81 +86,97 @@ class ReusableHorizontalSection extends StatelessWidget {
 class DidYouKnowSection extends StatelessWidget {
   const DidYouKnowSection({super.key});
 
-  final List<Map<String, String>> items = const [
-    {
-      'title': "Masjid Quba is the first mosque in Islam",
-      'image':
-          'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?q=80&w=500&auto=format&fit=crop',
-    },
-
-    {
-      'title': "Surah Al-Ikhlas is equal to one-third of the Quran",
-      'image':
-          'https://images.unsplash.com/photo-1584281723358-461f7555806e?q=80&w=500&auto=format&fit=crop',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return ReusableHorizontalSection(
-      title: "Did you know",
-      onSeeAll: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const DidYouKnowScreen()),
+    final KnowledgeController controller = Get.put(KnowledgeController());
+
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return SizedBox(
+          height: 200.h,
+          child: const Center(child: CircularProgressIndicator()),
         );
-      },
-      height: 200.h,
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return Container(
-          width: 220.w,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12.r)),
-          child: Stack(
-            children: [
-              Image.network(
-                item['image']!,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey.shade300,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey,
+      }
+
+      if (controller.knowledgeList.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return ReusableHorizontalSection(
+        title: "Did you know",
+        onSeeAll: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DidYouKnowScreen()),
+          );
+        },
+        height: 200.h,
+        itemCount: controller.knowledgeList.length,
+        itemBuilder: (context, index) {
+          final item = controller.knowledgeList[index];
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailScreen(data: item.toMap()),
+                ),
+              );
+            },
+            child: Container(
+              width: 220.w,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              child: Stack(
+                children: [
+                  Image.network(
+                    item.image,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey.shade300,
+                        child: const Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.8),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
-                  );
-                },
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                    padding: EdgeInsets.all(12.w),
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      item.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-                padding: EdgeInsets.all(12.w),
-                alignment: Alignment.bottomLeft,
-                child: Text(
-                  item['title']!,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                ],
               ),
-            ],
-          ),
-        );
-      },
-    );
+            ),
+          );
+        },
+      );
+    });
   }
 }
 

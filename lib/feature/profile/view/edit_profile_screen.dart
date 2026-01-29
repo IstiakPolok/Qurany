@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import '../controller/profile_controller.dart';
 
 class EditProfileScreen extends StatelessWidget {
   const EditProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ProfileController controller = Get.find<ProfileController>();
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
       body: SafeArea(
@@ -16,40 +19,46 @@ class EditProfileScreen extends StatelessWidget {
 
             // Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 24.h),
+              child: Obx(() {
+                final user = controller.user.value;
+                if (user == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 24.h),
 
-                    // Avatar with camera button
-                    _buildAvatarSection(),
+                      // Avatar with camera button
+                      _buildAvatarSection(user.avatarUrl, user.initials),
 
-                    SizedBox(height: 40.h),
+                      SizedBox(height: 40.h),
 
-                    // First Name Field
-                    _buildTextField("First name", "Emily"),
+                      // First Name Field
+                      _buildTextField("First name", user.firstName ?? ""),
 
-                    SizedBox(height: 20.h),
+                      SizedBox(height: 20.h),
 
-                    // Last Name Field
-                    _buildTextField("Last Name", "John"),
+                      // Last Name Field
+                      _buildTextField("Last Name", user.lastName ?? ""),
 
-                    SizedBox(height: 20.h),
+                      SizedBox(height: 20.h),
 
-                    // Email Field
-                    _buildTextField("Email Address", "emilyjohn@email.com"),
+                      // Email Field
+                      _buildTextField("Email Address", user.email),
 
-                    SizedBox(height: 40.h),
+                      SizedBox(height: 40.h),
 
-                    // Update Profile Button
-                    _buildUpdateButton(),
+                      // Update Profile Button
+                      _buildUpdateButton(),
 
-                    SizedBox(height: 32.h),
-                  ],
-                ),
-              ),
+                      SizedBox(height: 32.h),
+                    ],
+                  ),
+                );
+              }),
             ),
           ],
         ),
@@ -91,7 +100,7 @@ class EditProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatarSection() {
+  Widget _buildAvatarSection(String? avatarUrl, String initials) {
     return Center(
       child: Stack(
         children: [
@@ -103,17 +112,25 @@ class EditProfileScreen extends StatelessWidget {
               shape: BoxShape.circle,
               color: const Color(0xFFFFF9F0),
               border: Border.all(color: Colors.grey[300]!, width: 2),
+              image: avatarUrl != null
+                  ? DecorationImage(
+                      image: NetworkImage(avatarUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Center(
-              child: Text(
-                "EJ",
-                style: TextStyle(
-                  fontSize: 40.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
+            child: avatarUrl == null
+                ? Center(
+                    child: Text(
+                      initials,
+                      style: TextStyle(
+                        fontSize: 40.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  )
+                : null,
           ),
 
           // Camera button

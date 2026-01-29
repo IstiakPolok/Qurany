@@ -14,11 +14,15 @@ import 'notes_screen.dart';
 import 'notifications_settings_screen.dart';
 import 'premium_plan_screen.dart';
 
+import 'package:qurany/feature/profile/controller/profile_controller.dart';
+import 'package:get/get.dart';
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ProfileController profileController = Get.put(ProfileController());
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
       body: Column(
@@ -31,7 +35,7 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(context),
+                  Obx(() => _buildHeader(context, profileController)),
 
                   // Support Mission Card
                   _buildSupportMissionCard(),
@@ -61,7 +65,8 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ProfileController controller) {
+    final user = controller.user.value;
     return Stack(
       children: [
         // Background Image Stack
@@ -123,17 +128,25 @@ class ProfileScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(70.r),
+                        image: user?.avatarUrl != null
+                            ? DecorationImage(
+                                image: NetworkImage(user!.avatarUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                       ),
-                      child: Center(
-                        child: Text(
-                          "EJ",
-                          style: TextStyle(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF2E7D32),
-                          ),
-                        ),
-                      ),
+                      child: user?.avatarUrl == null
+                          ? Center(
+                              child: Text(
+                                user?.initials ?? "U",
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF2E7D32),
+                                ),
+                              ),
+                            )
+                          : null,
                     ),
                     SizedBox(width: 12.w),
                     // Name and Email
@@ -142,7 +155,7 @@ class ProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Emily John",
+                            user?.fullName ?? "User",
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
@@ -151,7 +164,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 2.h),
                           Text(
-                            "johndoe@email.com",
+                            user?.email ?? "email@example.com",
                             style: TextStyle(
                               fontSize: 14.sp,
                               color: Colors.white,
@@ -168,7 +181,7 @@ class ProfileScreen extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (context) => const EditProfileScreen(),
                           ),
-                        );
+                        ).then((_) => controller.fetchProfile());
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -202,7 +215,7 @@ class ProfileScreen extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: _buildFreePlanCard(context),
+                child: _buildFreePlanCard(context, user?.type ?? 'free'),
               ),
             ],
           ),
@@ -211,7 +224,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFreePlanCard(BuildContext context) {
+  Widget _buildFreePlanCard(BuildContext context, String planType) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -233,7 +246,7 @@ class ProfileScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Free Plan",
+                    planType == 'free' ? "Free Plan" : "Premium Plan",
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
@@ -241,42 +254,46 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    "Upgrade premium to unlock all features.",
+                    planType == 'free'
+                        ? "Upgrade premium to unlock all features."
+                        : "You have unlocked all premium features.",
                     style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
                   ),
                 ],
               ),
             ],
           ),
-          SizedBox(height: 16.h),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PremiumPlanScreen(),
+          if (planType == 'free') ...[
+            SizedBox(height: 16.h),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PremiumPlanScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2F7D33),
+                  borderRadius: BorderRadius.circular(25.r),
                 ),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 14.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2F7D33),
-                borderRadius: BorderRadius.circular(25.r),
-              ),
-              child: Center(
-                child: Text(
-                  "Go Premium",
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                child: Center(
+                  child: Text(
+                    "Go Premium",
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

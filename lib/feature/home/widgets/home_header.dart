@@ -94,8 +94,8 @@ class HomeHeader extends StatelessWidget {
             child: Center(
               child: Center(
                 child: DayProgressWidget(
-                  currentDay: 1,
-                  totalDays: 5, // Based on the 5 segments in the image
+                  currentDay: DateTime.now().weekday,
+                  totalDays: 7, // Based on the 7 days in a week
                 ),
               ),
             ),

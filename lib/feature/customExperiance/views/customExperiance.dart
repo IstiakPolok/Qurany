@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -131,31 +132,29 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
             child: Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.only(bottom: bottomSheetHeight),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _buildHeader(),
-                        SizedBox(height: width * 0.02),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
 
-                        _buildSelectionCard(
-                          "Qibla Compass",
-                          ["Classic", "Modern", "Clean"],
-                          selectedCompass,
-                          (val) {
-                            setState(() => selectedCompass = val);
-                            _saveCompassStyle(val);
-                          },
-                        ),
-                        SizedBox(height: width * 0.05),
-                        _buildPaginationDots(),
-                        SizedBox(height: width * 0.05),
-                        _buildCompassPreview(),
+                    children: [
+                      _buildHeader(),
+                      SizedBox(height: width * 0.02),
 
-                        SizedBox(height: width * 0.05),
-                      ],
-                    ),
+                      _buildSelectionCard(
+                        "Qibla Compass",
+                        ["Classic", "Modern", "Clean"],
+                        selectedCompass,
+                        (val) {
+                          setState(() => selectedCompass = val);
+                          _saveCompassStyle(val);
+                        },
+                      ),
+                      SizedBox(height: width * 0.05),
+                      _buildPaginationDots(),
+                      SizedBox(height: width * 0.05),
+                      _buildCompassPreview(),
+
+                      SizedBox(height: width * 0.05),
+                    ],
                   ),
                 ),
               ],
@@ -379,10 +378,6 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   }
 
   Widget _buildSmallPreview(String label, String img, bool isSelected) {
-    final width = MediaQuery.of(context).size.width;
-    final pad = (width * 0.02).clamp(6.0, 12.0);
-    final size = (width * 0.09).clamp(32.0, 60.0);
-
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -391,36 +386,34 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
         _saveCompassStyle(label);
       },
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: EdgeInsets.all(pad),
+            padding: EdgeInsets.all(8.w),
             decoration: BoxDecoration(
               border: isSelected
-                  ? Border.all(color: Colors.green, width: 2)
+                  ? Border.all(color: Colors.green, width: 2.w)
                   : Border.all(color: Colors.transparent),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(10.r),
             ),
             child: SizedBox(
-              width: size,
-              height: size,
+              width: 50.w,
+              height: 50.w,
               child: Image.asset(
                 img,
                 fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Icon(
                   Icons.compass_calibration,
-                  size: size * 0.9,
+                  size: 45.sp,
                   color: Colors.grey,
                 ),
               ),
             ),
           ),
-          SizedBox(height: 6),
+          SizedBox(height: 6.h),
           Text(
             label,
-            style: TextStyle(
-              fontSize: (width * 0.03).clamp(11.0, 13.0),
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
           ),
         ],
       ),

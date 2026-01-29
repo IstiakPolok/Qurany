@@ -258,45 +258,59 @@ class PrayerScreen extends StatelessWidget {
     BuildContext context,
     PrayerController controller,
   ) {
-    final date = controller.currentTime.value;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.arrow_back_ios, color: Colors.white70, size: 14.sp),
-        SizedBox(width: 4.w),
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const IslamicCalendarScreen(),
-              ),
-            );
-          },
-          child: Column(
-            children: [
-              Text(
-                DateFormat('EEEE, d MMMM').format(date),
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
+    return Obx(() {
+      final date = controller.selectedDate.value;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: () => controller.previousDay(),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Colors.white70,
+              size: 14.sp,
+            ),
+          ),
+          SizedBox(width: 4.w),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const IslamicCalendarScreen(),
                 ),
-              ),
-              SizedBox(height: 4.h),
-              Obx(
-                () => Text(
+              );
+            },
+            child: Column(
+              children: [
+                Text(
+                  DateFormat('EEEE, d MMMM').format(date),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
                   controller.getFormattedHijriDate(),
                   style: TextStyle(color: Colors.white70, fontSize: 12.sp),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        SizedBox(width: 4.w),
-        Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 14.sp),
-      ],
-    );
+          SizedBox(width: 4.w),
+          IconButton(
+            onPressed: () => controller.nextDay(),
+            icon: Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white70,
+              size: 14.sp,
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildCountdownBadge(PrayerController controller) {
