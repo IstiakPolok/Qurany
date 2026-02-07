@@ -2,15 +2,37 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:qurany/feature/ask_ai/services/ask_ai_service.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 // Controller for Ask AI screen
 class AskAIController extends GetxController {
   RxBool showChat = false.obs;
   RxList<Map<String, dynamic>> messages = <Map<String, dynamic>>[].obs;
   final TextEditingController messageController = TextEditingController();
+  final ScrollController scrollController = ScrollController();
+  final AskAiService _askAiService = AskAiService();
+  RxBool isLoading = false.obs;
+  RxString userName = "User".obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    String name = await SharedPreferencesHelper.getName();
+    if (name.isNotEmpty) {
+      userName.value = name;
+    }
+  }
 
   void startChat() {
     showChat.value = true;
+    scrollToBottom();
   }
 
   void goBack() {
@@ -21,22 +43,55 @@ class AskAIController extends GetxController {
     }
   }
 
-  void sendMessage() {
-    if (messageController.text.isNotEmpty) {
-      messages.add({'text': messageController.text, 'isUser': true});
-      // Simulate AI response
-      messages.add({
-        'text':
-            "Jazak Allah Khair for your question! I'm here to help guide you through Islamic teachings.",
-        'isUser': false,
-      });
+  void scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> sendMessage() async {
+    if (messageController.text.isNotEmpty && !isLoading.value) {
+      String userQuery = messageController.text;
+      String time = DateFormat('hh:mm a').format(DateTime.now());
+      messages.add({'text': userQuery, 'isUser': true, 'time': time});
       messageController.clear();
+      scrollToBottom();
+
+      isLoading.value = true;
+
+      final response = await _askAiService.sendMessage(userQuery);
+
+      isLoading.value = false;
+
+      if (response != null && response['success'] == true) {
+        String aiResponse = response['data']['response'];
+        messages.add({
+          'text': aiResponse,
+          'isUser': false,
+          'time': DateFormat('hh:mm a').format(DateTime.now()),
+        });
+      } else {
+        messages.add({
+          'text':
+              "Sorry, I'm having trouble connecting to the service. Please try again later.",
+          'isUser': false,
+          'time': DateFormat('hh:mm a').format(DateTime.now()),
+        });
+      }
+      scrollToBottom();
     }
   }
 
   @override
   void onClose() {
     messageController.dispose();
+    scrollController.dispose();
     super.onClose();
   }
 }
@@ -379,25 +434,41 @@ class AskAIScreen extends StatelessWidget {
                           size: 24.sp,
                         ),
                         SizedBox(width: 12.w),
-                        GestureDetector(
-                          onTap: () => controller.sendMessage(),
-                          child: Container(
-                            padding: EdgeInsets.all(10.w),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.send,
-                              color: const Color(0xFF2E7D32),
-                              size: 20.sp,
+                        Obx(
+                          () => GestureDetector(
+                            onTap: controller.isLoading.value
+                                ? null
+                                : () => controller.sendMessage(),
+                            child: Container(
+                              padding: EdgeInsets.all(10.w),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: controller.isLoading.value
+                                  ? SizedBox(
+                                      width: 20.sp,
+                                      height: 20.sp,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Color(0xFF2E7D32),
+                                            ),
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.send,
+                                      color: const Color(0xFF2E7D32),
+                                      size: 20.sp,
+                                    ),
                             ),
                           ),
                         ),
@@ -652,6 +723,7 @@ class AskAIScreen extends StatelessWidget {
 
   Widget _buildMessagesView(AskAIController controller) {
     return ListView.builder(
+      controller: controller.scrollController,
       padding: EdgeInsets.all(16.w),
       itemCount: controller.messages.length,
       itemBuilder: (context, index) {
@@ -689,7 +761,7 @@ class AskAIScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 8.w),
                       Text(
-                        "05:29",
+                        message['time'] ?? "",
                         style: TextStyle(
                           fontSize: 12.sp,
                           color: Colors.grey[500],
@@ -698,12 +770,16 @@ class AskAIScreen extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 12.h),
-                  Text(
-                    message['text'],
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Colors.black87,
-                      height: 1.5,
+                  MarkdownBody(
+                    data: message['text'],
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
+                      strong: const TextStyle(fontWeight: FontWeight.bold),
+                      em: TextStyle(fontStyle: FontStyle.italic),
                     ),
                   ),
                   SizedBox(height: 12.h),
@@ -751,7 +827,9 @@ class AskAIScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            "EJ",
+                            controller.userName.value.isNotEmpty
+                                ? controller.userName.value[0].toUpperCase()
+                                : "U",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 10.sp,
@@ -761,7 +839,7 @@ class AskAIScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 8.w),
                         Text(
-                          "Emily John",
+                          controller.userName.value,
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
@@ -770,7 +848,7 @@ class AskAIScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 8.w),
                         Text(
-                          "05:29",
+                          message['time'] ?? "",
                           style: TextStyle(
                             fontSize: 12.sp,
                             color: Colors.grey[500],
