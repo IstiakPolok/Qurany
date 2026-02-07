@@ -96,11 +96,13 @@ class MemorizationService {
 
       request.headers.addAll({'Authorization': 'Bearer $token'});
 
-      request.files.add(await http.MultipartFile.fromPath(
-        'audio',
-        audioPath,
-        contentType: MediaType('audio', 'wav'),
-      ));
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'audio',
+          audioPath,
+          contentType: MediaType('audio', 'wav'),
+        ),
+      );
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
