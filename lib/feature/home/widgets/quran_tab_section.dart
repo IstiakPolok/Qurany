@@ -33,94 +33,186 @@ class _QuranTabSectionState extends State<QuranTabSection> {
   int _totalItems = 114;
   final int _pageSize = 10;
 
+  Map<int, int> _progressMap = {};
+  bool _hasMoreSurahs = true;
+  bool _isLoadingMore = false;
+  ScrollPosition? _scrollPosition;
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    _fetchSurahs();
-    _fetchJuz();
+    _initData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _removeScrollListener();
+    _addScrollListener();
+  }
+
+  void _addScrollListener() {
+    try {
+      final scrollable = Scrollable.of(context);
+      _scrollPosition = scrollable.position;
+      _scrollPosition?.addListener(_scrollListener);
+    } catch (e) {
+      print("Error adding scroll listener: $e");
+    }
+  }
+
+  void _removeScrollListener() {
+    try {
+      _scrollPosition?.removeListener(_scrollListener);
+    } catch (e) {
+      // Ignore errors during disposal
+    }
+  }
+
+  void _scrollListener() {
+    if (_selectedTab == "Surah" &&
+        !_isLoading &&
+        !_isLoadingMore &&
+        _hasMoreSurahs &&
+        _searchController.text.isEmpty &&
+        _scrollPosition != null) {
+      if (_scrollPosition!.pixels >= _scrollPosition!.maxScrollExtent - 200) {
+        _loadMoreSurahs();
+      }
+    }
+  }
+
+  Future<void> _initData() async {
+    try {
+      setState(() => _isLoading = true);
+
+      // Fetch progress once
+      _progressMap = await _quranService.fetchSurahProgress();
+
+      await _fetchJuz();
+      await _fetchInitialSurahs();
+    } catch (e) {
+      print("Error initializing data: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchInitialSurahs() async {
+    _currentPage = 1;
+    _filteredSurahs = [];
+    await _loadMoreSurahs();
+  }
+
+  Future<void> _loadMoreSurahs() async {
+    if (_isLoadingMore) return;
+
+    try {
+      setState(() => _isLoadingMore = true);
+
+      // Simulate network delay if needed
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final allSurahs = StaticSurahData.getAllSurahs();
+      final totalSurahs = allSurahs.length;
+      final startIndex = (_currentPage - 1) * _pageSize;
+
+      if (startIndex >= totalSurahs) {
+        setState(() {
+          _hasMoreSurahs = false;
+          _isLoadingMore = false;
+        });
+        return;
+      }
+
+      final endIndex = startIndex + _pageSize;
+      final nextBatch = allSurahs.sublist(
+        startIndex,
+        endIndex > totalSurahs ? totalSurahs : endIndex,
+      );
+
+      final processedBatch = nextBatch.map((surah) {
+        if (_progressMap.containsKey(surah.number)) {
+          return surah.copyWith(revealedVerses: _progressMap[surah.number]);
+        }
+        return surah;
+      }).toList();
+
+      setState(() {
+        _filteredSurahs.addAll(processedBatch);
+        _currentPage++;
+        _isLoadingMore = false;
+        _hasMoreSurahs = endIndex < totalSurahs;
+      });
+    } catch (e) {
+      setState(() => _isLoadingMore = false);
+      print("Error loading more surahs: $e");
+    }
   }
 
   Future<void> _fetchJuz() async {
     try {
-      setState(() {
-        _isLoadingJuz = true;
-      });
-      // Use static data instead of API call
-      await Future.delayed(
-        const Duration(milliseconds: 100),
-      ); // Simulate loading
-      final juzList = StaticJuzData.getAllJuz();
+      setState(() => _isLoadingJuz = true);
+
+      final juzList = StaticJuzData.getAllJuz().map((juz) {
+        final updatedSurahs = juz.surahs.map((surah) {
+          if (_progressMap.containsKey(surah.number)) {
+            return surah.copyWith(revealedVerses: _progressMap[surah.number]);
+          }
+          return surah;
+        }).toList();
+
+        return JuzModel(number: juz.number, surahs: updatedSurahs);
+      }).toList();
+
       setState(() {
         _allJuz = juzList;
         _filteredJuz = juzList;
         _isLoadingJuz = false;
       });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingJuz = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _fetchSurahs({int? page}) async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = null;
-        if (page != null) {
-          _currentPage = page;
-        }
-      });
-      // Use static data instead of API call
-      await Future.delayed(
-        const Duration(milliseconds: 100),
-      ); // Simulate loading
-      final allSurahs = StaticSurahData.getAllSurahs();
-
-      // Calculate pagination
-      final startIndex = (_currentPage - 1) * _pageSize;
-      final endIndex = startIndex + _pageSize;
-      final paginatedSurahs = allSurahs.sublist(
-        startIndex,
-        endIndex > allSurahs.length ? allSurahs.length : endIndex,
-      );
-
-      setState(() {
-        _allSurahs = allSurahs;
-        _filteredSurahs = paginatedSurahs;
-        _totalItems = allSurahs.length;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString();
-        });
-      }
+      // Handle error
+    } finally {
+      if (mounted) setState(() => _isLoadingJuz = false);
     }
   }
 
   @override
   void dispose() {
+    _removeScrollListener();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
+  // Old methods replaced by initData and scroll listener logic
+  // Keeping _fetchSurahs only if referenced elsewhere, but better to remove or act as stub
+  Future<void> _fetchSurahs({int? page}) async {
+    // Legacy support or reset
+    if (page == 1) _fetchInitialSurahs();
+  }
+
   void _onSearchChanged() {
     final query = _searchController.text.toLowerCase();
     if (query.isEmpty) {
-      // Reset to current page when search is cleared
-      _fetchSurahs();
+      // Reset to infinite scroll list
+      _fetchInitialSurahs();
+      _filteredJuz = _allJuz;
+      setState(() {});
       return;
     }
 
+    // When searching, we search across ALL surahs, bypassing pagination for results
+    final allSurahsWithProgress = StaticSurahData.getAllSurahs().map((surah) {
+      if (_progressMap.containsKey(surah.number)) {
+        return surah.copyWith(revealedVerses: _progressMap[surah.number]);
+      }
+      return surah;
+    }).toList();
+
     setState(() {
-      _filteredSurahs = _allSurahs.where((surah) {
+      _filteredSurahs = allSurahsWithProgress.where((surah) {
         final matchesName =
             surah.englishName.toLowerCase().contains(query) ||
             surah.arabicName.contains(query);
@@ -146,122 +238,10 @@ class _QuranTabSectionState extends State<QuranTabSection> {
     });
   }
 
-  Widget _buildPagination() {
-    int totalPages = (_totalItems / _pageSize).ceil();
-    if (totalPages <= 1) return const SizedBox.shrink();
-
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Previous Button
-            if (_currentPage > 1)
-              GestureDetector(
-                onTap: () => _fetchSurahs(page: _currentPage - 1),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: primaryColor),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.chevron_left,
-                        color: primaryColor,
-                        size: 16.sp,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            SizedBox(width: 12.w),
-
-            // Page Numbers
-            ...List.generate(totalPages, (index) {
-              int pageNum = index + 1;
-
-              // Show first page, last page, current page and adjacent pages
-              if (pageNum == 1 ||
-                  pageNum == totalPages ||
-                  (pageNum >= _currentPage - 1 &&
-                      pageNum <= _currentPage + 1)) {
-                return GestureDetector(
-                  onTap: () => _fetchSurahs(page: pageNum),
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 4.w),
-                    padding: EdgeInsets.all(10.w),
-                    decoration: BoxDecoration(
-                      color: pageNum == _currentPage
-                          ? primaryColor
-                          : Colors.transparent,
-                      border: Border.all(color: primaryColor, width: 1.5),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: Text(
-                      "$pageNum",
-                      style: TextStyle(
-                        color: pageNum == _currentPage
-                            ? Colors.white
-                            : primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.sp,
-                      ),
-                    ),
-                  ),
-                );
-              } else if (pageNum == _currentPage - 2 ||
-                  pageNum == _currentPage + 2) {
-                // Show ellipsis
-                return Container(
-                  //  margin: EdgeInsets.symmetric(horizontal: 4.w),
-                  child: Text(
-                    "...",
-                    style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            }),
-
-            SizedBox(width: 12.w),
-
-            // Next Button
-            if (_currentPage < totalPages)
-              GestureDetector(
-                onTap: () => _fetchSurahs(page: _currentPage + 1),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 16.sp,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildPagination() {
+  //   // Removed for infinite scroll implementation
+  //   return const SizedBox.shrink();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -359,8 +339,15 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                               return _buildSurahItem(_filteredSurahs[index]);
                             },
                           ),
+                          if (_isLoadingMore)
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20.h),
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
                           SizedBox(height: 16.h),
-                          _buildPagination(),
+                          // _buildPagination(), // Removed in favor of infinite scroll
                         ],
                       ))
               : (_isLoadingJuz
@@ -476,7 +463,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
-                                  "0 / 286 Aya", // Placeholder for actual progress
+                                  "${surah.revealedVerses} / ${surah.totalVerses} Aya",
                                   style: TextStyle(
                                     fontSize: 10.sp,
                                     color: Colors.grey,

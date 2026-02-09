@@ -38,6 +38,19 @@ class VerseDetailModel {
       audio: audioMap,
     );
   }
+
+  VerseDetailModel copyWith({bool? isVerseRead}) {
+    return VerseDetailModel(
+      surahId: surahId,
+      verseId: verseId,
+      ayate: ayate,
+      isVerseRead: isVerseRead ?? this.isVerseRead,
+      text: text,
+      translation: translation,
+      transliteration: transliteration,
+      audio: audio,
+    );
+  }
 }
 
 class AudioDetailModel {

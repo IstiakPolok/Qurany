@@ -29,6 +29,18 @@ class SurahModel {
     );
   }
 
+  SurahModel copyWith({int? revealedVerses}) {
+    return SurahModel(
+      number: number,
+      englishName: englishName,
+      arabicName: arabicName,
+      revelationType: revelationType,
+      totalVerses: totalVerses,
+      revealedVerses: revealedVerses ?? this.revealedVerses,
+      translation: translation,
+    );
+  }
+
   // Helper method to parse int from dynamic (handles both int and String)
   static int? _parseInt(dynamic value) {
     if (value == null) return null;
@@ -62,6 +74,7 @@ class JuzSurahModel {
   final String versesRange;
   final String translation;
   final int totalVerses;
+  final int revealedVerses;
   final int juzId;
 
   const JuzSurahModel({
@@ -72,6 +85,7 @@ class JuzSurahModel {
     required this.versesRange,
     this.translation = '',
     this.totalVerses = 0,
+    this.revealedVerses = 0,
     this.juzId = 0,
   });
 
@@ -85,7 +99,22 @@ class JuzSurahModel {
       versesRange: '$verses VERSES',
       translation: json['translation'] ?? '',
       totalVerses: verses,
+      revealedVerses: SurahModel._parseInt(json['total_verses_read']) ?? 0,
       juzId: SurahModel._parseInt(json['juzId']) ?? 0,
+    );
+  }
+
+  JuzSurahModel copyWith({int? revealedVerses}) {
+    return JuzSurahModel(
+      number: number,
+      englishName: englishName,
+      arabicName: arabicName,
+      revelationType: revelationType,
+      versesRange: versesRange,
+      translation: translation,
+      totalVerses: totalVerses,
+      revealedVerses: revealedVerses ?? this.revealedVerses,
+      juzId: juzId,
     );
   }
 }

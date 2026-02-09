@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/core/const/static_surah_data.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';

@@ -13,3 +13,6 @@ const String completedSurahEndpoint =
     '$baseUrl/api/auth/ai/pronunciation/completed/surah';
 const String recitationCheckEndpoint =
     '$baseUrl/api/auth/ai/pronunciation/recite';
+const String surahProgressEndpoint = '$baseUrl/api/progress/surah';
+const String verseProgressEndpoint = '$baseUrl/api/progress';
+const String knowledgeBaseUrl = '$baseUrl/auth/knowledge';
