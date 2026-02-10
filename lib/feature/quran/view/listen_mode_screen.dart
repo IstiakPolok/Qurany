@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -200,6 +201,23 @@ class ListenModeController extends GetxController {
     }
   }
 
+  Future<void> _toggleVerseProgress(int verseId) async {
+    final success = await _quranService.toggleVerseProgress(surahId, verseId);
+    if (!success) {
+      if (kDebugMode) {
+        print('Failed to toggle progress for surah $surahId verse $verseId');
+      }
+    }
+  }
+
+  void _markVerseRead(int verseId) {
+    final index = verses.indexWhere((v) => v.verseId == verseId);
+    if (index == -1) return;
+    final verse = verses[index];
+    if (verse.isVerseRead) return;
+    verses[index] = verse.copyWith(isVerseRead: true);
+  }
+
   @override
   void onClose() {
     _player1.dispose();
@@ -270,9 +288,15 @@ class ListenModeController extends GetxController {
         loadMoreVerses();
       }
 
+      final currentVerse = verses[currentVerseIndex.value];
+
       // If the inactive player has preloaded the next verse, switch and play
       _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
       await _activePlayer.resume();
+
+      // Mark verse as read and toggle progress
+      _markVerseRead(currentVerse.verseId);
+      await _toggleVerseProgress(currentVerse.verseId);
 
       // Preload the following one
       _preloadNextVerse(currentVerseIndex.value);
@@ -307,8 +331,14 @@ class ListenModeController extends GetxController {
       String? audioUrl = await _getAudioUrlForVerse(currentVerseIndex.value);
 
       if (audioUrl != null) {
+        final currentVerse = verses[currentVerseIndex.value];
+
         await _activePlayer.setSourceUrl(audioUrl);
         await _activePlayer.resume();
+
+        // Mark verse as read and toggle progress
+        _markVerseRead(currentVerse.verseId);
+        await _toggleVerseProgress(currentVerse.verseId);
 
         // Preload next
         _preloadNextVerse(currentVerseIndex.value);

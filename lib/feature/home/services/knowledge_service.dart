@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import '../../../core/network_caller/endpoints.dart';
 import '../model/knowledge_model.dart';
 
 class KnowledgeService {
-  final String _baseUrl =
-      'https://yearningly-stemlike-shavon.ngrok-free.dev/api/knowledge';
+  final String _baseUrl = knowledgeBaseUrl;
 
   Future<List<KnowledgeModel>> getKnowledgeItems() async {
     try {

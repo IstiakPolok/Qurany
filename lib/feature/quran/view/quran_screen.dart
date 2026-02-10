@@ -137,7 +137,19 @@ class QuranController extends GetxController {
       await Future.delayed(
         const Duration(milliseconds: 100),
       ); // Simulate loading
-      surahs.assignAll(StaticSurahData.getAllSurahs());
+
+      // Fetch progress from API
+      final progressMap = await _quranService.fetchSurahProgress();
+
+      // Update surahs with progress data
+      final surahsWithProgress = StaticSurahData.getAllSurahs().map((surah) {
+        if (progressMap.containsKey(surah.number)) {
+          return surah.copyWith(revealedVerses: progressMap[surah.number]);
+        }
+        return surah;
+      }).toList();
+
+      surahs.assignAll(surahsWithProgress);
       _isSurahsFetched = true;
     } catch (e) {
       print("Error loading surahs: $e");
@@ -154,7 +166,23 @@ class QuranController extends GetxController {
       await Future.delayed(
         const Duration(milliseconds: 100),
       ); // Simulate loading
-      juzList.assignAll(StaticJuzData.getAllJuz());
+
+      // Fetch progress from API
+      final progressMap = await _quranService.fetchSurahProgress();
+
+      // Update juz with progress data
+      final juzWithProgress = StaticJuzData.getAllJuz().map((juz) {
+        final updatedSurahs = juz.surahs.map((surah) {
+          if (progressMap.containsKey(surah.number)) {
+            return surah.copyWith(revealedVerses: progressMap[surah.number]);
+          }
+          return surah;
+        }).toList();
+
+        return JuzModel(number: juz.number, surahs: updatedSurahs);
+      }).toList();
+
+      juzList.assignAll(juzWithProgress);
       _isJuzFetched = true;
     } catch (e) {
       print("Error fetching juz: $e");

@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -85,6 +86,23 @@ class SurahReadingController extends GetxController {
     );
   }
 
+  Future<void> _toggleVerseProgress(int verseId) async {
+    final success = await _quranService.toggleVerseProgress(surahId, verseId);
+    if (!success) {
+      if (kDebugMode) {
+        print('Failed to toggle progress for surah $surahId verse $verseId');
+      }
+    }
+  }
+
+  void _markVerseRead(int verseId) {
+    final index = verses.indexWhere((v) => v.verseId == verseId);
+    if (index == -1) return;
+    final verse = verses[index];
+    if (verse.isVerseRead) return;
+    verses[index] = verse.copyWith(isVerseRead: true);
+  }
+
   void _playNextVerse() async {
     if (currentPlayingVerse.value == -1) return;
 
@@ -100,6 +118,9 @@ class SurahReadingController extends GetxController {
 
       await _activePlayer.setPlaybackRate(playbackSpeed.value);
       await _activePlayer.resume();
+
+      _markVerseRead(nextVerse.verseId);
+      await _toggleVerseProgress(nextVerse.verseId);
 
       // Preload the following verse
       _preloadNextVerse(currentIndex + 1);
@@ -332,6 +353,9 @@ class SurahReadingController extends GetxController {
         await _activePlayer.setSourceUrl(audioUrl);
         await _activePlayer.setPlaybackRate(playbackSpeed.value);
         await _activePlayer.resume();
+
+        _markVerseRead(verseId);
+        await _toggleVerseProgress(verseId);
 
         // Find index and preload next
         int index = verses.indexWhere((v) => v.verseId == verseId);
@@ -1368,6 +1392,7 @@ class SurahReadingScreen extends StatelessWidget {
                     'assets/icons/3.iconoir_double-check.png',
                     width: 18.sp,
                     height: 18.sp,
+                    color: verse.isVerseRead ? Colors.green : null,
                   ),
                   SizedBox(width: 16.w),
                   GestureDetector(
@@ -1524,7 +1549,11 @@ class SurahReadingScreen extends StatelessWidget {
                     size: 20.sp,
                   ),
                   SizedBox(width: 16.w),
-                  Icon(Icons.check, color: Colors.grey[400], size: 20.sp),
+                  Icon(
+                    Icons.check,
+                    color: verse.isVerseRead ? Colors.green : Colors.grey[400],
+                    size: 20.sp,
+                  ),
                   SizedBox(width: 16.w),
                   Icon(
                     Icons.bookmark_border,

@@ -129,8 +129,10 @@ class QuranService {
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
-        print('Fetching random verse from: $url');
-        print('Token: $token');
+        print('========================================');
+        print('🔹 Fetching random verse from: $url');
+        print('🔹 Token: $token');
+        print('🔹 Token length: ${token?.length ?? 0}');
       }
       final response = await http.get(
         url,
@@ -139,6 +141,12 @@ class QuranService {
           'Content-Type': 'application/json',
         },
       );
+
+      if (kDebugMode) {
+        print('🔹 Response status: ${response.statusCode}');
+        print('🔹 Response body: ${response.body}');
+        print('========================================');
+      }
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = jsonDecode(response.body);
@@ -152,7 +160,7 @@ class QuranService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching random verse: $e');
+        print('❌ Error fetching random verse: $e');
       }
       rethrow;
     }
@@ -544,5 +552,103 @@ class QuranService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<bool> toggleVerseProgress(int surahId, int verseId) async {
+    final url = Uri.parse('$verseProgressEndpoint/$surahId/$verseId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.patch(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        print('Progress toggle response: $body');
+        return body['success'] == true;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling verse progress: $e');
+      }
+    }
+    return false;
+  }
+
+  Future<Map<int, int>> fetchSurahProgress() async {
+    final url = Uri.parse(surahProgressEndpoint);
+    final maxRetries = 2; // Maximum number of retries
+    int retryCount = 0;
+
+    while (retryCount <= maxRetries) {
+      try {
+        final token = await SharedPreferencesHelper.getAccessToken();
+        if (kDebugMode) {
+          print('========================================');
+          print('🔹 Fetching surah progress from: $url');
+          print('🔹 Token: $token');
+          print('🔹 Token length: ${token?.length ?? 0}');
+        }
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+        if (kDebugMode) {
+          print('🔹 Progress response status: ${response.statusCode}');
+          print('🔹 Progress response body: ${response.body}');
+          print('========================================');
+        }
+
+        // If the request is successful, process the response
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> body = jsonDecode(response.body);
+          if (body['success'] == true) {
+            final List<dynamic> data = body['data'];
+            final Map<int, int> progressMap = {};
+            // Process data and map surahId to readCount
+            for (var item in data) {
+              final int surahId = int.tryParse(item['surahId'].toString()) ?? 0;
+              final int readCount = int.tryParse(item['Read'].toString()) ?? 0;
+              if (kDebugMode) {
+                print('Mapping surahId $surahId to readCount $readCount');
+              }
+              if (surahId > 0) {
+                progressMap[surahId] = readCount;
+              }
+            }
+
+            if (kDebugMode) {
+              print('Final progressMap: $progressMap');
+            }
+            return progressMap; // Return the progress map
+          } else {
+            throw Exception(body['message'] ?? 'Failed to load progress');
+          }
+        } else {
+          throw Exception('Failed to load progress: ${response.statusCode}');
+        }
+      } catch (e) {
+        retryCount++;
+        if (retryCount > maxRetries) {
+          if (kDebugMode) {
+            print('❌ Error fetching surah progress: $e');
+          }
+          return {}; // Return empty map after max retries
+        }
+        // Retry with a delay before the next attempt
+        if (kDebugMode) {
+          print('Retrying... attempt $retryCount');
+        }
+        await Future.delayed(Duration(seconds: 2)); // Delay before retrying
+      }
+    }
+    return {}; // Return empty map if retries fail
   }
 }

@@ -29,6 +29,18 @@ class SurahModel {
     );
   }
 
+  SurahModel copyWith({int? revealedVerses}) {
+    return SurahModel(
+      number: number,
+      englishName: englishName,
+      arabicName: arabicName,
+      revelationType: revelationType,
+      totalVerses: totalVerses,
+      revealedVerses: revealedVerses ?? this.revealedVerses,
+      translation: translation,
+    );
+  }
+
   // Helper method to parse int from dynamic (handles both int and String)
   static int? _parseInt(dynamic value) {
     if (value == null) return null;
@@ -36,89 +48,6 @@ class SurahModel {
     if (value is String) return int.tryParse(value);
     return null;
   }
-
-  static List<SurahModel> get sampleSurahs => [
-    SurahModel(
-      number: 1,
-      englishName: "Al-Fatihah",
-      arabicName: "الفاتحة",
-      revelationType: "MECCAN",
-      totalVerses: 7,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 2,
-      englishName: "Al-Baqarah",
-      arabicName: "البقرة",
-      revelationType: "MEDINAN",
-      totalVerses: 286,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 3,
-      englishName: "Ali 'Imran",
-      arabicName: "آل عمران",
-      revelationType: "MEDINAN",
-      totalVerses: 200,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 4,
-      englishName: "An-Nisa",
-      arabicName: "النساء",
-      revelationType: "MEDINAN",
-      totalVerses: 176,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 5,
-      englishName: "Al-Ma'idah",
-      arabicName: "المائدة",
-      revelationType: "MEDINAN",
-      totalVerses: 120,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 6,
-      englishName: "Al-An'am",
-      arabicName: "الأنعام",
-      revelationType: "MECCAN",
-      totalVerses: 165,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 7,
-      englishName: "Al-A'raf",
-      arabicName: "الأعراف",
-      revelationType: "MECCAN",
-      totalVerses: 206,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 8,
-      englishName: "Al-Anfal",
-      arabicName: "الأنفال",
-      revelationType: "MEDINAN",
-      totalVerses: 75,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 9,
-      englishName: "At-Tawbah",
-      arabicName: "التوبة",
-      revelationType: "MEDINAN",
-      totalVerses: 129,
-      revealedVerses: 0,
-    ),
-    SurahModel(
-      number: 10,
-      englishName: "Yunus",
-      arabicName: "يونس",
-      revelationType: "MECCAN",
-      totalVerses: 109,
-      revealedVerses: 0,
-    ),
-  ];
 }
 
 class JuzModel {
@@ -135,52 +64,6 @@ class JuzModel {
           .toList(),
     );
   }
-
-  static List<JuzModel> get sampleJuz => [
-    JuzModel(
-      number: 1,
-      surahs: [
-        JuzSurahModel(
-          number: 1,
-          englishName: "Al-Fatihah",
-          arabicName: "الفاتحة",
-          revelationType: "MECCAN",
-          versesRange: "7 VERSES",
-        ),
-        JuzSurahModel(
-          number: 2,
-          englishName: "Al-Baqarah",
-          arabicName: "البقرة",
-          revelationType: "MEDINIAN",
-          versesRange: "1 - 141 VERSES",
-        ),
-      ],
-    ),
-    JuzModel(
-      number: 2,
-      surahs: [
-        JuzSurahModel(
-          number: 2,
-          englishName: "Al-Baqarah",
-          arabicName: "البقرة",
-          revelationType: "MEDINIAN",
-          versesRange: "142 - 252 VERSES",
-        ),
-      ],
-    ),
-    JuzModel(
-      number: 3,
-      surahs: [
-        JuzSurahModel(
-          number: 2,
-          englishName: "Al-Baqarah",
-          arabicName: "البقرة",
-          revelationType: "MEDINIAN",
-          versesRange: "252 - 286 VERSES",
-        ),
-      ],
-    ),
-  ];
 }
 
 class JuzSurahModel {
@@ -191,6 +74,7 @@ class JuzSurahModel {
   final String versesRange;
   final String translation;
   final int totalVerses;
+  final int revealedVerses;
   final int juzId;
 
   const JuzSurahModel({
@@ -201,6 +85,7 @@ class JuzSurahModel {
     required this.versesRange,
     this.translation = '',
     this.totalVerses = 0,
+    this.revealedVerses = 0,
     this.juzId = 0,
   });
 
@@ -214,7 +99,22 @@ class JuzSurahModel {
       versesRange: '$verses VERSES',
       translation: json['translation'] ?? '',
       totalVerses: verses,
+      revealedVerses: SurahModel._parseInt(json['total_verses_read']) ?? 0,
       juzId: SurahModel._parseInt(json['juzId']) ?? 0,
+    );
+  }
+
+  JuzSurahModel copyWith({int? revealedVerses}) {
+    return JuzSurahModel(
+      number: number,
+      englishName: englishName,
+      arabicName: arabicName,
+      revelationType: revelationType,
+      versesRange: versesRange,
+      translation: translation,
+      totalVerses: totalVerses,
+      revealedVerses: revealedVerses ?? this.revealedVerses,
+      juzId: juzId,
     );
   }
 }

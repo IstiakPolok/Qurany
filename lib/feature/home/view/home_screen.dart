@@ -17,55 +17,54 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0), // Cream background
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Section
-            const HomeHeader(),
+      body: ListView(
+        children: [
+          // Header Section
+          const HomeHeader(),
 
-            // Weekly Streak
-            const WeeklyStreakRow(),
+          // Weekly Streak
+          const WeeklyStreakRow(),
 
-            // Recent Reading Cards
-            const RecentReadingList(),
+          // Recent Reading Cards
+          const RecentReadingList(),
 
-            // Verse of the Day
-            const VerseOfDayCard(),
+          // Verse of the Day
+          const VerseOfDayCard(),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Personalized Recommendation
-            const FeelingWidget(),
+          // Personalized Recommendation
+          const FeelingWidget(),
 
-            // My Goals
-            const DailyGoalsCard(),
+          // My Goals
+          const DailyGoalsCard(),
 
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-            // Did You Know
-            const DidYouKnowSection(),
-            const SizedBox(height: 24),
+          // Did You Know
+          // This section will now load lazily when scrolled into view
+          const DidYouKnowSection(),
+          const SizedBox(height: 24),
 
-            // Reciters
-            const RecitersSection(),
+          // Reciters
+          const RecitersSection(),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 24),
 
-            // Stories
-            const StoriesSection(),
-            const SizedBox(height: 24),
+          // Stories
+          const StoriesSection(),
+          const SizedBox(height: 24),
 
-            // Azkar
-            AzkarSection(),
-            const SizedBox(height: 24),
+          // Azkar
+          AzkarSection(),
+          const SizedBox(height: 24),
 
-            // Quran Tabs & List
-            const QuranTabSection(),
+          // Quran Tabs & List
+          const QuranTabSection(),
 
-            // Extra padding for bottom nav bar
-            SizedBox(height: 100.h),
-          ],
-        ),
+          // Extra padding for bottom nav bar
+          SizedBox(height: 100.h),
+        ],
       ),
     );
   }
