@@ -35,8 +35,7 @@ class GoogleSignInService {
       await _ensureInitialized();
 
       // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn
-          .authenticate();
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
 
       // If user cancels the sign-in
       if (googleUser == null) {
@@ -45,8 +44,7 @@ class GoogleSignInService {
       }
 
       // Obtain the auth details (idToken is here)
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
       final String? idToken = googleAuth.idToken;
 

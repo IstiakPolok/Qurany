@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 
 import '../../../core/const/app_colors.dart' as AppColors;
 import 'package:slide_to_act/slide_to_act.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../customExperiance/views/customExperiance.dart';
 
@@ -40,10 +39,10 @@ class _onBoardind2State extends State<onBoardind2> {
   final GlobalKey<SlideActionState> _slideKey = GlobalKey();
 
   final List<String> _images = [
-    'assets/image/onboard1.png',
-    'assets/image/onboard2.png',
-    'assets/image/onboard3.png',
-    'assets/image/onboard4.png',
+    'assets/image/onboard1.jpg',
+    'assets/image/onboard2.jpg',
+    'assets/image/onboard3.jpg',
+    'assets/image/onboard4.jpg',
   ];
 
   @override

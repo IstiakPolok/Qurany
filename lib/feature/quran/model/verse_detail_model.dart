@@ -1,4 +1,31 @@
+class NoteModel {
+  final String id;
+  final String title;
+  final String description;
+  final int surahId;
+  final int verseId;
+
+  NoteModel({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.surahId,
+    required this.verseId,
+  });
+
+  factory NoteModel.fromJson(Map<String, dynamic> json) {
+    return NoteModel(
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      surahId: (json['surahId'] as int?) ?? 0,
+      verseId: (json['verseId'] as int?) ?? 0,
+    );
+  }
+}
+
 class VerseDetailModel {
+  final int id;
   final int surahId;
   final int verseId;
   final String ayate;
@@ -7,8 +34,10 @@ class VerseDetailModel {
   final String translation;
   final String transliteration;
   final Map<String, AudioDetailModel> audio;
+  final List<NoteModel> notes;
 
   VerseDetailModel({
+    required this.id,
     required this.surahId,
     required this.verseId,
     required this.ayate,
@@ -17,6 +46,7 @@ class VerseDetailModel {
     required this.translation,
     required this.transliteration,
     required this.audio,
+    this.notes = const [],
   });
 
   factory VerseDetailModel.fromJson(Map<String, dynamic> json) {
@@ -27,20 +57,27 @@ class VerseDetailModel {
       });
     }
 
+    final noteList = (json['note'] as List<dynamic>? ?? [])
+        .map((n) => NoteModel.fromJson(n as Map<String, dynamic>))
+        .toList();
+
     return VerseDetailModel(
-      surahId: json['surahId'] ?? 0,
-      verseId: json['verseId'] ?? 0,
+      id: (json['id'] as int?) ?? 0,
+      surahId: (json['surahId'] as int?) ?? 0,
+      verseId: (json['verseId'] as int?) ?? 0,
       ayate: json['ayate'] ?? '',
       isVerseRead: json['isRead'] ?? false,
       text: json['text'] ?? '',
       translation: json['translation'] ?? '',
       transliteration: json['transliteration'] ?? '',
       audio: audioMap,
+      notes: noteList,
     );
   }
 
-  VerseDetailModel copyWith({bool? isVerseRead}) {
+  VerseDetailModel copyWith({bool? isVerseRead, List<NoteModel>? notes}) {
     return VerseDetailModel(
+      id: id,
       surahId: surahId,
       verseId: verseId,
       ayate: ayate,
@@ -49,6 +86,7 @@ class VerseDetailModel {
       translation: translation,
       transliteration: transliteration,
       audio: audio,
+      notes: notes ?? this.notes,
     );
   }
 }

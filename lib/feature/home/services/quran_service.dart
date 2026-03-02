@@ -9,6 +9,7 @@ import 'package:qurany/feature/home/model/history_model.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
 import 'package:qurany/feature/quran/model/tafsir_model.dart';
 import 'package:qurany/feature/quran/model/bookmarked_verse_model.dart';
+import 'package:qurany/feature/profile/model/note_list_item.dart';
 import 'package:flutter/foundation.dart';
 
 class SurahResponse {
@@ -37,6 +38,13 @@ class TafsirResponse {
     required this.page,
     required this.limit,
   });
+}
+
+class ApiActionResult {
+  final bool success;
+  final String message;
+
+  ApiActionResult({required this.success, required this.message});
 }
 
 class QuranService {
@@ -161,6 +169,58 @@ class QuranService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error fetching random verse: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<String> fetchAiVerseReflection({
+    required int surahId,
+    required int verseId,
+  }) async {
+    final url = Uri.parse(
+      '$baseUrl/api/auth/quran/random/verse/ai/$surahId/$verseId',
+    );
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('========================================');
+        print('🔹 Fetching AI verse reflection from: $url');
+        print('🔹 Token length: ${token?.length ?? 0}');
+      }
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('🔹 AI reflection status: ${response.statusCode}');
+        print('🔹 AI reflection body: ${response.body}');
+        print('========================================');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load reflection: ${response.statusCode}');
+      }
+
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      if (body['success'] != true) {
+        throw Exception(body['message'] ?? 'Failed to load reflection');
+      }
+
+      final data = body['data'];
+      if (data is String) {
+        return data;
+      }
+
+      throw Exception('Invalid reflection payload');
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error fetching AI reflection: $e');
       }
       rethrow;
     }
@@ -470,8 +530,8 @@ class QuranService {
     }
   }
 
-  Future<List<AzkarModel>> fetchAzkar() async {
-    final url = Uri.parse(azkarEndpoint);
+  Future<List<AzkarGroupModel>> fetchAzkar() async {
+    final url = Uri.parse(azkarGroupEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.get(
@@ -486,7 +546,7 @@ class QuranService {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true) {
           final List<dynamic> data = body['data'];
-          return data.map((e) => AzkarModel.fromJson(e)).toList();
+          return data.map((e) => AzkarGroupModel.fromJson(e)).toList();
         } else {
           throw Exception(body['message'] ?? 'Failed to load azkar');
         }
@@ -498,8 +558,8 @@ class QuranService {
     }
   }
 
-  Future<List<AzkarModel>> fetchAzkarByGroup(String time) async {
-    final url = Uri.parse('$azkarGroupEndpoint/$time');
+  Future<List<AzkarItem>> fetchAzkarByGroup(String time) async {
+    final url = Uri.parse('$azkarGroupEndpoint');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.get(
@@ -514,7 +574,12 @@ class QuranService {
         final Map<String, dynamic> body = jsonDecode(response.body);
         if (body['success'] == true) {
           final List<dynamic> data = body['data'];
-          return data.map((e) => AzkarModel.fromJson(e)).toList();
+          final groups = data.map((e) => AzkarGroupModel.fromJson(e)).toList();
+          final matchingGroup = groups.firstWhere(
+            (g) => g.time == time || g.name == time,
+            orElse: () => groups.first,
+          );
+          return matchingGroup.items;
         } else {
           throw Exception(body['message'] ?? 'Failed to load azkar group');
         }
@@ -523,6 +588,198 @@ class QuranService {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<ApiActionResult> bookmarkAzkarGroup(String azkarGroupId) async {
+    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark/$azkarGroupId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Bookmark azkar group status: ${response.statusCode}');
+        print('Bookmark azkar group body: ${response.body}');
+      }
+
+      Map<String, dynamic>? body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          body = decoded;
+        }
+      } catch (_) {}
+
+      final message = (body?['message'] ?? '').toString();
+      final normalizedMessage = message.toLowerCase();
+      final apiSuccess = body?['success'] == true;
+      final alreadyExists = normalizedMessage.contains('already exists');
+
+      return ApiActionResult(
+        success: apiSuccess || alreadyExists,
+        message: message.isNotEmpty
+            ? message
+            : 'Failed to bookmark (status: ${response.statusCode})',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error bookmarking azkar group: $e');
+      }
+      return ApiActionResult(success: false, message: 'Failed to bookmark: $e');
+    }
+  }
+
+  Future<List<String>> fetchAzkarBookmarkedGroupIds() async {
+    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Fetch azkar bookmarks status: ${response.statusCode}');
+        print('Fetch azkar bookmarks body: ${response.body}');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch bookmarks: ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception('Invalid bookmarks payload');
+      }
+
+      if (decoded['success'] != true) {
+        throw Exception(decoded['message'] ?? 'Failed to fetch bookmarks');
+      }
+
+      final data = decoded['data'];
+      if (data is! List) {
+        return const <String>[];
+      }
+
+      return data
+          .map((e) {
+            if (e is Map<String, dynamic>) {
+              return (e['azkarGroupId'] ?? '').toString();
+            }
+            return '';
+          })
+          .where((id) => id.isNotEmpty)
+          .toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching azkar bookmarks: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, String>> fetchAzkarBookmarkedGroupIdToBookmarkId() async {
+    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Fetch azkar bookmarks(map) status: ${response.statusCode}');
+        print('Fetch azkar bookmarks(map) body: ${response.body}');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch bookmarks: ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception('Invalid bookmarks payload');
+      }
+      if (decoded['success'] != true) {
+        throw Exception(decoded['message'] ?? 'Failed to fetch bookmarks');
+      }
+
+      final data = decoded['data'];
+      if (data is! List) {
+        return const <String, String>{};
+      }
+
+      final Map<String, String> result = {};
+      for (final entry in data) {
+        if (entry is! Map<String, dynamic>) continue;
+        final groupId = (entry['azkarGroupId'] ?? '').toString();
+        final bookmarkId = (entry['id'] ?? '').toString();
+        if (groupId.isNotEmpty && bookmarkId.isNotEmpty) {
+          result[groupId] = bookmarkId;
+        }
+      }
+      return result;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching azkar bookmarks(map): $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<ApiActionResult> deleteAzkarBookmark(String bookmarkId) async {
+    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark/$bookmarkId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Delete azkar bookmark status: ${response.statusCode}');
+        print('Delete azkar bookmark body: ${response.body}');
+      }
+
+      Map<String, dynamic>? body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          body = decoded;
+        }
+      } catch (_) {}
+
+      final message = (body?['message'] ?? '').toString();
+      final apiSuccess = body?['success'] == true;
+
+      return ApiActionResult(
+        success: apiSuccess,
+        message: message.isNotEmpty
+            ? message
+            : (apiSuccess
+                  ? 'Removed from bookmark'
+                  : 'Failed to remove bookmark (status: ${response.statusCode})'),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting azkar bookmark: $e');
+      }
+      return ApiActionResult(success: false, message: 'Failed to remove: $e');
     }
   }
 
@@ -551,6 +808,28 @@ class QuranService {
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<bool> bookmarkHistory(String historyId) async {
+    final url = Uri.parse('$baseUrl/api/auth/history/bookmark/$historyId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.post(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (kDebugMode) {
+        print('Bookmark history status: ${response.statusCode}');
+        print('Bookmark history body: ${response.body}');
+      }
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      if (kDebugMode) print('Error bookmarking history: $e');
+      return false;
     }
   }
 
@@ -650,5 +929,192 @@ class QuranService {
       }
     }
     return {}; // Return empty map if retries fail
+  }
+
+  Future<List<NoteListItem>> fetchNotes() async {
+    final url = Uri.parse(noteEndpoint);
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('========================================');
+        print('🔹 Fetching notes from: $url');
+        print('🔹 Token length: ${token?.length ?? 0}');
+      }
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (kDebugMode) {
+        print('🔹 fetchNotes status: ${response.statusCode}');
+        print('🔹 fetchNotes body: ${response.body}');
+        print('========================================');
+      }
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['success'] == true) {
+          final data = body['data'] as List<dynamic>;
+          return data
+              .map((e) => NoteListItem.fromJson(e as Map<String, dynamic>))
+              .where((n) => !n.isDeleted)
+              .toList();
+        }
+        throw Exception(body['message'] ?? 'Failed to fetch notes');
+      }
+      throw Exception('Failed to fetch notes: ${response.statusCode}');
+    } catch (e) {
+      if (kDebugMode) print('❌ fetchNotes error: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> deleteNote(String noteId) async {
+    final url = Uri.parse('$baseUrl/api/auth/note/$noteId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (kDebugMode) {
+        print('========================================');
+        print('🔹 Deleting note: $noteId');
+        print('🔹 Token length: ${token?.length ?? 0}');
+      }
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (kDebugMode) {
+        print('🔹 deleteNote response status: ${response.statusCode}');
+        print('🔹 deleteNote response body: ${response.body}');
+        print('========================================');
+      }
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      if (kDebugMode) print('❌ deleteNote error: $e');
+      return false;
+    }
+  }
+
+  Future<String?> createNote({
+    required String description,
+    required int surahId,
+    required int verseId,
+    required int id,
+  }) async {
+    final url = Uri.parse('$baseUrl/api/auth/note');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final requestBody = {
+        'description': description,
+        'surahId': surahId,
+        'verseId': verseId,
+        'verse': id,
+      };
+      if (kDebugMode) {
+        print('========================================');
+        print('🔹 Creating note at: $url');
+        print('🔹 id: $id | surahId: $surahId | verseId: $verseId');
+        print('🔹 description: $description');
+        print('🔹 Token length: ${token?.length ?? 0}');
+        print('🔹 Request body: ${jsonEncode(requestBody)}');
+      }
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+      if (kDebugMode) {
+        print('🔹 createNote response status: ${response.statusCode}');
+        print('🔹 createNote response body: ${response.body}');
+        print('========================================');
+      }
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return data['message'] as String? ?? 'Note created successfully';
+      }
+      // Note already exists → update it instead
+      if (response.statusCode == 400 &&
+          (data['message'] as String? ?? '').contains('already exists')) {
+        final existingId = data['data']?['id'] as String?;
+        if (existingId != null) {
+          if (kDebugMode) {
+            print(
+              '🔄 Note already exists (id: $existingId) — switching to updateNote',
+            );
+          }
+          final updated = await updateNote(
+            noteId: existingId,
+            description: description,
+            surahId: surahId,
+            verseId: verseId,
+          );
+          return updated ? 'Note updated successfully' : null;
+        }
+      }
+      if (kDebugMode) {
+        print('❌ createNote failed: ${data['message']}');
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ createNote error: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> updateNote({
+    required String noteId,
+    required String description,
+    required int surahId,
+    required int verseId,
+  }) async {
+    final url = Uri.parse('$baseUrl/api/auth/note/$noteId');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final requestBody = {
+        'description': description,
+        'surahId': surahId,
+        'verseId': verseId,
+      };
+      if (kDebugMode) {
+        print('========================================');
+        print('🔹 Updating note at: $url');
+        print('🔹 noteId: $noteId | surahId: $surahId | verseId: $verseId');
+        print('🔹 description: $description');
+        print('🔹 Token length: ${token?.length ?? 0}');
+        print('🔹 Request body: ${jsonEncode(requestBody)}');
+      }
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(requestBody),
+      );
+      if (kDebugMode) {
+        print('🔹 updateNote response status: ${response.statusCode}');
+        print('🔹 updateNote response body: ${response.body}');
+        print('========================================');
+      }
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+      if (kDebugMode) {
+        final data = jsonDecode(response.body);
+        print('❌ updateNote failed: ${data["message"]}');
+      }
+      return false;
+    } catch (e) {
+      if (kDebugMode) print('❌ updateNote error: $e');
+      return false;
+    }
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:glassmorphism/glassmorphism.dart';
-import 'payment_checkout_screen.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import '../../../core/services/purchase_api.dart';
 
 class PremiumPlanScreen extends StatefulWidget {
   const PremiumPlanScreen({super.key});
@@ -12,6 +13,34 @@ class PremiumPlanScreen extends StatefulWidget {
 
 class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
   bool isYearlySelected = true;
+  List<Package> packages = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOfferings();
+  }
+
+  Future<void> _fetchOfferings() async {
+    try {
+      final offerings = await PurchaseApi.fetchOfferings();
+      if (offerings.isNotEmpty) {
+        setState(() {
+          packages = offerings.first.availablePackages;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,59 +177,66 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
   }
 
   Widget _buildPricingSection() {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    if (packages.isEmpty) {
+      return Center(
+        child: Text(
+          "No plans available at the moment.",
+          style: TextStyle(color: Colors.white, fontSize: 16.sp),
+        ),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24.w),
       child: Row(
-        children: [
-          // Monthly Card
-          _buildPricingCard(
-            title: "Monthly",
-            price: "\$4.99",
-            isSelected: !isYearlySelected,
-            onTap: () {
-              setState(() {
-                isYearlySelected = false;
-              });
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PaymentCheckoutScreen(
-                    planType: 'Monthly',
-                    price: '\$4.99',
-                  ),
-                ),
-              );
-            },
-          ),
+        children: packages.map((package) {
+          final isYearly = package.packageType == PackageType.annual;
+          final isMonthly = package.packageType == PackageType.monthly;
 
-          SizedBox(width: 16.w),
+          // Use index to add spacing between cards
+          final isLast = packages.last == package;
 
-          // Yearly Card
-          _buildPricingCard(
-            title: "Yearly",
-            price: "\$29.99",
-            isSelected: isYearlySelected,
-            showBadge: true,
-            badgeText: "Save 40%",
-            onTap: () {
-              setState(() {
-                isYearlySelected = true;
-              });
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PaymentCheckoutScreen(
-                    planType: 'Yearly',
-                    price: '\$29.99',
-                    savingsText: 'Save 40%',
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: isLast ? 0 : 16.w),
+              child: _buildPricingCard(
+                title: package.storeProduct.title.split('(')[0].trim(),
+                price: package.storeProduct.priceString,
+                isSelected: isYearly ? isYearlySelected : !isYearlySelected,
+                showBadge: isYearly,
+                badgeText: isYearly ? "Save 40%" : null,
+                onTap: () {
+                  setState(() {
+                    isYearlySelected = isYearly;
+                  });
+                  _handlePurchase(package);
+                },
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
+  }
+
+  Future<void> _handlePurchase(Package package) async {
+    final success = await PurchaseApi.purchasePackage(package);
+    if (success) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Purchase Successful!")));
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Purchase Failed or Cancelled")),
+      );
+    }
   }
 
   Widget _buildPricingCard({
@@ -403,7 +439,13 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: GestureDetector(
         onTap: () {
-          // Handle trial subscription
+          if (packages.isNotEmpty) {
+            final package = packages.firstWhere(
+              (p) => p.packageType == PackageType.annual,
+              orElse: () => packages.first,
+            );
+            _handlePurchase(package);
+          }
         },
         child: Container(
           width: double.infinity,

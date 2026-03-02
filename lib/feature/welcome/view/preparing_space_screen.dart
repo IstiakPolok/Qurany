@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/bottom_nav_bar/screen/bottom_nav_bar.dart';
 

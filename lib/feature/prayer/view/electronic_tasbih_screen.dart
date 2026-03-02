@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 
 class ElectronicTasbihScreen extends StatefulWidget {
   const ElectronicTasbihScreen({super.key});
@@ -592,7 +591,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       color: Colors.black87,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 3.h),
+
                   Text(
                     "Start counting blessings with the zikr that speaks to your heart.",
                     style: TextStyle(
@@ -601,7 +601,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       height: 1.2,
                     ),
                   ),
-                  SizedBox(height: 16.h),
+                  SizedBox(height: 3.h),
                   ElevatedButton(
                     onPressed: _showDhikrPicker,
                     style: ElevatedButton.styleFrom(
@@ -626,7 +626,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             ),
             Image.asset(
               'assets/image/tasbih_hand.png',
-              height: 110.h,
+              height: 80.h,
               fit: BoxFit.contain,
             ),
           ],
@@ -898,9 +898,6 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Recalculate path metrics based on current screen size
-    _calculatePath(Size(MediaQuery.of(context).size.width, 160.h));
-
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
       appBar: AppBar(
@@ -932,249 +929,255 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(vertical: 16.h),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: _currentDhikrCard(),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+            child: _currentDhikrCard(),
+          ),
+
+          SizedBox(height: 12.h),
+
+          // Dhikr Count
+          Text(
+            "Dhikr Count",
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
+          ),
+          SizedBox(height: 8.h),
 
-            SizedBox(height: 32.h),
-
-            // Dhikr Count
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Text(
-                "Dhikr Count",
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+          // Hexagon Counter
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 130.w,
+                height: 145.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/image/Polygon.png'),
+                    fit: BoxFit.fill,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "$_counter / $_targetCount",
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      "Round $_round",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            SizedBox(height: 16.h),
-
-            // Hexagon Counter
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: 160.w,
-                  height: 175.w,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage('assets/image/Polygon.png'),
-                      fit: BoxFit.fill,
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _showEditDialog,
+                  child: Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2EAD8),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.edit,
+                      size: 14.sp,
+                      color: Colors.grey[700],
                     ),
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: 30.h),
+
+          // Beads Curve & Interaction
+          Expanded(
+            child: GestureDetector(
+              onHorizontalDragUpdate: _onDragUpdate,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final beadHeight = constraints.maxHeight;
+                  _calculatePath(Size(constraints.maxWidth, beadHeight));
+                  return SizedBox(
+                    height: beadHeight,
+                    width: constraints.maxWidth,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          child: CustomPaint(
+                            size: Size(constraints.maxWidth, beadHeight),
+                            painter: BeadPathPainter(_beadPath),
+                          ),
+                        ),
+                        ..._buildVisibleBeads(constraints.maxWidth, beadHeight),
+                        Text(
+                          "Right to left swipe will\ndecrease count",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // Style Selector
+          SizedBox(
+            height: 80.h,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildStyleItem("Green", 'assets/image/1.png', true),
+                _buildStyleItem("Orange", 'assets/image/2.png', false),
+                _buildStyleItem("Parrot", 'assets/image/3.png', false),
+                _buildStyleItem(
+                  "Galaxy",
+                  'assets/image/4.png',
+                  false,
+                  isLocked: true,
+                ),
+                _buildStyleItem(
+                  "Galaxy",
+                  'assets/image/5.png',
+                  false,
+                  isLocked: true,
+                ),
+                _buildStyleItem(
+                  "Galaxy",
+                  'assets/image/6.png',
+                  false,
+                  isLocked: true,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 12.h),
+
+          // Premium Unlock
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECEFE2),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: const Color(0xFF2F7D33)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        "$_counter / $_targetCount",
-                        style: TextStyle(
-                          fontSize: 28.sp,
-                          fontWeight: FontWeight.bold,
+                      Container(
+                        width: 28.w,
+                        height: 30.w,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage('assets/image/Polygon.png'),
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.lock_open,
                           color: Colors.white,
+                          size: 16.sp,
                         ),
                       ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        "Round $_round",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Unlock Premium Styles",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13.sp,
+                              ),
+                            ),
+                            SizedBox(height: 3.h),
+                            Text(
+                              "Continue using and engaging with Qurani+ to unlock beautiful new compass styles!",
+                              style: TextStyle(
+                                fontWeight: FontWeight.normal,
+                                fontSize: 13.sp,
+                              ),
+                            ),
+                            SizedBox(height: 3.h),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4.r),
+                                    child: LinearProgressIndicator(
+                                      value: 0.33,
+                                      backgroundColor: Colors.grey[300],
+                                      color: const Color(0xFF2E7D32),
+                                      minHeight: 5.h,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10.w),
+                                Text(
+                                  "33%",
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Complete 2 more goals to unlock "Other" colors',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2F7D33),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: _showEditDialog,
-                    child: Container(
-                      padding: EdgeInsets.all(8.w),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE2EAD8),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Icon(
-                        Icons.edit,
-                        size: 16.sp,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: 40.h),
-
-            // Beads Curve & Interaction
-            GestureDetector(
-              onHorizontalDragUpdate: _onDragUpdate,
-              child: SizedBox(
-                height: 160.h,
-                width: MediaQuery.of(context).size.width,
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    // The Curve Path
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      child: CustomPaint(
-                        size: Size(MediaQuery.of(context).size.width, 160.h),
-                        painter: BeadPathPainter(_beadPath),
-                      ),
-                    ),
-
-                    // Dynamic Beads
-                    ..._buildVisibleBeads(
-                      MediaQuery.of(context).size.width,
-                      160.h,
-                    ),
-                    Text(
-                      "Right to left swipe will\ndecrease count",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Text(
-            //   "Right to left swipe will\ndecrease count",
-            //   textAlign: TextAlign.center,
-            //   style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-            // ),
-
-            // Style Selector
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-
-              child: Row(
-                children: [
-                  _buildStyleItem("Green", 'assets/image/1.png', true),
-
-                  _buildStyleItem("Orange", 'assets/image/2.png', false),
-
-                  _buildStyleItem("Parrot", 'assets/image/3.png', false),
-                  _buildStyleItem(
-                    "Galaxy",
-                    'assets/image/4.png',
-                    false,
-                    isLocked: true,
-                  ),
-                  _buildStyleItem(
-                    "Galaxy",
-                    'assets/image/5.png',
-                    false,
-                    isLocked: true,
-                  ),
-                  _buildStyleItem(
-                    "Galaxy",
-                    'assets/image/6.png',
-                    false,
-                    isLocked: true,
-                  ),
                 ],
               ),
             ),
-
-            SizedBox(height: 32.h),
-
-            // Premium Unlock
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECEFE2),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: const Color(0xFFECEFE2)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.lock_open,
-                          color: const Color(0xFF2E7D32),
-                          size: 20.sp,
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          "Unlock Premium Styles",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      "Continue using and engaging with Qurany+ to unlock beautiful new compass styles!",
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4.r),
-                            child: LinearProgressIndicator(
-                              value: 0.33,
-                              backgroundColor: Colors.grey[300],
-                              color: const Color(0xFF2E7D32),
-                              minHeight: 6.h,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Text(
-                          "33%",
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      "Complete 2 more goals to unlock \"Other\" colors",
-                      style: TextStyle(
-                        fontSize: 10.sp,
-                        color: const Color(0xFF2E7D32),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 20.h),
-          ],
-        ),
+          ),
+          SizedBox(height: 25.h),
+        ],
       ),
     );
   }
@@ -1188,7 +1191,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
     // Render beads so they overflow out of the screen
     // Increase range to cover more beads
-    for (int i = -12; i <= 12; i++) {
+    for (int i = -10; i <= 10; i++) {
       double beadLinearPos = centerOffset + _dragOffset + (i * _beadSpacing);
 
       // Map to path if within bounds
@@ -1200,11 +1203,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           final bool isCenterBead = i == 0;
           beads.add(
             Positioned(
-              left: tangent.position.dx - 17.5.w,
-              top: tangent.position.dy - 17.5.w,
+              left: tangent.position.dx - 20.w,
+              top: tangent.position.dy - 20.w,
               child: Container(
-                width: 35.w,
-                height: 35.w,
+                width: 40.w,
+                height: 40.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: isCenterBead
@@ -1238,14 +1241,19 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     bool isSelected, {
     bool isLocked = false,
   }) {
-    return Column(
+    return Stack(
       children: [
-        Image.asset(
-          imagePath,
-          width: 120.w,
-          height: 100.w,
-          fit: BoxFit.contain,
-        ),
+        Image.asset(imagePath, width: 100.w, height: 80.h, fit: BoxFit.contain),
+        if (isLocked)
+          Positioned(
+            top: 0.h,
+            right: 12.w,
+            child: Container(
+              padding: EdgeInsets.all(3.w),
+
+              child: Icon(Icons.lock, size: 12.sp, color: Colors.grey),
+            ),
+          ),
       ],
     );
   }

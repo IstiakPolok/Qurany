@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/feature/home/controller/azkar_controller.dart';
-import 'package:qurany/feature/home/model/azkar_model.dart';
 
 class AzkarDetailScreen extends StatefulWidget {
   final Map<String, dynamic> categoryData;

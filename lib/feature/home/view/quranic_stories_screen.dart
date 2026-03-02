@@ -139,19 +139,42 @@ class QuranicStoriesScreen extends StatelessWidget {
                     // Bookmark Icon
                     Align(
                       alignment: Alignment.topRight,
-                      child: Container(
-                        margin: EdgeInsets.all(10.w),
-                        padding: EdgeInsets.all(6.w),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.bookmark_border,
-                          size: 18.sp,
-                          color: Colors.black54,
-                        ),
-                      ),
+                      child: Obx(() {
+                        final isBookmarked = controller.bookmarkedIds.contains(
+                          item.id,
+                        );
+                        final isBookmarking = controller.bookmarkingIds
+                            .contains(item.id);
+                        return GestureDetector(
+                          onTap: () => controller.toggleBookmark(item.id),
+                          child: Container(
+                            margin: EdgeInsets.all(10.w),
+                            padding: EdgeInsets.all(6.w),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: isBookmarking
+                                ? SizedBox(
+                                    width: 18.sp,
+                                    height: 18.sp,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: Color(0xFF2E7D32),
+                                    ),
+                                  )
+                                : Icon(
+                                    isBookmarked
+                                        ? Icons.bookmark
+                                        : Icons.bookmark_border,
+                                    size: 18.sp,
+                                    color: isBookmarked
+                                        ? const Color(0xFF2E7D32)
+                                        : Colors.black54,
+                                  ),
+                          ),
+                        );
+                      }),
                     ),
                   ],
                 ),

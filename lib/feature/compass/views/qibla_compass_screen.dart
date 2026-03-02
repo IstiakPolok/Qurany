@@ -200,41 +200,48 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                 _buildCompassSection(),
               ],
             )
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Map Header Section
-                  _buildMapHeader(),
+          : Column(
+              children: [
+                // Map Header with Stats overlapping
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _buildMapHeader(),
+                    Positioned(
+                      bottom: -25.h,
+                      left: 0,
+                      right: 0,
+                      child: _buildStatsRow(),
+                    ),
+                  ],
+                ),
 
-                  // Prayer Info Row
-                  _buildPrayerInfoRow(),
+                SizedBox(height: 10.h),
 
-                  // Stats Row
-                  _buildStatsRow(),
+                // Compass Section (fills remaining space)
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _buildCompassSection()),
+                      Positioned(
+                        top: 30.h,
+                        right: 30.w,
+                        child: _buildExpandViewButtton(),
+                      ),
+                    ],
+                  ),
+                ),
 
-                  SizedBox(height: 16.h),
+                // Qibla Compass Style Selector
+                _buildCompassStyleSelector(),
 
-                  // Compass Section
-                  _buildCompassSection(),
+                SizedBox(height: 10.h),
 
-                  SizedBox(height: 16.h),
+                // Premium Unlock Banner
+                _buildPremiumBanner(),
 
-                  // Expand View Button
-                  _buildExpandViewButton(),
-
-                  SizedBox(height: 24.h),
-
-                  // Qibla Compass Style Selector
-                  _buildCompassStyleSelector(),
-
-                  SizedBox(height: 24.h),
-
-                  // Premium Unlock Banner
-                  _buildPremiumBanner(),
-
-                  SizedBox(height: 24.h),
-                ],
-              ),
+                SizedBox(height: 10.h),
+              ],
             ),
     );
   }
@@ -244,7 +251,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
       children: [
         // Map placeholder
         Container(
-          height: 200.h,
+          height: 160.h,
           width: double.infinity,
           decoration: const BoxDecoration(
             image: DecorationImage(
@@ -292,85 +299,85 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
     );
   }
 
-  Widget _buildPrayerInfoRow() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-      color: const Color(0xFFFFF9F0),
-      child: Obx(() {
-        if (prayerController == null) {
-          return const SizedBox();
-        }
+  // Widget _buildPrayerInfoRow() {
+  //   return Container(
+  //     padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+  //     color: const Color(0xFFFFF9F0),
+  //     child: Obx(() {
+  //       if (prayerController == null) {
+  //         return const SizedBox();
+  //       }
 
-        final nextPrayer = prayerController!.getNextPrayerName();
-        final timeRemaining = prayerController!.getTimeRemaining();
-        final nextPrayerTime =
-            prayerController!.prayerData.value?.times[nextPrayer] ?? '00:00';
+  //       final nextPrayer = prayerController!.getNextPrayerName();
+  //       final timeRemaining = prayerController!.getTimeRemaining();
+  //       final nextPrayerTime =
+  //           prayerController!.prayerData.value?.times[nextPrayer] ?? '00:00';
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Next Prayer",
-                  style: TextStyle(
-                    color: const Color(0xFF2E7D32),
-                    fontSize: 12.sp,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Row(
-                  children: [
-                    Icon(
-                      _getPrayerIcon(nextPrayer),
-                      size: 18.sp,
-                      color: Colors.grey[600],
-                    ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      nextPrayer,
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  nextPrayerTime,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  "in $timeRemaining",
-                  style: TextStyle(
-                    color: const Color(0xFF2E7D32),
-                    fontSize: 12.sp,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      }),
-    );
-  }
+  //       return Row(
+  //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //         children: [
+  //           Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 "Next Prayer",
+  //                 style: TextStyle(
+  //                   color: const Color(0xFF2E7D32),
+  //                   fontSize: 12.sp,
+  //                 ),
+  //               ),
+  //               SizedBox(height: 4.h),
+  //               Row(
+  //                 children: [
+  //                   Icon(
+  //                     _getPrayerIcon(nextPrayer),
+  //                     size: 18.sp,
+  //                     color: Colors.grey[600],
+  //                   ),
+  //                   SizedBox(width: 6.w),
+  //                   Text(
+  //                     nextPrayer,
+  //                     style: TextStyle(
+  //                       fontSize: 16.sp,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ],
+  //           ),
+  //           Column(
+  //             crossAxisAlignment: CrossAxisAlignment.end,
+  //             children: [
+  //               Text(
+  //                 nextPrayerTime,
+  //                 style: TextStyle(
+  //                   fontSize: 16.sp,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //               SizedBox(height: 4.h),
+  //               Text(
+  //                 "in $timeRemaining",
+  //                 style: TextStyle(
+  //                   color: const Color(0xFF2E7D32),
+  //                   fontSize: 12.sp,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ],
+  //       );
+  //     }),
+  //   );
+  // }
 
   Widget _buildStatsRow() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 24.w),
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
+        color: const Color(0xFFFFF9F0),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Obx(() {
@@ -458,7 +465,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
     );
   }
 
-  Widget _buildExpandViewButton() {
+  Widget _buildExpandViewButtton() {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -466,23 +473,13 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         });
       },
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        padding: EdgeInsets.all(10.w),
         decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(25.r),
-          border: Border.all(color: primaryColor),
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey[300]!),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.open_in_full, size: 18.sp, color: Colors.black87),
-            SizedBox(width: 8.w),
-            Text(
-              "Expand View",
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
+        child: Icon(Icons.open_in_full, size: 18.sp, color: Colors.black87),
       ),
     );
   }
@@ -510,45 +507,50 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           SizedBox(height: 16.h),
 
           // First row - Unlocked styles
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildCompassOption(
-                "Classic",
-                'assets/image/classic_icon.png',
-                false,
-              ),
-              _buildCompassOption(
-                "Modern",
-                'assets/image/modern_icon.png',
-                false,
-              ),
-              _buildCompassOption(
-                "Clean",
-                'assets/image/clean_icon.png',
-                false,
-              ),
-            ],
-          ),
-
-          SizedBox(height: 16.h),
-
-          // Second row - Locked premium styles
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildCompassOption(
-                "Ornate",
-                'assets/image/ornateCompass.png',
-                true,
-              ),
-              _buildCompassOption("Neon", 'assets/image/neonCOmpass.png', true),
-              _buildCompassOption(
-                "Galaxy",
-                'assets/image/galaxycompass.png',
-                true,
-              ),
-            ],
+          SizedBox(
+            height: 100.h,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                SizedBox(width: 8.w),
+                _buildCompassOption(
+                  "Classic",
+                  'assets/image/classic_icon.png',
+                  false,
+                ),
+                SizedBox(width: 12.w),
+                _buildCompassOption(
+                  "Modern",
+                  'assets/image/modern_icon.png',
+                  false,
+                ),
+                SizedBox(width: 12.w),
+                _buildCompassOption(
+                  "Clean",
+                  'assets/image/clean_icon.png',
+                  false,
+                ),
+                SizedBox(width: 12.w),
+                _buildCompassOption(
+                  "Ornate",
+                  'assets/image/ornateCompass.png',
+                  true,
+                ),
+                SizedBox(width: 12.w),
+                _buildCompassOption(
+                  "Neon",
+                  'assets/image/neonCOmpass.png',
+                  true,
+                ),
+                SizedBox(width: 12.w),
+                _buildCompassOption(
+                  "Galaxy",
+                  'assets/image/galaxycompass.png',
+                  true,
+                ),
+                SizedBox(width: 8.w),
+              ],
+            ),
           ),
         ],
       ),
@@ -572,8 +574,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           Stack(
             children: [
               Container(
-                width: 90.w,
-                height: 90.w,
+                width: 75.w,
+                height: 75.w,
                 decoration: BoxDecoration(
                   color: isLocked ? Colors.grey[200] : const Color(0xFFE8F5E9),
                   borderRadius: BorderRadius.circular(16.r),
@@ -643,77 +645,96 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
   }
 
   Widget _buildPremiumBanner() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24.w),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32),
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Icon(Icons.lock_open, size: 20.sp, color: Colors.white),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Column(
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.w),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFECEFE2),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: const Color(0xFF2F7D33)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Unlock Premium Styles",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.sp,
+                Container(
+                  width: 28.w,
+                  height: 30.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/image/Polygon.png'),
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.lock_open,
+                    color: Colors.white,
+                    size: 16.sp,
                   ),
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  "Continue using and engaging with Qurany+ to unlock beautiful new compass styles!",
-                  style: TextStyle(fontSize: 11.sp, color: Colors.grey[700]),
-                ),
-                SizedBox(height: 12.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4.r),
-                        child: LinearProgressIndicator(
-                          value: 0.33,
-                          backgroundColor: Colors.white,
-                          color: const Color(0xFF2E7D32),
-                          minHeight: 6.h,
+                SizedBox(width: 6.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Unlock Premium Styles",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.sp,
                         ),
                       ),
-                    ),
-                    SizedBox(width: 12.w),
-                    Text(
-                      "33%",
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
+                      SizedBox(height: 3.h),
+                      Text(
+                        "Continue using and engaging with Qurani+ to unlock beautiful new compass styles!",
+                        style: TextStyle(
+                          fontWeight: FontWeight.normal,
+                          fontSize: 13.sp,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  "Complete 2 more goals to unlock \"Ornate\" style",
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    color: const Color(0xFF2E7D32),
+                      SizedBox(height: 3.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4.r),
+                              child: LinearProgressIndicator(
+                                value: 0.33,
+                                backgroundColor: Colors.grey[300],
+                                color: const Color(0xFF2E7D32),
+                                minHeight: 5.h,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10.w),
+                          Text(
+                            "33%",
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        'Complete 2 more goals to unlock "Other" colors',
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2F7D33),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

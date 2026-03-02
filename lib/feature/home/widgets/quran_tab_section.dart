@@ -19,7 +19,7 @@ class QuranTabSection extends StatefulWidget {
 class _QuranTabSectionState extends State<QuranTabSection> {
   final TextEditingController _searchController = TextEditingController();
   final QuranService _quranService = QuranService();
-  List<SurahModel> _allSurahs = [];
+  final List<SurahModel> _allSurahs = [];
   List<SurahModel> _filteredSurahs = [];
   List<JuzModel> _allJuz = [];
   List<JuzModel> _filteredJuz = [];
@@ -30,7 +30,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
 
   // Pagination state
   int _currentPage = 1;
-  int _totalItems = 114;
+  final int _totalItems = 114;
   final int _pageSize = 10;
 
   Map<int, int> _progressMap = {};
@@ -257,9 +257,22 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                 "Quran",
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
-              Text(
-                "View all",
-                style: TextStyle(fontSize: 12.sp, color: Colors.green),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "View all",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.sp,
+                      height: 1.5,
+                      color: Color(0xff2f7d33),
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+                  Container(height: 1.2, width: 52.w, color: Color(0xff2f7d33)),
+                ],
               ),
             ],
           ),

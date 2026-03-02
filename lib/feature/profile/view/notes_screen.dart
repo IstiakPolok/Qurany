@@ -1,63 +1,143 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:qurany/core/const/static_surah_data.dart';
+import 'package:qurany/feature/home/services/quran_service.dart';
+import 'package:qurany/feature/profile/model/note_list_item.dart';
+import 'package:qurany/feature/quran/view/surah_reading_screen.dart';
 
-class NotesScreen extends StatefulWidget {
+// ─── Controller ──────────────────────────────────────────────────────────────
+
+class NotesController extends GetxController {
+  final QuranService _service = QuranService();
+
+  RxList<NoteListItem> notes = <NoteListItem>[].obs;
+  RxBool isLoading = true.obs;
+  RxString error = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchNotes();
+  }
+
+  Future<void> fetchNotes() async {
+    try {
+      isLoading(true);
+      error('');
+      final fetched = await _service.fetchNotes();
+      notes.assignAll(fetched);
+    } catch (e) {
+      error(e.toString());
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  Future<bool> deleteNote(String noteId) async {
+    final ok = await _service.deleteNote(noteId);
+    if (ok) notes.removeWhere((n) => n.id == noteId);
+    return ok;
+  }
+
+  Future<bool> updateNote({
+    required String noteId,
+    required String description,
+    required int surahId,
+    required int verseId,
+  }) async {
+    final ok = await _service.updateNote(
+      noteId: noteId,
+      description: description,
+      surahId: surahId,
+      verseId: verseId,
+    );
+    if (ok) await fetchNotes();
+    return ok;
+  }
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+
+class NotesScreen extends StatelessWidget {
   const NotesScreen({super.key});
 
   @override
-  State<NotesScreen> createState() => _NotesScreenState();
-}
-
-class _NotesScreenState extends State<NotesScreen> {
-  final List<Map<String, String>> notes = [
-    {
-      'title': 'In the Name of Allah, the Most Compassionate, Most Merciful.',
-      'date': 'Created Nov 15, 2025',
-      'surah': 'Al-Fatiha',
-      'verse': '120',
-      'note':
-          'This verse brings me so much comfort during difficult times. It reminds me that whatever challenge I face, Allah knows I have the strength to handle it. I should trust in His wisdom and my own resilience.',
-    },
-    {
-      'title':
-          'And We certainly created man and We know what his soul whispers to him, and We are closer to him than his jugular vein.',
-      'date': 'Created Nov 16, 2025',
-      'surah': 'Qaf',
-      'verse': '16',
-      'note':
-          "This verse reassures me of Allah's intimacy with my thoughts and feelings. It encourages me to be honest with myself and seek His guidance in every aspect of life.",
-    },
-    {
-      'title': 'Indeed, with hardship comes ease.',
-      'date': 'Created Nov 17, 2025',
-      'surah': 'Ash-Sharh',
-      'verse': '5',
-      'note':
-          'This verse is a beacon of hope, reminding me that challenges are temporary and that relief will follow. It instills a sense of patience and perseverance within me.',
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.put(NotesController());
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0),
       body: SafeArea(
         child: Column(
           children: [
-            // App Bar
-            _buildAppBar(context),
-
+            _buildAppBar(context, controller),
             SizedBox(height: 16.h),
-
-            // Notes List
             Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                itemCount: notes.length,
-                itemBuilder: (context, index) {
-                  return _buildNoteCard(notes[index], index);
-                },
-              ),
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (controller.error.value.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 48.sp,
+                          color: Colors.red[300],
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'Failed to load notes',
+                          style: TextStyle(fontSize: 14.sp),
+                        ),
+                        SizedBox(height: 8.h),
+                        ElevatedButton(
+                          onPressed: controller.fetchNotes,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                if (controller.notes.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.note_outlined,
+                          size: 64.sp,
+                          color: Colors.grey[300],
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'No notes yet',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: controller.fetchNotes,
+                  child: ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    itemCount: controller.notes.length,
+                    itemBuilder: (context, index) => _buildNoteCard(
+                      context,
+                      controller.notes[index],
+                      index,
+                      controller,
+                    ),
+                  ),
+                );
+              }),
             ),
           ],
         ),
@@ -65,7 +145,7 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, NotesController controller) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Row(
@@ -99,12 +179,16 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  Widget _buildNoteCard(Map<String, String> note, int index) {
-    // Different accent colors for cards
+  Widget _buildNoteCard(
+    BuildContext context,
+    NoteListItem note,
+    int index,
+    NotesController controller,
+  ) {
     final colors = [
-      const Color(0xFF2E7D32), // Green
-      const Color(0xFFFF9800), // Orange
-      const Color(0xFF2196F3), // Blue
+      const Color(0xFF2E7D32),
+      const Color(0xFFFF9800),
+      const Color(0xFF2196F3),
     ];
     final accentColor = colors[index % colors.length];
 
@@ -124,25 +208,52 @@ class _NotesScreenState extends State<NotesScreen> {
           children: [
             // Title
             Text(
-              note['title']!,
+              note.title,
               style: TextStyle(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 4.h),
 
-            // Date and Surah info
+            // Arabic verse text (if available)
+            if (note.verseData != null) ...[
+              SizedBox(height: 4.h),
+              Text(
+                note.verseData!.text,
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontFamily: 'Arial',
+                  height: 1.8,
+                  color: Colors.black87,
+                ),
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.right,
+              ),
+              SizedBox(height: 4.h),
+              Text(
+                note.verseData!.translation,
+                style: TextStyle(
+                  fontSize: 13.sp,
+                  color: Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                  height: 1.4,
+                ),
+              ),
+              SizedBox(height: 8.h),
+            ],
+
+            // Date and surah info
             Text(
-              '${note['date']} • ${note['surah']} : ${note['verse']}',
+              '${note.formattedDate} • Surah ${note.surahId} : ${note.verseId}',
               style: TextStyle(fontSize: 12.sp, color: Colors.grey[500]),
             ),
             SizedBox(height: 12.h),
 
-            // Note content
+            // Note description
             Text(
-              note['note']!,
+              note.description,
               style: TextStyle(
                 fontSize: 13.sp,
                 color: Colors.grey[700],
@@ -151,33 +262,51 @@ class _NotesScreenState extends State<NotesScreen> {
             ),
             SizedBox(height: 16.h),
 
-            // Bottom row with button and actions
+            // Bottom row
             Row(
               children: [
-                // Read Ayah button
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 10.h,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(25.r),
-                  ),
-                  child: Text(
-                    "Read Ayah",
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: () {
+                    final surahList = StaticSurahData.getAllSurahs();
+                    final surah = surahList.firstWhere(
+                      (s) => s.number == note.surahId,
+                      orElse: () => surahList.first,
+                    );
+                    Get.delete<SurahReadingController>();
+                    Get.to(
+                      () => SurahReadingScreen(
+                        surahId: surah.number,
+                        surahName: surah.englishName,
+                        arabicName: surah.arabicName,
+                        meaning: surah.translation,
+                        origin: surah.revelationType,
+                        ayaCount: surah.totalVerses,
+                        translation: surah.translation,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                      vertical: 10.h,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(25.r),
+                    ),
+                    child: Text(
+                      "Read Ayah",
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
                 const Spacer(),
-                // Edit button
+                // Edit
                 GestureDetector(
-                  onTap: () {
-                    // Handle edit
-                  },
+                  onTap: () => _showEditDialog(context, note, controller),
                   child: Container(
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
@@ -192,9 +321,9 @@ class _NotesScreenState extends State<NotesScreen> {
                   ),
                 ),
                 SizedBox(width: 12.w),
-                // Delete button
+                // Delete
                 GestureDetector(
-                  onTap: () => _showDeleteDialog(context),
+                  onTap: () => _showDeleteDialog(context, note, controller),
                   child: Container(
                     padding: EdgeInsets.all(10.w),
                     decoration: BoxDecoration(
@@ -216,114 +345,282 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context) {
+  void _showEditDialog(
+    BuildContext context,
+    NoteListItem note,
+    NotesController controller,
+  ) {
+    final textController = TextEditingController(text: note.description);
+
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Close button
-              Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Icon(
-                    Icons.close,
-                    size: 24.sp,
-                    color: Colors.grey[600],
+      barrierColor: Colors.black45,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          bool isSaving = false;
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Container(
+              padding: EdgeInsets.all(20.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2F7D33),
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Spacer(),
+                      Column(
+                        children: [
+                          Text(
+                            'Surah ${note.surahId}, Aya ${note.verseId}',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.sp,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            'Edit Note',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-
-              SizedBox(height: 8.h),
-
-              // Trash icon in hexagon-like shape
-              Container(
-                padding: EdgeInsets.all(20.w),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFEBEE),
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Icon(
-                  Icons.delete_outline,
-                  size: 32.sp,
-                  color: Colors.red[400],
-                ),
-              ),
-
-              SizedBox(height: 20.h),
-
-              // Title
-              Text(
-                "Delete This Note?",
-                style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
-              ),
-
-              SizedBox(height: 8.h),
-
-              // Subtitle
-              Text(
-                "This action can't be undone. Do you want to continue?",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: Colors.grey[600],
-                  height: 1.4,
-                ),
-              ),
-
-              SizedBox(height: 24.h),
-
-              // Delete button
-              GestureDetector(
-                onTap: () {
-                  // Handle delete
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(25.r),
+                  SizedBox(height: 16.h),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 14.w,
+                      vertical: 12.h,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(color: Colors.white54, width: 1.2),
+                    ),
+                    child: TextField(
+                      controller: textController,
+                      maxLines: 5,
+                      minLines: 5,
+                      style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                      decoration: InputDecoration(
+                        hintText: 'Edit your note...',
+                        hintStyle: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 14.sp,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      cursorColor: Colors.white,
+                    ),
                   ),
-                  child: Center(
-                    child: Text(
-                      "Delete",
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                  SizedBox(height: 16.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final text = textController.text.trim();
+                              if (text.isEmpty) return;
+                              setState(() => isSaving = true);
+                              final ok = await controller.updateNote(
+                                noteId: note.id,
+                                description: text,
+                                surahId: note.surahId,
+                                verseId: note.verseId,
+                              );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              Get.snackbar(
+                                ok ? 'Saved' : 'Error',
+                                ok ? 'Note updated' : 'Failed to update note',
+                                backgroundColor: ok
+                                    ? const Color(0xFF2E7D32)
+                                    : Colors.red,
+                                colorText: Colors.white,
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF2E7D32),
+                        disabledBackgroundColor: Colors.white60,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: isSaving
+                          ? SizedBox(
+                              width: 18.w,
+                              height: 18.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            )
+                          : Text(
+                              'Save Note',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeleteDialog(
+    BuildContext context,
+    NoteListItem note,
+    NotesController controller,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          bool isDeleting = false;
+          return Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Icon(
+                        Icons.close,
+                        size: 24.sp,
+                        color: Colors.grey[600],
                       ),
                     ),
                   ),
-                ),
-              ),
-
-              SizedBox(height: 12.h),
-
-              // Cancel button
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Text(
-                  "Cancel",
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF2196F3),
+                  SizedBox(height: 8.h),
+                  Container(
+                    padding: EdgeInsets.all(20.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEBEE),
+                      borderRadius: BorderRadius.circular(16.r),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline,
+                      size: 32.sp,
+                      color: Colors.red[400],
+                    ),
                   ),
-                ),
+                  SizedBox(height: 20.h),
+                  Text(
+                    "Delete This Note?",
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "This action can't be undone. Do you want to continue?",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.grey[600],
+                      height: 1.4,
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+                  GestureDetector(
+                    onTap: isDeleting
+                        ? null
+                        : () async {
+                            setState(() => isDeleting = true);
+                            final ok = await controller.deleteNote(note.id);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            Get.snackbar(
+                              ok ? 'Deleted' : 'Error',
+                              ok ? 'Note deleted' : 'Failed to delete note',
+                              backgroundColor: ok
+                                  ? Colors.grey[800]
+                                  : Colors.red,
+                              colorText: Colors.white,
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          },
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      decoration: BoxDecoration(
+                        color: isDeleting ? Colors.red[300] : Colors.red,
+                        borderRadius: BorderRadius.circular(25.r),
+                      ),
+                      child: Center(
+                        child: isDeleting
+                            ? SizedBox(
+                                width: 18.w,
+                                height: 18.w,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                "Delete",
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 12.h),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(ctx),
+                    child: Text(
+                      "Cancel",
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF2196F3),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

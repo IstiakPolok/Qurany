@@ -6,6 +6,8 @@ class HistoryController extends GetxController {
   final QuranService _quranService = QuranService();
   var historyList = <HistoryModel>[].obs;
   var isLoading = true.obs;
+  final RxSet<String> bookmarkedIds = <String>{}.obs;
+  final RxSet<String> bookmarkingIds = <String>{}.obs;
 
   @override
   void onInit() {
@@ -23,5 +25,28 @@ class HistoryController extends GetxController {
     } finally {
       isLoading(false);
     }
+  }
+
+  Future<void> toggleBookmark(String historyId) async {
+    if (bookmarkingIds.contains(historyId)) return;
+    bookmarkingIds.add(historyId);
+    final wasBookmarked = bookmarkedIds.contains(historyId);
+    // Optimistic update
+    if (wasBookmarked) {
+      bookmarkedIds.remove(historyId);
+    } else {
+      bookmarkedIds.add(historyId);
+    }
+    final success = await _quranService.bookmarkHistory(historyId);
+    if (!success) {
+      // Revert on failure
+      if (wasBookmarked) {
+        bookmarkedIds.add(historyId);
+      } else {
+        bookmarkedIds.remove(historyId);
+      }
+      Get.snackbar('Error', 'Failed to bookmark story');
+    }
+    bookmarkingIds.remove(historyId);
   }
 }

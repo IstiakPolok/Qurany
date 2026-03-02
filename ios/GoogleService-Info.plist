@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>19186387012-vtu4esfenqrpo2st6ug7718022nbb4b1.apps.googleusercontent.com</string>
+	<string>917319441883-tacu733s73qabpft6qnlhlvrpi71h2t6.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.19186387012-vtu4esfenqrpo2st6ug7718022nbb4b1</string>
+	<string>com.googleusercontent.apps.917319441883-tacu733s73qabpft6qnlhlvrpi71h2t6</string>
 	<key>ANDROID_CLIENT_ID</key>
-	<string>19186387012-53vegvf6ipvn4bt1cncjc6dnv6hgpuj5.apps.googleusercontent.com</string>
+	<string>917319441883-a86rvbn6hsmall9kbtkvdld22glvafcf.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyAhG6ZpWK_fUeCUSwOLXHGeePiovdDgeME</string>
+	<string>AIzaSyCDnovndDzOG6m-bJlTtA8YhvIUAfKg0dk</string>
 	<key>GCM_SENDER_ID</key>
-	<string>19186387012</string>
+	<string>756089115715</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.example.qurany</string>
 	<key>PROJECT_ID</key>
-	<string>qurany-b80ee</string>
+	<string>qurany-6d394</string>
 	<key>STORAGE_BUCKET</key>
-	<string>qurany-b80ee.firebasestorage.app</string>
+	<string>qurany-6d394.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:19186387012:ios:2af15578945adf561b9411</string>
+	<string>1:756089115715:ios:d74fd6d8cbfb92421bf0f6</string>
 </dict>
 </plist>
