@@ -108,7 +108,7 @@ class _PrayerNotificationSettingSheetState
                 Switch(
                   value: isAllowed,
                   onChanged: (value) => setState(() => isAllowed = value),
-                  activeColor: Colors.white,
+                  activeThumbColor: Colors.white,
                   activeTrackColor: const Color(0xFF2E7D32),
                 ),
               ],

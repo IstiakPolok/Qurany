@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:get/utils.dart';
 import 'package:qurany/feature/auth/views/login_options_screen.dart';
 import '../../../core/services_class/local_service/shared_preferences_helper.dart';
 import '../../auth/services/google_auth_service.dart';
@@ -15,7 +14,6 @@ import 'notifications_settings_screen.dart';
 import 'premium_plan_screen.dart';
 
 import 'package:qurany/feature/profile/controller/profile_controller.dart';
-import 'package:get/get.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -263,37 +261,37 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-          if (planType == 'free') ...[
-            SizedBox(height: 16.h),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumPlanScreen(),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 14.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2F7D33),
-                  borderRadius: BorderRadius.circular(25.r),
+          //  if (planType == 'free') ...[
+          SizedBox(height: 16.h),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PremiumPlanScreen(),
                 ),
-                child: Center(
-                  child: Text(
-                    "Go Premium",
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 14.h),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2F7D33),
+                borderRadius: BorderRadius.circular(25.r),
+              ),
+              child: Center(
+                child: Text(
+                  "Go Premium",
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
               ),
             ),
-          ],
+          ),
+          // ],
         ],
       ),
     );

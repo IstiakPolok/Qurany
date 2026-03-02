@@ -205,7 +205,7 @@ class PaymentSuccessScreen extends StatelessWidget {
                   ),
               ],
             );
-          }).toList(),
+          }),
 
           // Start Exploring Button
         ],

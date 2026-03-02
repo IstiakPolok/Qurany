@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/firebase_options.dart';
 import 'package:qurany/core/services/location_service.dart';
+import 'package:qurany/core/services/purchase_api.dart'; // Add this
 
 import 'route/app_routes.dart';
 
@@ -18,6 +19,10 @@ void main() async {
   // Lock orientation to portrait only (disable orientation changes)
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize RevenueCat
+  await PurchaseApi.init();
+
   print("------------------------------------------------");
   print("✅ Connected to Firebase Project: ${Firebase.app().options.projectId}");
   print("------------------------------------------------");

@@ -198,14 +198,14 @@ class QuranController extends GetxController {
       print("📚 Fetching bookmarked surahs...");
       final response = await _quranService.fetchBookmarkedSurahs();
       print("✅ Received ${response.length} bookmarked surahs");
-      response.forEach((surah) {
+      for (var surah in response) {
         print(
           "  - Surah ${surah.number}: ${surah.englishName} (${surah.arabicName})",
         );
         print(
           "    Type: ${surah.revelationType}, Verses: ${surah.totalVerses}",
         );
-      });
+      }
       favoriteSurahs.assignAll(response);
       _isFavoriteSurahsFetched = true;
       print("💾 Assigned to favoriteSurahs observable");
@@ -880,7 +880,12 @@ class QuranScreen extends StatelessWidget {
   ) {
     final isSelected = controller.selectedMode.value == index;
     return GestureDetector(
-      onTap: () => controller.selectedMode.value = index,
+      onTap: () {
+        controller.selectedMode.value = index;
+        if (index == 2) {
+          Get.to(() => const MemorizationScreen());
+        }
+      },
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 12.w),
         decoration: BoxDecoration(

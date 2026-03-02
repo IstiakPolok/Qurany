@@ -3,6 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../quran/view/quran_screen.dart';
 import '../../home/model/surah_model.dart';
+import '../../home/controller/azkar_controller.dart';
+import '../../home/model/azkar_model.dart';
+import '../../home/view/azkar_detail_screen.dart';
 import '../../quran/model/bookmarked_verse_model.dart';
 
 class BookmarksScreen extends StatefulWidget {
@@ -36,6 +39,14 @@ class _BookmarksScreenState extends State<BookmarksScreen>
     final QuranController controller = Get.find<QuranController>();
     controller.fetchFavoriteSurahs(forceRefresh: true);
     controller.fetchBookmarkedVerses(forceRefresh: true);
+
+    if (!Get.isRegistered<AzkarController>()) {
+      Get.put(AzkarController());
+    } else {
+      final AzkarController azkarController = Get.find<AzkarController>();
+      azkarController.fetchAllAzkar();
+      azkarController.fetchBookmarkedAzkarGroups();
+    }
   }
 
   @override
@@ -568,132 +579,162 @@ class _BookmarksScreenState extends State<BookmarksScreen>
 
   // ==================== AZKAR TAB ====================
   Widget _buildAzkarTab() {
-    final azkar = [
-      {
-        'title': 'Morning Azkar',
-        'time': '(5-10 min)',
-        'image':
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-      },
-      {
-        'title': 'Evening Azkar',
-        'time': '(5-10 min)',
-        'image':
-            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
-      },
-      {
-        'title': 'Before Sleeping Azkar',
-        'time': '(3-5 min)',
-        'image':
-            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-      },
-      {
-        'title': 'After Prayer Azkar',
-        'time': '(5-7 min)',
-        'image':
-            'https://images.unsplash.com/photo-1585036156171-384164a8c675?w=400',
-      },
-    ];
+    final AzkarController controller = Get.find<AzkarController>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Saved Azkar",
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 16.h),
-        Expanded(
-          child: GridView.builder(
+    return Obx(() {
+      final isLoading =
+          controller.isLoading.value || controller.isLoadingBookmarks.value;
+      final bookmarkedIds = controller.bookmarkedAzkarGroupIds;
+      final bookmarkedAzkar = controller.allAzkar
+          .where((g) => bookmarkedIds.contains(g.id))
+          .toList();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12.w,
-              mainAxisSpacing: 12.h,
-              childAspectRatio: 1.1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Saved Azkar",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            itemCount: azkar.length,
-            itemBuilder: (context, index) {
-              return _buildAzkarCard(azkar[index]);
-            },
           ),
-        ),
-      ],
-    );
+          SizedBox(height: 16.h),
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : bookmarkedAzkar.isEmpty
+                ? const Center(child: Text('No bookmarked azkar found'))
+                : GridView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12.w,
+                      mainAxisSpacing: 12.h,
+                      childAspectRatio: 1.1,
+                    ),
+                    itemCount: bookmarkedAzkar.length,
+                    itemBuilder: (context, index) {
+                      return _buildAzkarCard(
+                        context,
+                        bookmarkedAzkar[index],
+                        controller,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    });
   }
 
-  Widget _buildAzkarCard(Map<String, String> azkar) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        image: DecorationImage(
-          image: NetworkImage(azkar['image']!),
-          fit: BoxFit.cover,
-        ),
-      ),
+  Widget _buildAzkarCard(
+    BuildContext context,
+    AzkarGroupModel azkar,
+    AzkarController controller,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AzkarDetailScreen(
+              categoryData: {
+                'title': azkar.name,
+                'time': azkar.time,
+                'duration': azkar.duration,
+                'image': azkar.image ?? '',
+              },
+            ),
+          ),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16.r),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
-          ),
+          color: Colors.grey[200],
         ),
-        child: Stack(
-          children: [
-            // Bookmark icon top right
-            Positioned(
-              top: 8.h,
-              right: 8.w,
-              child: Container(
-                padding: EdgeInsets.all(6.w),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16.r),
+          child: Stack(
+            children: [
+              if ((azkar.image ?? '').isNotEmpty)
+                Image.network(
+                  azkar.image!,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(color: Colors.grey[300]);
+                  },
+                )
+              else
+                Container(color: Colors.grey[300]),
+              Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Icon(
-                  Icons.bookmark,
-                  size: 14.sp,
-                  color: const Color(0xFF2E7D32),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                  ),
                 ),
               ),
-            ),
-            // Title at bottom
-            Positioned(
-              left: 12.w,
-              right: 12.w,
-              bottom: 12.h,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    azkar['title']!,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
+              // Bookmark icon top right
+              Positioned(
+                top: 8.h,
+                right: 8.w,
+                child: GestureDetector(
+                  onTap: () => controller.bookmarkAzkarGroup(azkar.id),
+                  child: Container(
+                    padding: EdgeInsets.all(6.w),
+                    decoration: BoxDecoration(
                       color: Colors.white,
+                      borderRadius: BorderRadius.circular(16.r),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(
+                      Icons.bookmark,
+                      size: 14.sp,
+                      color: const Color(0xFF2E7D32),
+                    ),
                   ),
-                  Text(
-                    azkar['time']!,
-                    style: TextStyle(fontSize: 10.sp, color: Colors.white70),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+              // Title at bottom
+              Positioned(
+                left: 12.w,
+                right: 12.w,
+                bottom: 12.h,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      azkar.name,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '(${azkar.duration})',
+                      style: TextStyle(fontSize: 10.sp, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

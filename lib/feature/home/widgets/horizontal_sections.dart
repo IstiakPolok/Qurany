@@ -33,9 +33,22 @@ class SectionHeader extends StatelessWidget {
           ),
           GestureDetector(
             onTap: onSeeAll,
-            child: Text(
-              "See all",
-              style: TextStyle(fontSize: 12.sp, color: Colors.green),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "See all",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                    height: 1.5,
+                    color: Color(0xff2f7d33),
+                  ),
+                ),
+                SizedBox(height: 1.h),
+                Container(height: 1.2, width: 42.w, color: Color(0xff2f7d33)),
+              ],
             ),
           ),
         ],
@@ -408,23 +421,35 @@ class AzkarSection extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  Image.network(
-                    item['image'],
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[300],
-                        child: const Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: Colors.grey,
+                  item['image'].isNotEmpty
+                      ? Image.network(
+                          item['image'],
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Icon(
+                                  Icons.image_not_supported_outlined,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
+                          color: Colors.grey[300],
+                          width: double.infinity,
+                          height: double.infinity,
+                          child: const Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey,
+                            ),
                           ),
                         ),
-                      );
-                    },
-                  ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(

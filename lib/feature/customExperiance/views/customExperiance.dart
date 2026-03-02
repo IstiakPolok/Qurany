@@ -5,7 +5,6 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/feature/permissions/views/location_permission_screen.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';

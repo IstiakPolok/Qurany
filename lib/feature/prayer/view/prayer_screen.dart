@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:hijri/hijri_calendar.dart';
 import 'package:qurany/feature/prayer/view/electronic_tasbih_screen.dart';
 import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
 import 'package:qurany/feature/profile/view/prayer_notification_setting_sheet.dart';

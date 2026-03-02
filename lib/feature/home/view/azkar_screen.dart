@@ -65,6 +65,7 @@ class AzkarScreen extends StatelessWidget {
           itemCount: azkarGroups.length,
           itemBuilder: (context, index) {
             final item = azkarGroups[index];
+            final azkarGroupId = (item['id'] ?? '').toString();
             return GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -82,19 +83,33 @@ class AzkarScreen extends StatelessWidget {
                 );
               },
               child: Container(
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(9.r),
-                  image: DecorationImage(
-                    image: NetworkImage(item['image']),
-                    fit: BoxFit.cover,
-                  ),
+                  color: Colors.grey[200],
                 ),
                 child: Stack(
                   children: [
+                    // Background Image with placeholder
+                    item['image'].isNotEmpty
+                        ? Image.network(
+                            item['image'],
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(color: Colors.grey[300]),
+                          )
+                        : Container(
+                            color: Colors.grey[300],
+                            width: double.infinity,
+                            height: double.infinity,
+                            child: Icon(Icons.image, color: Colors.grey[400]),
+                          ),
                     // Gradient Overlay
                     Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16.r),
+                        borderRadius: BorderRadius.circular(9.r),
                         gradient: LinearGradient(
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
@@ -140,19 +155,37 @@ class AzkarScreen extends StatelessWidget {
                     // Bookmark Icon
                     Align(
                       alignment: Alignment.topRight,
-                      child: Container(
-                        margin: EdgeInsets.all(10.w),
-                        padding: EdgeInsets.all(6.w),
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.bookmark_border,
-                          size: 18.sp,
-                          color: Colors.black54,
-                        ),
-                      ),
+                      child: Obx(() {
+                        final isBookmarked = controller.bookmarkedAzkarGroupIds
+                            .contains(azkarGroupId);
+                        final isBookmarking = controller
+                            .bookmarkingAzkarGroupIds
+                            .contains(azkarGroupId);
+
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () async {
+                            await controller.bookmarkAzkarGroup(azkarGroupId);
+                          },
+                          child: Container(
+                            margin: EdgeInsets.all(10.w),
+                            padding: EdgeInsets.all(6.w),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              size: 18.sp,
+                              color: isBookmarking
+                                  ? Colors.black26
+                                  : Colors.black54,
+                            ),
+                          ),
+                        );
+                      }),
                     ),
                   ],
                 ),

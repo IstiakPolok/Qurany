@@ -5,10 +5,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/quran/view/listen_mode_screen.dart';
+import 'package:qurany/feature/quran/view/memorization_screen.dart';
+import 'package:qurany/feature/ask_ai/view/ask_ai_intro_screen.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
 import 'package:qurany/feature/quran/model/tafsir_model.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+
+import '../../../core/const/static_surah_data.dart';
 
 // Controller
 class SurahReadingController extends GetxController {
@@ -369,6 +373,12 @@ class SurahReadingController extends GetxController {
     }
   }
 
+  void updateVerseNotes(int verseId, List<NoteModel> notes) {
+    final index = verses.indexWhere((v) => v.verseId == verseId);
+    if (index == -1) return;
+    verses[index] = verses[index].copyWith(notes: notes);
+  }
+
   String _mapReciterNameToKey(String name) {
     // Determine key based on stored name
     // Keys based on API response: mishary, abuBakar, nasser, yasser
@@ -429,8 +439,6 @@ class SurahReadingScreen extends StatelessWidget {
                     children: [
                       // Surah Header Card
                       _buildSurahHeader(),
-
-                      SizedBox(height: 16.h),
 
                       // View tabs (Translation, Transliteration, Tafsir)
                       _buildViewTabs(controller),
@@ -522,21 +530,18 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   void _showSurahSelector(BuildContext context) {
-    final List<Map<String, dynamic>> surahs = [
-      {"number": 1, "name": "Al-Fatiah"},
-      {"number": 2, "name": "Al-Baqarah"},
-      {"number": 3, "name": "Aali Imran"},
-      {"number": 4, "name": "An-Nisa"},
-      {"number": 5, "name": "Al-Ma'idah"},
-      {"number": 6, "name": "Al-An'am"},
-      {"number": 7, "name": "Al-A'raf"},
-      {"number": 8, "name": "Al-Anfal"},
-      {"number": 9, "name": "At-Tawbah"},
-      {"number": 10, "name": "Yunus"},
-      {"number": 11, "name": "Hud"},
-      {"number": 12, "name": "Yusuf"},
-      {"number": 13, "name": "Ar-Ra'd"},
-    ];
+    final List<Map<String, dynamic>> surahs = StaticSurahData.getAllSurahs()
+        .map(
+          (s) => {
+            "number": s.number,
+            "name": s.englishName,
+            "arabicName": s.arabicName,
+            "ayaCount": s.totalVerses,
+            "origin": s.revelationType,
+            "translation": s.translation,
+          },
+        )
+        .toList();
 
     showModalBottomSheet(
       context: context,
@@ -846,67 +851,61 @@ class SurahReadingScreen extends StatelessWidget {
 
   Widget _buildSurahHeader() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 0.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16.r),
         image: const DecorationImage(
           image: AssetImage('assets/image/readmodecardBG.png'),
-          fit: BoxFit.cover,
+          fit: BoxFit.fitHeight,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(height: 20.h),
-            Text(
-              meaning,
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-                letterSpacing: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          SizedBox(height: 20.h),
+          Text(
+            meaning,
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+              letterSpacing: 2,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                translation.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11.sp,
+                  color: Colors.black,
+                  letterSpacing: 1,
+                ),
               ),
-            ),
-            SizedBox(height: 8.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  translation.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    color: Colors.black,
-                    letterSpacing: 1,
-                  ),
-                ),
-                _buildDot(),
-                Text(
-                  origin,
-                  style: TextStyle(fontSize: 11.sp, color: Colors.black),
-                ),
-                _buildDot(),
-                Text(
-                  "$ayaCount Aya",
-                  style: TextStyle(fontSize: 11.sp, color: Colors.black),
-                ),
-              ],
-            ),
-            SizedBox(height: 20.h),
-            // Bismillah
-            Text(
-              "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
-              style: TextStyle(
-                fontSize: 28.sp,
-                color: primaryColor,
-                fontFamily: 'Arial',
+              _buildDot(),
+              Text(
+                origin,
+                style: TextStyle(fontSize: 11.sp, color: Colors.black),
               ),
-              textDirection: TextDirection.rtl,
-            ),
-            SizedBox(height: 40.h),
-          ],
-        ),
+              _buildDot(),
+              Text(
+                "$ayaCount Aya",
+                style: TextStyle(fontSize: 11.sp, color: Colors.black),
+              ),
+            ],
+          ),
+          SizedBox(height: 20.h),
+          // Bismillah
+          Image.asset(
+            'assets/image/bismillah.png',
+            width: 200.w,
+            fit: BoxFit.contain,
+          ),
+          SizedBox(height: 90.h),
+        ],
       ),
     );
   }
@@ -923,17 +922,24 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   Widget _buildViewTabs(SurahReadingController controller) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Obx(
-        () => Row(
-          children: [
-            _buildViewTab("Translation", 0, controller),
-            SizedBox(width: 12.w),
-            _buildViewTab("Transliteration", 1, controller),
-            SizedBox(width: 12.w),
-            _buildViewTab("Tafsir", 2, controller),
-          ],
+    return Center(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Obx(
+          () => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildViewTab("Translation", 0, controller),
+              SizedBox(width: 12.w),
+              _buildViewTab("Transliteration", 1, controller),
+              SizedBox(width: 12.w),
+              _buildViewTab("Tafsir", 2, controller),
+            ],
+          ),
         ),
       ),
     );
@@ -953,7 +959,7 @@ class SurahReadingScreen extends StatelessWidget {
           color: isSelected ? const Color(0xFF2E7D32) : Colors.transparent,
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
-            color: isSelected ? const Color(0xFF2E7D32) : Colors.grey[300]!,
+            color: isSelected ? const Color(0xFF2E7D32) : Colors.transparent,
           ),
         ),
         child: Text(
@@ -1011,7 +1017,7 @@ class SurahReadingScreen extends StatelessWidget {
             return _buildLoadMoreButton(controller);
           }
           final verse = controller.verses[index];
-          return _buildVerseCard(verse, controller);
+          return _buildVerseCard(verse, controller, context);
         },
       );
     });
@@ -1262,6 +1268,7 @@ class SurahReadingScreen extends StatelessWidget {
   Widget _buildVerseCard(
     VerseDetailModel verse,
     SurahReadingController controller,
+    BuildContext context,
   ) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -1373,20 +1380,43 @@ class SurahReadingScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // More options
-              Icon(Icons.more_horiz, color: Colors.grey[500], size: 20.sp),
+              GestureDetector(
+                onTap: () => _showVerseOptionsMenu(context, verse, controller),
+                child: Icon(
+                  Icons.more_horiz,
+                  color: Colors.grey[500],
+                  size: 20.sp,
+                ),
+              ),
               Row(
                 children: [
                   Image.asset(
                     'assets/icons/1.solar_notes-outline.png',
                     width: 18.sp,
                     height: 18.sp,
+                    // color: verse.notes.isNotEmpty
+                    //     ? const Color(0xFF2E7D32)
+                    //     : null,
                   ),
                   SizedBox(width: 16.w),
-                  Image.asset(
-                    'assets/icons/2.solar_document-add-broken.png',
-                    width: 18.sp,
-                    height: 18.sp,
+                  GestureDetector(
+                    onTap: () => _showAddNoteDialog(
+                      context,
+                      verse.id,
+                      verse.verseId,
+                      verse.notes,
+                      controller,
+                    ),
+                    child: Image.asset(
+                      'assets/icons/2.solar_document-add-broken.png',
+                      width: 18.sp,
+                      height: 18.sp,
+                      color: verse.notes.isNotEmpty
+                          ? const Color(0xFF2E7D32)
+                          : null,
+                    ),
                   ),
+
                   SizedBox(width: 16.w),
                   Image.asset(
                     'assets/icons/3.iconoir_double-check.png',
@@ -1408,6 +1438,422 @@ class SurahReadingScreen extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showVerseOptionsMenu(
+    BuildContext context,
+    VerseDetailModel verse,
+    SurahReadingController controller,
+  ) {
+    final TextEditingController askController = TextEditingController();
+
+    void sendToAI() {
+      final query = askController.text.trim();
+      if (query.isEmpty) return;
+      Navigator.pop(context);
+      if (Get.isRegistered<AskAIController>()) {
+        Get.delete<AskAIController>();
+      }
+      final aiController = Get.put(AskAIController());
+      final contextMessage = 'About $surahName, Verse ${verse.verseId}: $query';
+      aiController.messageController.text = contextMessage;
+      aiController.showChat.value = true;
+      Get.to(() => const AskAIScreen());
+      Future.delayed(const Duration(milliseconds: 400), () {
+        aiController.sendMessage();
+      });
+    }
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black26,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+        child: Container(
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2E7D32),
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Close button
+              Align(
+                alignment: Alignment.topRight,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(ctx),
+                  child: Icon(Icons.close, color: Colors.white, size: 20.sp),
+                ),
+              ),
+              SizedBox(height: 8.h),
+
+              // Ask about this aya field
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(30.r),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.amber, size: 18.sp),
+                    SizedBox(width: 8.w),
+                    Expanded(
+                      child: TextField(
+                        controller: askController,
+                        style: TextStyle(color: Colors.white, fontSize: 13.sp),
+                        onSubmitted: (_) => sendToAI(),
+                        decoration: InputDecoration(
+                          hintText: 'Ask about this aya',
+                          hintStyle: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13.sp,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        cursorColor: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    GestureDetector(
+                      onTap: sendToAI,
+                      child: Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.send,
+                          color: Colors.white,
+                          size: 16.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20.h),
+
+              // Action buttons row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildVerseOptionButton(
+                    ctx,
+                    icon: Icon(
+                      Icons.share_outlined,
+                      color: Colors.white,
+                      size: 26.sp,
+                    ),
+                    label: 'Share',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      // Share verse text
+                    },
+                  ),
+                  _buildVerseOptionButton(
+                    ctx,
+                    icon: Image.asset(
+                      'assets/icons/fi_15961848.png',
+                      width: 26.sp,
+                      height: 26.sp,
+                      color: Colors.white,
+                    ),
+                    label: 'Memorise',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      if (Get.isRegistered<MemorizationController>()) {
+                        Get.delete<MemorizationController>();
+                      }
+                      final memoController = Get.put(MemorizationController());
+                      Get.to(() => const MemorizationScreen());
+                      memoController.startPracticeSession(
+                        surahId,
+                        verse.verseId,
+                      );
+                    },
+                  ),
+                  _buildVerseOptionButton(
+                    ctx,
+                    icon: Icon(Icons.repeat, color: Colors.white, size: 26.sp),
+                    label: 'Repeat Verse',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      controller.playVerse(verse.verseId);
+                    },
+                  ),
+                ],
+              ),
+              SizedBox(height: 4.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerseOptionButton(
+    BuildContext context, {
+    required Widget icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          icon,
+          SizedBox(height: 6.h),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddNoteDialog(
+    BuildContext context,
+    int id,
+    int verseId,
+    List<NoteModel> notes,
+    SurahReadingController controller,
+  ) {
+    final bool hasNote = notes.isNotEmpty;
+    final NoteModel? existingNote = hasNote ? notes.first : null;
+    final TextEditingController noteController = TextEditingController(
+      text: existingNote?.description ?? '',
+    );
+    final QuranService _noteService = QuranService();
+    bool _isSaving = false;
+    bool _isDeleting = false;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black45,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Container(
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2F7D33),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header row
+                Row(
+                  children: [
+                    const Spacer(),
+                    Column(
+                      children: [
+                        Text(
+                          '$surahName, Aya $verseId',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          hasNote ? 'View / Edit Note' : 'Add a note',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 20.sp,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16.h),
+                // Text field
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 14.w,
+                    vertical: 12.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: Colors.white54, width: 1.2),
+                  ),
+                  child: TextField(
+                    controller: noteController,
+                    maxLines: 5,
+                    minLines: 5,
+                    style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                    decoration: InputDecoration(
+                      hintText: 'Type here',
+                      hintStyle: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 14.sp,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    cursorColor: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                // Save button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () async {
+                            final text = noteController.text.trim();
+                            if (text.isEmpty) return;
+                            setState(() => _isSaving = true);
+                            final msg = await _noteService.createNote(
+                              description: text,
+                              surahId: surahId,
+                              verseId: verseId,
+                              id: id,
+                            );
+                            setState(() => _isSaving = false);
+                            if (context.mounted) Navigator.pop(context);
+                            if (msg != null) {
+                              Get.snackbar(
+                                'Note Saved',
+                                msg,
+                                backgroundColor: const Color(0xFF2E7D32),
+                                colorText: Colors.white,
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            } else {
+                              Get.snackbar(
+                                'Error',
+                                'Failed to save note',
+                                backgroundColor: Colors.red,
+                                colorText: Colors.white,
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF2E7D32),
+                      disabledBackgroundColor: Colors.white60,
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.r),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _isSaving
+                        ? SizedBox(
+                            width: 18.w,
+                            height: 18.w,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF2E7D32),
+                            ),
+                          )
+                        : Text(
+                            'Save Note',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+                // Delete button — only shown when a note exists
+                if (hasNote) ...[
+                  SizedBox(height: 10.h),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isDeleting
+                          ? null
+                          : () async {
+                              setState(() => _isDeleting = true);
+                              final ok = await _noteService.deleteNote(
+                                existingNote!.id,
+                              );
+                              setState(() => _isDeleting = false);
+                              if (context.mounted) Navigator.pop(context);
+                              if (ok) {
+                                controller.updateVerseNotes(verseId, []);
+                                Get.snackbar(
+                                  'Note Deleted',
+                                  'Note removed successfully',
+                                  backgroundColor: Colors.grey[800],
+                                  colorText: Colors.white,
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              } else {
+                                Get.snackbar(
+                                  'Error',
+                                  'Failed to delete note',
+                                  backgroundColor: Colors.red,
+                                  colorText: Colors.white,
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: Colors.red.shade200,
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: _isDeleting
+                          ? SizedBox(
+                              width: 18.w,
+                              height: 18.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              'Delete Note',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1740,7 +2186,7 @@ class SurahReadingScreen extends StatelessWidget {
                 );
               },
               child: Icon(
-                Icons.headphones,
+                Icons.more_horiz,
                 color: Colors.grey[600],
                 size: 24.sp,
               ),

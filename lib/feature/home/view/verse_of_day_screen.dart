@@ -208,14 +208,33 @@ class VerseOfDayScreen extends StatelessWidget {
                               ),
                               SizedBox(width: 8.w),
                               Expanded(
-                                child: Text(
-                                  "Reflect on this verse and let it guide your day. May Allah's words bring peace to your heart.",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14.sp,
-                                    height: 1.4,
-                                  ),
-                                ),
+                                child: Obx(() {
+                                  final reflection =
+                                      controller.aiReflection.value;
+                                  final isAiLoading =
+                                      controller.isAiReflectionLoading.value;
+                                  final aiError =
+                                      controller.aiReflectionErrorMessage.value;
+
+                                  final text =
+                                      (reflection != null &&
+                                          reflection.trim().isNotEmpty)
+                                      ? reflection
+                                      : (isAiLoading
+                                            ? 'Loading reflection...'
+                                            : (aiError.isNotEmpty
+                                                  ? 'Reflection unavailable'
+                                                  : ''));
+
+                                  return Text(
+                                    text,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14.sp,
+                                      height: 1.4,
+                                    ),
+                                  );
+                                }),
                               ),
                             ],
                           ),

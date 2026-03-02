@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -17,6 +16,18 @@ import 'package:record/record.dart';
 class MemorizationController extends GetxController {
   final MemorizationService _memorizationService = MemorizationService();
 
+  static const String _logTag = 'MEMO';
+  void _log(String message) {
+    if (!kDebugMode) return;
+    debugPrint('$_logTag: $message');
+  }
+
+  void _logError(String message, Object error, StackTrace stackTrace) {
+    if (!kDebugMode) return;
+    debugPrint('$_logTag ERROR: $message -> $error');
+    debugPrint(stackTrace.toString());
+  }
+
   // Stats Data
   final versesLearned = 0.obs;
   final avgAccuracy = 0.obs;
@@ -28,19 +39,25 @@ class MemorizationController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _log('onInit');
     // Initialize surahList with all surahs
     _initializeSurahList();
+    _log('Initialized surahList: ${surahList.length}');
     fetchStats();
     _setupAudioListeners();
   }
 
   void _setupAudioListeners() {
+    _log('Setting up audio listeners');
     _player1.onPlayerComplete.listen((_) => _handlePlaybackComplete());
     _player2.onPlayerComplete.listen((_) => _handlePlaybackComplete());
   }
 
   void _handlePlaybackComplete() {
     _currentRepeatCount.value++;
+    _log(
+      'Playback complete. repeat=${_currentRepeatCount.value}/${repeatCount.value}',
+    );
     if (_currentRepeatCount.value < repeatCount.value) {
       _playCurrentVerse(isRepeat: true);
     } else {
@@ -69,10 +86,15 @@ class MemorizationController extends GetxController {
 
   Future<void> fetchStats() async {
     isLoading.value = true;
+    _log('fetchStats: start');
     try {
       final accuracy = await _memorizationService.getAverageAccuracy();
       final verses = await _memorizationService.getCompletedVerses();
       final progressData = await _memorizationService.getCompletedSurahs();
+
+      _log(
+        'fetchStats: raw values accuracy=$accuracy versesLearned=$verses progressData=${progressData?.length ?? 0}',
+      );
 
       if (accuracy != null) {
         avgAccuracy.value = accuracy;
@@ -101,6 +123,8 @@ class MemorizationController extends GetxController {
               "verses": "$totalCompleted/${surah.totalVerses} Aya",
               "progress": progress,
               "color": primaryColor,
+              "surahId": surahId,
+              "totalCompleted": totalCompleted,
             });
 
             // Update surahList entry as well
@@ -116,13 +140,18 @@ class MemorizationController extends GetxController {
               surahList[surahIndex] = updatedSurah;
             }
           } catch (e) {
-            print('Surah not found for id: $surahId');
+            _log('Surah not found for id: $surahId');
           }
         }
         progressList.assignAll(updatedProgress);
       }
+    } catch (e, st) {
+      _logError('fetchStats failed', e, st);
     } finally {
       isLoading.value = false;
+      _log(
+        'fetchStats: done avgAccuracy=${avgAccuracy.value} versesLearned=${versesLearned.value} progressItems=${progressList.length}',
+      );
     }
   }
 
@@ -175,6 +204,7 @@ class MemorizationController extends GetxController {
   }
 
   Future<void> startPracticeSession(int surahId, int verseId) async {
+    _log('startPracticeSession: surahId=$surahId verseId=$verseId');
     currentPracticeSurahId.value = surahId;
     currentStep.value = 2;
     await _loadVerseForPractice(surahId, verseId);
@@ -187,6 +217,8 @@ class MemorizationController extends GetxController {
       // Calculate which page this verse might be on (assuming 50 verses per page)
       int page = ((verseNumber - 1) ~/ 50) + 1;
 
+      _log('loadVerse: surahId=$surahId verse=$verseNumber page=$page');
+
       final response = await _quranService.fetchSurahById(
         surahId,
         page: page,
@@ -195,17 +227,25 @@ class MemorizationController extends GetxController {
 
       practiceVerses.assignAll(response.verses);
 
+      _log('loadVerse: fetched verses=${practiceVerses.length} (limit=50)');
+
       // Find the index of the requested verse
       final index = practiceVerses.indexWhere((v) => v.verseId == verseNumber);
       if (index != -1) {
         currentPracticeVerseIndex.value = index;
         currentVerseModel.value = practiceVerses[index];
+        _log('loadVerse: set current index=$index verseId=$verseNumber');
       } else if (practiceVerses.isNotEmpty) {
         currentPracticeVerseIndex.value = 0;
         currentVerseModel.value = practiceVerses[0];
+        _log(
+          'loadVerse: verseId=$verseNumber not found in page=$page, defaulting to first verseId=${practiceVerses[0].verseId}',
+        );
+      } else {
+        _log('loadVerse: response had no verses');
       }
-    } catch (e) {
-      print("Error loading verse for practice: $e");
+    } catch (e, st) {
+      _logError('Error loading verse for practice', e, st);
     } finally {
       isLoadingVerse.value = false;
     }
@@ -215,9 +255,11 @@ class MemorizationController extends GetxController {
     if (practiceVerses.isEmpty) return;
 
     if (isPlayingAudio.value) {
+      _log('togglePlayPause: pausing');
       await _activePlayer.pause();
       isPlayingAudio.value = false;
     } else {
+      _log('togglePlayPause: playing current verse');
       await _playCurrentVerse();
     }
   }
@@ -237,13 +279,17 @@ class MemorizationController extends GetxController {
 
       String? audioUrl = await _getAudioUrlForCurrentVerse();
 
+      _log(
+        'playVerse: verseId=${currentVerseModel.value?.verseId} isRepeat=$isRepeat url=${audioUrl == null ? 'null' : 'ok'}',
+      );
+
       if (audioUrl != null) {
         await _activePlayer.setSourceUrl(audioUrl);
         await _activePlayer.resume();
         isPlayingAudio.value = true;
       }
-    } catch (e) {
-      print("Error playing verse: $e");
+    } catch (e, st) {
+      _logError('Error playing verse', e, st);
       isPlayingAudio.value = false;
     }
   }
@@ -252,6 +298,10 @@ class MemorizationController extends GetxController {
     if (currentPracticeVerseIndex.value < practiceVerses.length - 1) {
       currentPracticeVerseIndex.value++;
       currentVerseModel.value = practiceVerses[currentPracticeVerseIndex.value];
+
+      _log(
+        'nextVerse: index=${currentPracticeVerseIndex.value} verseId=${currentVerseModel.value?.verseId}',
+      );
 
       if (isPlayingAudio.value) {
         await _playCurrentVerse();
@@ -263,6 +313,10 @@ class MemorizationController extends GetxController {
     if (currentPracticeVerseIndex.value > 0) {
       currentPracticeVerseIndex.value--;
       currentVerseModel.value = practiceVerses[currentPracticeVerseIndex.value];
+
+      _log(
+        'previousVerse: index=${currentPracticeVerseIndex.value} verseId=${currentVerseModel.value?.verseId}',
+      );
 
       if (isPlayingAudio.value) {
         await _playCurrentVerse();
@@ -278,13 +332,17 @@ class MemorizationController extends GetxController {
       String preferredReciterName = await SharedPreferencesHelper.getReciter();
       String audioKey = _mapReciterNameToKey(preferredReciterName);
 
+      _log('audio: preferredReciter="$preferredReciterName" key=$audioKey');
+
       if (verse.audio.containsKey(audioKey)) {
+        _log('audio: using preferred key=$audioKey');
         return verse.audio[audioKey]?.url;
       } else if (verse.audio.isNotEmpty) {
+        _log('audio: preferred key missing, using first available');
         return verse.audio.values.first.url;
       }
-    } catch (e) {
-      print("Error getting audio URL: $e");
+    } catch (e, st) {
+      _logError('Error getting audio URL', e, st);
     }
     return null;
   }
@@ -298,6 +356,7 @@ class MemorizationController extends GetxController {
   }
 
   void stopAudio() {
+    _log('stopAudio');
     _player1.stop();
     _player2.stop();
     isPlayingAudio.value = false;
@@ -305,11 +364,13 @@ class MemorizationController extends GetxController {
   }
 
   void backToDashboard() {
+    _log('backToDashboard');
     stopAudio();
     currentStep.value = 0;
   }
 
   void backToSelection() {
+    _log('backToSelection');
     stopAudio();
     currentStep.value = 1;
   }
@@ -323,6 +384,7 @@ class MemorizationController extends GetxController {
   }
 
   void setRepeatCount(int count) {
+    _log('setRepeatCount: $count');
     repeatCount.value = count;
   }
 
@@ -341,6 +403,8 @@ class MemorizationController extends GetxController {
         final path =
             '${directory.path}/recitation_${DateTime.now().millisecondsSinceEpoch}.wav';
 
+        _log('startRecording: path=$path');
+
         const config = RecordConfig(
           encoder: AudioEncoder.wav,
           sampleRate: 44100,
@@ -351,10 +415,11 @@ class MemorizationController extends GetxController {
         isRecording.value = true;
         _lastRecordingPath = path;
       } else {
+        _log('startRecording: permission denied');
         Get.snackbar("Permission Denied", "Microphone permission is required");
       }
-    } catch (e) {
-      print("Error starting record: $e");
+    } catch (e, st) {
+      _logError('Error starting record', e, st);
     }
   }
 
@@ -363,11 +428,13 @@ class MemorizationController extends GetxController {
       final path = await _recorder.stop();
       isRecording.value = false;
 
+      _log('stopRecording: path=${path ?? 'null'}');
+
       if (path != null) {
         await _sendAudioToAI(path);
       }
-    } catch (e) {
-      print("Error stopping record: $e");
+    } catch (e, st) {
+      _logError('Error stopping record', e, st);
     }
   }
 
@@ -376,6 +443,9 @@ class MemorizationController extends GetxController {
 
     isAIProcessing.value = true;
     try {
+      _log(
+        'sendAudioToAI: surahId=${currentPracticeSurahId.value} verseId=${currentVerseModel.value?.verseId} path=$path',
+      );
       final result = await _memorizationService.checkPronunciation(
         surahId: currentPracticeSurahId.value,
         verseId: currentVerseModel.value!.verseId,
@@ -383,12 +453,19 @@ class MemorizationController extends GetxController {
       );
 
       if (result != null) {
+        _log(
+          'AI result: accuracy=${result['accuracy']} fluency=${result['fluency']} completeness=${result['completeness']}',
+        );
         _showResultsDialog(result);
         // Refresh stats to include new points
         fetchStats();
       } else {
+        _log('AI result: null');
         Get.snackbar("Error", "Failed to process pronunciation");
       }
+    } catch (e, st) {
+      _logError('sendAudioToAI failed', e, st);
+      Get.snackbar("Error", "Failed to process pronunciation");
     } finally {
       isAIProcessing.value = false;
     }
@@ -400,6 +477,10 @@ class MemorizationController extends GetxController {
     final int completeness = result['completeness'] ?? 0;
     final String textSpoken = result['text_spoken'] ?? "";
     final List<dynamic> wordsDetails = result['words_details'] ?? [];
+
+    _log(
+      'showResultsDialog: accuracy=$accuracy fluency=$fluency completeness=$completeness words=${wordsDetails.length} transcriptionLen=${textSpoken.length}',
+    );
 
     Get.dialog(
       Dialog(
@@ -1193,6 +1274,118 @@ class MemorizationScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildProgressItem(
+    Map<String, dynamic> item,
+    MemorizationController controller,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon
+          Container(
+            padding: EdgeInsets.all(10.w),
+            decoration: BoxDecoration(
+              color: bgColor.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(Icons.menu_book, color: primaryColor, size: 20.sp),
+          ),
+          SizedBox(width: 16.w),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item["surah"],
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  item["verses"],
+                  style: TextStyle(fontSize: 12.sp, color: subheading),
+                ),
+                SizedBox(height: 12.h),
+                // Custom Button/Badge
+                GestureDetector(
+                  onTap: () {
+                    final int surahId = item['surahId'] as int? ?? 1;
+                    final int totalCompleted =
+                        item['totalCompleted'] as int? ?? 0;
+                    final int nextVerse = totalCompleted > 0
+                        ? totalCompleted
+                        : 1;
+                    controller.startPracticeSession(surahId, nextVerse);
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Text(
+                      "Continue",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Circular Progress
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 50.w,
+                height: 50.w,
+                child: CircularProgressIndicator(
+                  value: item["progress"],
+                  backgroundColor: bgColor,
+                  color: primaryColor,
+                  strokeWidth: 5,
+                ),
+              ),
+              Text(
+                "${(item["progress"] * 100).toInt()}%",
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRepeatToggle(MemorizationController controller, int count) {
     return GestureDetector(
       onTap: () => controller.setRepeatCount(count),
@@ -1373,106 +1566,8 @@ class MemorizationScreen extends StatelessWidget {
         separatorBuilder: (context, index) => SizedBox(height: 16.h),
         itemBuilder: (context, index) {
           final item = controller.progressList[index];
-          return _buildProgressItem(item);
+          return _buildProgressItem(item, controller);
         },
-      ),
-    );
-  }
-
-  Widget _buildProgressItem(Map<String, dynamic> item) {
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Icon
-          Container(
-            padding: EdgeInsets.all(10.w),
-            decoration: BoxDecoration(
-              color: bgColor.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Icon(Icons.menu_book, color: primaryColor, size: 20.sp),
-          ),
-          SizedBox(width: 16.w),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item["surah"],
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  item["verses"],
-                  style: TextStyle(fontSize: 12.sp, color: subheading),
-                ),
-                SizedBox(height: 12.h),
-                // Custom Button/Badge
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 6.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: primaryColor,
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Text(
-                    "Continue",
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Circular Progress
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 50.w,
-                height: 50.w,
-                child: CircularProgressIndicator(
-                  value: item["progress"],
-                  backgroundColor: bgColor,
-                  color: primaryColor,
-                  strokeWidth: 5,
-                ),
-              ),
-              Text(
-                "${(item["progress"] * 100).toInt()}%",
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }

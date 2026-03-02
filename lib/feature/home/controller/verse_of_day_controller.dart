@@ -9,6 +9,10 @@ class VerseOfDayController extends GetxController {
   final RxBool isLoading = true.obs;
   final RxString errorMessage = ''.obs;
 
+  final RxnString aiReflection = RxnString();
+  final RxBool isAiReflectionLoading = false.obs;
+  final RxString aiReflectionErrorMessage = ''.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -19,13 +23,40 @@ class VerseOfDayController extends GetxController {
     try {
       isLoading(true);
       errorMessage('');
+      aiReflection.value = null;
+      aiReflectionErrorMessage('');
       final response = await _quranService.fetchRandomVerse();
       randomVerse.value = response;
+
+      await _fetchAiReflectionForVerse(
+        surahId: response.data.verse.surahId,
+        verseId: response.data.verse.verseId,
+      );
     } catch (e) {
       errorMessage('Failed to load verse: $e');
       print('Error in VerseOfDayController: $e');
     } finally {
       isLoading(false);
+    }
+  }
+
+  Future<void> _fetchAiReflectionForVerse({
+    required int surahId,
+    required int verseId,
+  }) async {
+    try {
+      isAiReflectionLoading(true);
+      aiReflectionErrorMessage('');
+      final reflection = await _quranService.fetchAiVerseReflection(
+        surahId: surahId,
+        verseId: verseId,
+      );
+      aiReflection.value = reflection;
+    } catch (e) {
+      aiReflectionErrorMessage('Failed to load reflection: $e');
+      print('Error fetching AI reflection: $e');
+    } finally {
+      isAiReflectionLoading(false);
     }
   }
 
