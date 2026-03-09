@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:qurany/feature/home/controller/verse_of_day_controller.dart';
+import 'package:qurany/feature/quran/view/surah_reading_screen.dart';
+import 'package:qurany/core/const/static_surah_data.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class VerseOfDayScreen extends StatelessWidget {
   const VerseOfDayScreen({super.key});
@@ -122,179 +126,245 @@ class VerseOfDayScreen extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
 
-                return Column(
-                  children: [
-                    SizedBox(height: 20.h),
-                    Text(
-                      "Verse of the Day",
-                      style: GoogleFonts.merriweather(
-                        color: Colors.white,
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight:
+                          MediaQuery.of(context).size.height -
+                          MediaQuery.of(context).padding.top -
+                          MediaQuery.of(context).padding.bottom,
                     ),
-                    SizedBox(height: 16.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.menu_book, color: Colors.white, size: 20.sp),
-                        SizedBox(width: 8.w),
-                        Flexible(
-                          child: Text(
-                            controller.getVerseReference(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                        SizedBox(height: 20.h),
+                        Text(
+                          "Verse of the Day",
+                          style: GoogleFonts.merriweather(
+                            color: Colors.white,
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
-                    const Spacer(flex: 1),
-
-                    // Arabic Text
-                    Text(
-                      verse.data.verse.verse.text,
-                      textAlign: TextAlign.center,
-                      textDirection: TextDirection.rtl,
-                      style: GoogleFonts.amiri(
-                        color: Colors.white,
-                        fontSize: 28.sp,
-                        fontWeight: FontWeight.bold,
-                        height: 1.6,
-                      ),
-                    ),
-                    SizedBox(height: 24.h),
-
-                    // Display Translation from API
-                    Container(
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                      child: Text(
-                        verse.data.verse.verse.translation,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          height: 1.5,
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 40.h),
-
-                    // Reflection Box
-                    Container(
-                      padding: EdgeInsets.all(20.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16.r),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: Colors.white70,
-                                size: 18.sp,
+                        SizedBox(height: 16.h),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.menu_book,
+                              color: Colors.white,
+                              size: 20.sp,
+                            ),
+                            SizedBox(width: 8.w),
+                            Flexible(
+                              child: Text(
+                                controller.getVerseReference(),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              SizedBox(width: 8.w),
-                              Expanded(
-                                child: Obx(() {
-                                  final reflection =
-                                      controller.aiReflection.value;
-                                  final isAiLoading =
-                                      controller.isAiReflectionLoading.value;
-                                  final aiError =
-                                      controller.aiReflectionErrorMessage.value;
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 24.h),
 
-                                  final text =
-                                      (reflection != null &&
-                                          reflection.trim().isNotEmpty)
-                                      ? reflection
-                                      : (isAiLoading
-                                            ? 'Loading reflection...'
-                                            : (aiError.isNotEmpty
-                                                  ? 'Reflection unavailable'
-                                                  : ''));
+                        // Arabic Text
+                        FutureBuilder<String>(
+                          future: SharedPreferencesHelper.getArabicScript(),
+                          builder: (context, snapshot) {
+                            final scriptFont = snapshot.data ?? 'Imlaei';
+                            return Text(
+                              verse.data.verse.verse.text,
+                              textAlign: TextAlign.center,
+                              textDirection: TextDirection.rtl,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28.sp,
+                                fontWeight: FontWeight.bold,
+                                height: 1.6,
+                                fontFamily: scriptFont == 'IndoPak'
+                                    ? 'IndoPak'
+                                    : 'Arial',
+                              ),
+                            );
+                          },
+                        ),
+                        SizedBox(height: 24.h),
 
-                                  return Text(
-                                    text,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14.sp,
-                                      height: 1.4,
-                                    ),
-                                  );
-                                }),
+                        // Display Translation from API
+                        Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Text(
+                            verse.data.verse.verse.translation,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 40.h),
+
+                        // Reflection Box
+                        Container(
+                          padding: EdgeInsets.all(20.w),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.auto_awesome,
+                                    color: Colors.white70,
+                                    size: 18.sp,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Expanded(
+                                    child: Obx(() {
+                                      final reflection =
+                                          controller.aiReflection.value;
+                                      final isAiLoading = controller
+                                          .isAiReflectionLoading
+                                          .value;
+                                      final aiError = controller
+                                          .aiReflectionErrorMessage
+                                          .value;
+
+                                      final text =
+                                          (reflection != null &&
+                                              reflection.trim().isNotEmpty)
+                                          ? reflection
+                                          : (isAiLoading
+                                                ? 'Loading reflection...'
+                                                : (aiError.isNotEmpty
+                                                      ? 'Reflection unavailable'
+                                                      : ''));
+
+                                      return Text(
+                                        text,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.sp,
+                                          height: 1.4,
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-
-                    const Spacer(flex: 2),
-
-                    // Share Button
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        // TODO: Implement share functionality
-                      },
-                      icon: const Icon(
-                        Icons.share_outlined,
-                        color: Colors.black87,
-                      ),
-                      label: const Text(
-                        "Share",
-                        style: TextStyle(color: Colors.black87),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        minimumSize: Size(double.infinity, 50.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.r),
                         ),
-                      ),
-                    ),
 
-                    SizedBox(height: 16.h),
+                        SizedBox(height: 32.h),
 
-                    TextButton(
-                      onPressed: () {
-                        // TODO: Navigate to full surah reading
-                        // You can use verse.data.verse.surahId to navigate
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Read Full Surah",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.sp,
+                        // Share Button
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final reference = controller.getVerseReference();
+                            final arabicText = verse.data.verse.verse.text;
+                            final translation =
+                                verse.data.verse.verse.translation;
+                            final reflection =
+                                controller.aiReflection.value ?? "";
+
+                            String shareText =
+                                "📖 Verse of the Day\n\n"
+                                "$reference\n\n"
+                                "Arabic:\n$arabicText\n\n"
+                                "Translation:\n$translation";
+
+                            if (reflection.isNotEmpty) {
+                              shareText +=
+                                  "\n\nAI Analysis & Reflection:\n$reflection";
+                            }
+
+                            shareText += "\n\nShared via Qurany App";
+
+                            Share.share(shareText);
+                          },
+                          icon: const Icon(
+                            Icons.share_outlined,
+                            color: Colors.black87,
+                          ),
+                          label: const Text(
+                            "Share",
+                            style: TextStyle(color: Colors.black87),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            minimumSize: Size(double.infinity, 50.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.r),
                             ),
                           ),
-                          SizedBox(width: 4.w),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: Colors.white,
-                            size: 16.sp,
+                        ),
+
+                        SizedBox(height: 16.h),
+
+                        TextButton(
+                          onPressed: () {
+                            final surahId = verse.data.verse.surahId;
+                            final verseId = verse.data.verse.verseId;
+                            final surah = StaticSurahData.getAllSurahs()
+                                .firstWhere((s) => s.number == surahId);
+
+                            // Clean any existing controller tag if needed
+                            Get.delete<SurahReadingController>(
+                              tag: surahId.toString(),
+                            );
+
+                            Get.to(
+                              () => SurahReadingScreen(
+                                surahId: surahId,
+                                surahName: surah.englishName,
+                                arabicName: surah.arabicName,
+                                meaning: surah.englishName,
+                                origin: surah.revelationType,
+                                ayaCount: surah.totalVerses,
+                                translation: surah.translation,
+                                initialVerseId: verseId,
+                              ),
+                            );
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Read Full Surah",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.sp,
+                                ),
+                              ),
+                              SizedBox(width: 4.w),
+                              Icon(
+                                Icons.arrow_forward,
+                                color: Colors.white,
+                                size: 16.sp,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        SizedBox(height: 30.h),
+                      ],
                     ),
-                    SizedBox(height: 30.h),
-                  ],
+                  ),
                 );
               }),
             ),

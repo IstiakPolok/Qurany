@@ -101,56 +101,71 @@ class EditProfileScreen extends StatelessWidget {
   }
 
   Widget _buildAvatarSection(String? avatarUrl, String initials) {
+    final ProfileController controller = Get.find<ProfileController>();
     return Center(
-      child: Stack(
-        children: [
-          // Avatar circle
-          Container(
-            width: 120.w,
-            height: 120.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFF9F0),
-              border: Border.all(color: Colors.grey[300]!, width: 2),
-              image: avatarUrl != null
-                  ? DecorationImage(
-                      image: NetworkImage(avatarUrl),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: avatarUrl == null
-                ? Center(
-                    child: Text(
-                      initials,
-                      style: TextStyle(
-                        fontSize: 40.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
+      child: GestureDetector(
+        onTap: () => controller.pickAndUploadAvatar(),
+        child: Stack(
+          children: [
+            // Avatar circle
+            Obx(() {
+              final isUploading = controller.isUploadingAvatar.value;
+              final currentUrl = controller.user.value?.avatarUrl ?? avatarUrl;
+              return Container(
+                width: 120.w,
+                height: 120.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFFF9F0),
+                  border: Border.all(color: Colors.grey[300]!, width: 2),
+                  image: currentUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(currentUrl),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: isUploading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF2E7D32),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : currentUrl == null
+                    ? Center(
+                        child: Text(
+                          initials,
+                          style: TextStyle(
+                            fontSize: 40.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      )
+                    : null,
+              );
+            }),
 
-          // Camera button
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: EdgeInsets.all(10.w),
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E7D32),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.camera_alt_outlined,
-                size: 20.sp,
-                color: Colors.white,
+            // Camera button
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: EdgeInsets.all(10.w),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF2E7D32),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.camera_alt_outlined,
+                  size: 20.sp,
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

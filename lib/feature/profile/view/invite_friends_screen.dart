@@ -1,12 +1,108 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
+import 'package:qurany/core/network_caller/endpoints.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
-class InviteFriendsScreen extends StatelessWidget {
+class InviteFriendsScreen extends StatefulWidget {
   const InviteFriendsScreen({super.key});
 
-  final String inviteCode = 'QURAN2025';
-  final String inviteUrl = 'https://qurancompanion.app/invite/QURAN2025';
+  @override
+  State<InviteFriendsScreen> createState() => _InviteFriendsScreenState();
+}
+
+class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
+  String _inviteCode = '------';
+  String _inviteUrl = '';
+  int _friendsInvited = 0;
+  int _monthsEarned = 0;
+  bool _isLoading = true;
+
+  // Enter referral code
+  final TextEditingController _codeController = TextEditingController();
+  bool _isApplying = false;
+  String? _applyMessage;
+  bool _applySuccess = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReferralData();
+  }
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _applyReferralCode() async {
+    final code = _codeController.text.trim();
+    if (code.isEmpty) return;
+    setState(() {
+      _isApplying = true;
+      _applyMessage = null;
+    });
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/referral/add-code/$code'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+      final body = json.decode(response.body);
+      final success = body['success'] == true;
+      setState(() {
+        _applySuccess = success;
+        _applyMessage =
+            (body['message'] as String?) ??
+            (success ? 'Referral code applied!' : 'Failed to apply code');
+      });
+      if (success) _codeController.clear();
+    } catch (e) {
+      setState(() {
+        _applySuccess = false;
+        _applyMessage = 'Something went wrong. Please try again.';
+      });
+    } finally {
+      setState(() => _isApplying = false);
+    }
+  }
+
+  Future<void> _fetchReferralData() async {
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/auth/referral/my-ref-code'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'ngrok-skip-browser-warning': 'true',
+        },
+      );
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        if (body['success'] == true) {
+          final data = body['data'];
+          final code = data['referralCode'] as String? ?? '------';
+          setState(() {
+            _inviteCode = code;
+            _inviteUrl = code;
+            _friendsInvited = (data['referralCount'] as num?)?.toInt() ?? 0;
+            _monthsEarned = (data['earn'] as num?)?.toInt() ?? 0;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[DEBUG] fetchReferralData error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +120,11 @@ class InviteFriendsScreen extends StatelessWidget {
 
                 // Personal Invite Code Card (overlapping header)
                 _buildInviteCodeCard(context),
+
+                SizedBox(height: 20.h),
+
+                // Enter a referral code
+                _buildEnterReferralCode(context),
 
                 SizedBox(height: 20.h),
 
@@ -52,7 +153,7 @@ class InviteFriendsScreen extends StatelessWidget {
   Widget _buildHeader(BuildContext context) {
     return Column(
       children: [
-        // App bar with back button
+        SizedBox(height: 40.h),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           child: Row(
@@ -107,14 +208,16 @@ class InviteFriendsScreen extends StatelessWidget {
         SizedBox(height: 20.h),
 
         // Stats cards
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildStatCard("12", "Friends Invited"),
-            SizedBox(width: 12.w),
-            _buildStatCard("4", "Months Earned"),
-          ],
-        ),
+        _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildStatCard(_friendsInvited.toString(), "Friends Invited"),
+                  SizedBox(width: 12.w),
+                  _buildStatCard(_monthsEarned.toString(), "Months Earned"),
+                ],
+              ),
 
         SizedBox(height: 50.h),
       ],
@@ -177,7 +280,7 @@ class InviteFriendsScreen extends StatelessWidget {
             ),
             SizedBox(height: 8.h),
             Text(
-              inviteCode,
+              _inviteCode,
               style: TextStyle(
                 fontSize: 28.sp,
                 fontWeight: FontWeight.bold,
@@ -185,10 +288,10 @@ class InviteFriendsScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 12.h),
-            Text(
-              inviteUrl,
-              style: TextStyle(fontSize: 11.sp, color: Colors.black),
-            ),
+            // Text(
+            //   _inviteUrl,
+            //   style: TextStyle(fontSize: 11.sp, color: Colors.black),
+            // ),
             Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -196,10 +299,10 @@ class InviteFriendsScreen extends StatelessWidget {
                 // Copy Link button
                 GestureDetector(
                   onTap: () {
-                    Clipboard.setData(ClipboardData(text: inviteUrl));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Link copied!')),
-                    );
+                    Clipboard.setData(ClipboardData(text: _inviteUrl));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Copied!')));
                   },
                   child: Container(
                     padding: EdgeInsets.symmetric(
@@ -220,7 +323,7 @@ class InviteFriendsScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 6.w),
                         Text(
-                          "Copy Link",
+                          "Copy Referral Code",
                           style: TextStyle(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w500,
@@ -271,14 +374,146 @@ class InviteFriendsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildEnterReferralCode(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Have a Referral Code?",
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 10.h),
+          Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Enter a friend's referral code to get rewarded together",
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _codeController,
+                        textCapitalization: TextCapitalization.characters,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.5,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter the Code',
+                          hintStyle: TextStyle(
+                            fontSize: 13.sp,
+                            color: Colors.grey[400],
+                            fontWeight: FontWeight.normal,
+                            letterSpacing: 0,
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 14.w,
+                            vertical: 12.h,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    GestureDetector(
+                      onTap: _isApplying ? null : _applyReferralCode,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 18.w,
+                          vertical: 13.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _isApplying
+                              ? Colors.grey[400]
+                              : const Color(0xFF2E7D32),
+                          borderRadius: BorderRadius.circular(10.r),
+                        ),
+                        child: _isApplying
+                            ? SizedBox(
+                                width: 18.w,
+                                height: 18.w,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                "Apply",
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_applyMessage != null) ...[
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      Icon(
+                        _applySuccess ? Icons.check_circle : Icons.error,
+                        size: 16.sp,
+                        color: _applySuccess
+                            ? const Color(0xFF2E7D32)
+                            : Colors.red[600],
+                      ),
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        child: Text(
+                          _applyMessage!,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: _applySuccess
+                                ? const Color(0xFF2E7D32)
+                                : Colors.red[600],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageTemplate(BuildContext context) {
-    const message = '''As-salamu alaykum! 🌙
-
-I've been using Quran Companion to deepen my connection with the Quran, and it's been truly transformative. The app has beautiful features like AI-guided learning, prayer times, and peaceful recitations.
-
-I thought you might benefit from it too. Join me on this blessed journey! 📖 ✨
-
-Use my code: QURAN2025''';
+    final message =
+        'As-salamu alaykum! 🌙\n\nI\'ve been using Quran Companion to deepen my connection with the Quran, and it\'s been truly transformative. The app has beautiful features like AI-guided learning, prayer times, and peaceful recitations.\n\nI thought you might benefit from it too. Join me on this blessed journey! 📖 ✨\n\nUse my code: $_inviteCode';
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -313,7 +548,7 @@ Use my code: QURAN2025''';
                 SizedBox(height: 16.h),
                 GestureDetector(
                   onTap: () {
-                    Clipboard.setData(const ClipboardData(text: message));
+                    Clipboard.setData(ClipboardData(text: message));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Message copied!')),
                     );

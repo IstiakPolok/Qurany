@@ -15,6 +15,24 @@ class _NotificationSoundScreenState extends State<NotificationSoundScreen> {
   String playingAdhan =
       ''; // Track which adhan is "playing" (showing pause icon)
 
+  String _selectedAdhanLabel() {
+    switch (selectedAdhan) {
+      case 'without':
+        return 'Without sound';
+      case 'madinah':
+        return 'Adhan(Madinah)';
+      case 'makkah':
+        return 'Adhan(Makkah)';
+      case 'indonesia1':
+      case 'indonesia2':
+        return 'Adhan(Indonesia)';
+      case 'makkah2':
+        return 'Adhan(Makkah)';
+      default:
+        return 'Adhan(Makkah)';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -126,6 +144,22 @@ class _NotificationSoundScreenState extends State<NotificationSoundScreen> {
                   Icons.arrow_back_ios_new,
                   size: 16.sp,
                   color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                Navigator.pop(context, _selectedAdhanLabel());
+              },
+              child: Text(
+                'Done',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF2E7D32),
                 ),
               ),
             ),

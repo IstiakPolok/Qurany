@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 import 'dart:async';
 
@@ -17,7 +18,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
       'title': 'Read Quran Daily',
       'target': 'Target: 30 minutes',
       'icon': 'assets/icons/navquranIcons.png',
-      'isSelected': true,
+      'isSelected': false,
     },
     {
       'title': 'Memorize New Verses',
@@ -38,6 +39,29 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
       'isSelected': false,
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedGoals();
+  }
+
+  Future<void> _loadSavedGoals() async {
+    final saved = await SharedPreferencesHelper.getGoals();
+    setState(() {
+      for (final goal in _goals) {
+        goal['isSelected'] = saved.contains(goal['title']);
+      }
+    });
+  }
+
+  Future<void> _persistGoals() async {
+    final selected = _goals
+        .where((g) => g['isSelected'] == true)
+        .map((g) => g['title'] as String)
+        .toList();
+    await SharedPreferencesHelper.saveGoals(selected);
+  }
 
   OverlayEntry? _overlayEntry;
   Timer? _overlayTimer;
@@ -137,6 +161,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
     setState(() {
       _goals[index]['isSelected'] = !_goals[index]['isSelected'];
     });
+    _persistGoals();
 
     // Show confirmation toast if selected
     if (_goals[index]['isSelected']) {

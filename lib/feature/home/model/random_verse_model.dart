@@ -71,14 +71,57 @@ class InnerVerse {
   final int id;
   final String text;
   final String translation;
+  final String transliteration;
+  final int verseId;
+  final int surahId;
+  final Map<String, AudioInfo>? audio;
 
-  InnerVerse({required this.id, required this.text, required this.translation});
+  InnerVerse({
+    required this.id,
+    required this.text,
+    required this.translation,
+    required this.transliteration,
+    required this.verseId,
+    required this.surahId,
+    this.audio,
+  });
 
   factory InnerVerse.fromJson(Map<String, dynamic> json) {
     return InnerVerse(
       id: json['id'] ?? 0,
       text: json['text'] ?? '',
       translation: json['translation'] ?? '',
+      transliteration: json['transliteration'] ?? '',
+      verseId: json['verseId'] ?? 0,
+      surahId: json['surahId'] ?? 0,
+      audio: json['audio'] != null
+          ? (json['audio'] as Map<String, dynamic>).map(
+              (key, value) => MapEntry(key, AudioInfo.fromJson(value)),
+            )
+          : null,
+    );
+  }
+}
+
+class AudioInfo {
+  final String url;
+  final String type;
+  final String reciter;
+  final String originalUrl;
+
+  AudioInfo({
+    required this.url,
+    required this.type,
+    required this.reciter,
+    required this.originalUrl,
+  });
+
+  factory AudioInfo.fromJson(Map<String, dynamic> json) {
+    return AudioInfo(
+      url: json['url'] ?? '',
+      type: json['type'] ?? '',
+      reciter: json['reciter'] ?? '',
+      originalUrl: json['originalUrl'] ?? '',
     );
   }
 }

@@ -60,14 +60,8 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
     }
 
     permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       return;
     }
 
@@ -110,9 +104,6 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final width = mq.size.width;
-    // Base height for the bottom sheet (approx: top+button+bottom padding)
-    final bottomSheetBase = 96.0;
-    final bottomSheetHeight = bottomSheetBase + mq.viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: primaryColor,

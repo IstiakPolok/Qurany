@@ -30,3 +30,36 @@ class HistoryModel {
     );
   }
 }
+
+class BookmarkedHistoryModel {
+  final String bookmarkId;
+  final String historyId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final HistoryModel history;
+
+  BookmarkedHistoryModel({
+    required this.bookmarkId,
+    required this.historyId,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.history,
+  });
+
+  factory BookmarkedHistoryModel.fromJson(Map<String, dynamic> json) {
+    final historyJson = json['history'];
+    return BookmarkedHistoryModel(
+      bookmarkId: (json['id'] ?? '').toString(),
+      historyId: (json['historyId'] ?? '').toString(),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      history: HistoryModel.fromJson(
+        historyJson is Map<String, dynamic> ? historyJson : {},
+      ),
+    );
+  }
+}

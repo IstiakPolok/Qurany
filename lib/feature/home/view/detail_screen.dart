@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:get/get.dart';
+import 'package:qurany/feature/ask_ai/view/ask_ai_intro_screen.dart';
 
 class DetailScreen extends StatelessWidget {
   final Map<String, String> data;
@@ -151,7 +153,22 @@ class DetailScreen extends StatelessWidget {
             left: 24.w,
             right: 24.w,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                final title = data['title'] ?? '';
+                final description = data['description'] ?? '';
+                if (Get.isRegistered<AskAIController>()) {
+                  Get.delete<AskAIController>();
+                }
+                final aiController = Get.put(AskAIController());
+                final contextMessage =
+                    'Tell me more about: $title\n\n$description';
+                aiController.messageController.text = contextMessage;
+                aiController.showChat.value = true;
+                Get.to(() => const AskAIScreen());
+                Future.delayed(const Duration(milliseconds: 400), () {
+                  aiController.sendMessage();
+                });
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF2E7D32), // Dark Green
                 shape: RoundedRectangleBorder(

@@ -7,12 +7,16 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/firebase_options.dart';
 import 'package:qurany/core/services/location_service.dart';
-import 'package:qurany/core/services/purchase_api.dart'; // Add this
+import 'package:qurany/core/services/purchase_api.dart';
+import 'package:qurany/core/services/notification_service.dart';
 
 import 'route/app_routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Notification Service
+  await NotificationService().init(requestPermissionOnInit: false);
 
   configEasyLoading();
 

@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/feature/ask_ai/services/ask_ai_service.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:qurany/feature/profile/controller/profile_controller.dart';
+import 'package:qurany/feature/profile/services/profile_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
@@ -14,6 +16,7 @@ class AskAIController extends GetxController {
   final TextEditingController messageController = TextEditingController();
   final ScrollController scrollController = ScrollController();
   final AskAiService _askAiService = AskAiService();
+  final ProfileService _profileService = ProfileService();
   RxBool isLoading = false.obs;
   RxString userName = "User".obs;
 
@@ -24,9 +27,31 @@ class AskAIController extends GetxController {
   }
 
   Future<void> _loadUserName() async {
-    String name = await SharedPreferencesHelper.getName();
-    if (name.isNotEmpty) {
-      userName.value = name;
+    final cachedName = await SharedPreferencesHelper.getName();
+    if (cachedName.trim().isNotEmpty) {
+      userName.value = cachedName.trim();
+    }
+
+    String? dynamicName;
+
+    if (Get.isRegistered<ProfileController>()) {
+      final profileController = Get.find<ProfileController>();
+      dynamicName = profileController.user.value?.fullName;
+      if ((dynamicName == null || dynamicName.trim().isEmpty) &&
+          !profileController.isLoading.value) {
+        await profileController.fetchProfile();
+        dynamicName = profileController.user.value?.fullName;
+      }
+    }
+
+    if (dynamicName == null || dynamicName.trim().isEmpty) {
+      final profile = await _profileService.getProfile();
+      dynamicName = profile?.fullName;
+    }
+
+    if (dynamicName != null && dynamicName.trim().isNotEmpty) {
+      userName.value = dynamicName.trim();
+      await SharedPreferencesHelper.saveName(userName.value);
     }
   }
 
@@ -718,7 +743,9 @@ class AskAIScreen extends StatelessWidget {
 
   void _sendQuickAction(AskAIController controller, String message) {
     controller.messageController.text = message;
-    controller.sendMessage();
+    controller.messageController.selection = TextSelection.fromPosition(
+      TextPosition(offset: controller.messageController.text.length),
+    );
   }
 
   Widget _buildMessagesView(AskAIController controller) {

@@ -18,6 +18,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0), // Cream background
       body: ListView(
+        padding: EdgeInsets.zero,
         children: [
           // Header Section
           const HomeHeader(),

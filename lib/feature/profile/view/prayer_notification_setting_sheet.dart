@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'notification_sound_screen.dart';
 
 class PrayerNotificationSettingSheet extends StatefulWidget {
@@ -20,6 +21,47 @@ class _PrayerNotificationSettingSheetState
   String preAdhanReminder = "None";
 
   final List<String> days = ["M", "T", "W", "T", "F", "S", "S"];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings =
+        await SharedPreferencesHelper.getPrayerNotificationSettings(
+          widget.prayerName,
+        );
+    if (settings == null || !mounted) return;
+
+    setState(() {
+      isAllowed = settings['isAllowed'] != false;
+
+      final savedDays = settings['selectedDays'];
+      if (savedDays is List) {
+        selectedDays = savedDays
+            .map((e) => int.tryParse(e.toString()) ?? -1)
+            .where((e) => e >= 0 && e <= 6)
+            .toSet();
+      }
+
+      notificationSound = (settings['notificationSound'] ?? notificationSound)
+          .toString();
+      preAdhanReminder = (settings['preAdhanReminder'] ?? preAdhanReminder)
+          .toString();
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    await SharedPreferencesHelper.savePrayerNotificationSettings(
+      prayerName: widget.prayerName,
+      isAllowed: isAllowed,
+      selectedDays: selectedDays.toList()..sort(),
+      notificationSound: notificationSound,
+      preAdhanReminder: preAdhanReminder,
+    );
+  }
 
   String _getSelectedDaysText() {
     if (selectedDays.isEmpty) return "None";
@@ -107,7 +149,10 @@ class _PrayerNotificationSettingSheetState
                 ),
                 Switch(
                   value: isAllowed,
-                  onChanged: (value) => setState(() => isAllowed = value),
+                  onChanged: (value) {
+                    setState(() => isAllowed = value);
+                    _saveSettings();
+                  },
                   activeThumbColor: Colors.white,
                   activeTrackColor: const Color(0xFF2E7D32),
                 ),
@@ -148,6 +193,7 @@ class _PrayerNotificationSettingSheetState
                       selectedDays.add(index);
                     }
                   });
+                  _saveSettings();
                 },
                 child: _HexagonDay(day: days[index], isSelected: isSelected),
               );
@@ -159,12 +205,18 @@ class _PrayerNotificationSettingSheetState
 
           // Notification Sound
           _buildMenuItem("Notification Sound", notificationSound, () {
-            Navigator.push(
+            Navigator.push<String>(
               context,
               MaterialPageRoute(
                 builder: (context) => const NotificationSoundScreen(),
               ),
-            );
+            ).then((selected) {
+              if (selected == null || selected.trim().isEmpty) return;
+              setState(() {
+                notificationSound = selected;
+              });
+              _saveSettings();
+            });
           }),
           _buildDivider(),
 

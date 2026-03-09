@@ -524,16 +524,15 @@ class PrayerScreen extends StatelessWidget {
         ),
         child: GetBuilder<PrayerController>(
           builder: (controller) {
-            // Count how many prayers have passed today
-            final passedPrayers = [
+            final checkedPrayers = [
               'Fajr',
               'Dhuhr',
               'Asr',
               'Maghrib',
               'Isha',
-            ].where((prayer) => controller.isPrayerPassed(prayer)).length;
+            ].where((prayer) => controller.isPrayerChecked(prayer)).length;
 
-            final progress = passedPrayers / 5.0;
+            final progress = checkedPrayers / 5.0;
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -555,7 +554,7 @@ class PrayerScreen extends StatelessWidget {
                     Column(
                       children: [
                         Text(
-                          "$passedPrayers/5",
+                          "$checkedPrayers/5",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18.sp,
@@ -669,9 +668,8 @@ class PrayerScreen extends StatelessWidget {
   ) {
     final nextPrayer = controller.getNextPrayerName();
     bool isNext = data['name'] == nextPrayer;
-
-    // Check if this prayer has passed using the controller
-    bool isPassed = controller.isPrayerPassed(data['name']!);
+    final prayerName = data['name']!;
+    bool isChecked = controller.isPrayerChecked(prayerName);
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -691,9 +689,9 @@ class PrayerScreen extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            _getPrayerIcon(data['name']!),
+            _getPrayerIcon(prayerName),
             size: 24.sp,
-            color: isPassed ? const Color(0xFF2E7D32) : Colors.grey[700],
+            color: isChecked ? const Color(0xFF2E7D32) : Colors.grey[700],
           ),
           SizedBox(width: 12.w),
           Expanded(
@@ -702,11 +700,11 @@ class PrayerScreen extends StatelessWidget {
               children: [
                 Flexible(
                   child: Text(
-                    data['name']!,
+                    prayerName,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
-                      color: isPassed
+                      color: isChecked
                           ? const Color(0xFF2E7D32)
                           : Colors.black87,
                     ),
@@ -769,27 +767,30 @@ class PrayerScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
-                    color: isPassed ? const Color(0xFF2E7D32) : Colors.black87,
+                    color: isChecked ? const Color(0xFF2E7D32) : Colors.black87,
                   ),
                 ),
                 SizedBox(width: 12.w),
-                Container(
-                  width: 24.w,
-                  height: 24.w,
-                  decoration: BoxDecoration(
-                    color: isPassed
-                        ? const Color(0xFF2E7D32)
-                        : Colors.transparent,
-                    border: Border.all(
-                      color: isPassed
+                GestureDetector(
+                  onTap: () => controller.togglePrayerChecked(prayerName),
+                  child: Container(
+                    width: 24.w,
+                    height: 24.w,
+                    decoration: BoxDecoration(
+                      color: isChecked
                           ? const Color(0xFF2E7D32)
-                          : Colors.grey[400]!,
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: isChecked
+                            ? const Color(0xFF2E7D32)
+                            : Colors.grey[400]!,
+                      ),
+                      borderRadius: BorderRadius.circular(4.r),
                     ),
-                    borderRadius: BorderRadius.circular(4.r),
+                    child: isChecked
+                        ? Icon(Icons.check, color: Colors.white, size: 16.sp)
+                        : null,
                   ),
-                  child: isPassed
-                      ? Icon(Icons.check, color: Colors.white, size: 16.sp)
-                      : null,
                 ),
               ],
             ),

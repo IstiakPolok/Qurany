@@ -3,11 +3,17 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/core/services/notification_service.dart';
 
 import '../../preferences/views/preferences_flow_screen.dart';
 
 class NotificationPermissionScreen extends StatelessWidget {
   const NotificationPermissionScreen({super.key});
+
+  Future<void> _handleEnableNotification() async {
+    await NotificationService().requestNotificationPermission();
+    Get.to(() => const PreferencesFlowScreen());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,9 +100,7 @@ class NotificationPermissionScreen extends StatelessWidget {
                     width: double.infinity,
                     height: buttonHeight,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Get.to(() => PreferencesFlowScreen());
-                      },
+                      onPressed: _handleEnableNotification,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(
                           0xFFFFF9F0,
@@ -126,7 +130,7 @@ class NotificationPermissionScreen extends StatelessWidget {
                     height: buttonHeight,
                     child: OutlinedButton(
                       onPressed: () {
-                        Get.to(() => PreferencesFlowScreen());
+                        Get.to(() => const PreferencesFlowScreen());
                       },
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Colors.white),

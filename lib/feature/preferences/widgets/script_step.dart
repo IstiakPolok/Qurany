@@ -12,6 +12,7 @@ class ScriptStep extends StatefulWidget {
 
 class _ScriptStepState extends State<ScriptStep> {
   String selectedScript = 'Imlaei';
+  String previewScript = 'Imlaei';
 
   @override
   void initState() {
@@ -24,15 +25,23 @@ class _ScriptStepState extends State<ScriptStep> {
     if (mounted) {
       setState(() {
         selectedScript = script;
+        previewScript = script;
       });
     }
   }
 
   Future<void> _selectScript(String script) async {
-    setState(() {
-      selectedScript = script;
-    });
     await SharedPreferencesHelper.saveArabicScript(script);
+    final saved = await SharedPreferencesHelper.getArabicScript();
+    // Debug print
+    // ignore: avoid_print
+    print('[DEBUG] Saved script: $saved');
+    if (mounted) {
+      setState(() {
+        selectedScript = script;
+        previewScript = saved;
+      });
+    }
   }
 
   @override
@@ -81,9 +90,9 @@ class _ScriptStepState extends State<ScriptStep> {
                       style: TextStyle(
                         fontSize: 24.sp,
                         fontWeight: FontWeight.bold,
-                        fontFamily: selectedScript == 'IndoPak'
-                            ? 'IndoPakFont'
-                            : 'Amiri', // Placeholder fonts
+                        fontFamily: previewScript == 'IndoPak'
+                            ? 'IndoPak'
+                            : 'Arial',
                       ),
                       textAlign: TextAlign.center,
                     ),

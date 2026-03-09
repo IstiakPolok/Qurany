@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:qurany/core/network_caller/endpoints.dart';
+import 'package:qurany/core/network_caller/network_error_handler.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/model/random_verse_model.dart';
@@ -164,11 +166,31 @@ class QuranService {
           throw Exception(body['message'] ?? 'Failed to load random verse');
         }
       } else {
-        throw Exception('Failed to load random verse: ${response.statusCode}');
+        throw MaintenanceException(response.statusCode);
       }
+    } on SocketException catch (e) {
+      if (kDebugMode) {
+        print('❌ No internet - fetching random verse: $e');
+      }
+      throw NoInternetException(e.toString());
+    } on http.ClientException catch (e) {
+      if (kDebugMode) {
+        print('❌ Client error fetching random verse: $e');
+      }
+      if (NetworkErrorHandler.isNoInternetError(e)) {
+        throw NoInternetException(e.toString());
+      }
+      rethrow;
+    } on MaintenanceException {
+      rethrow;
+    } on NoInternetException {
+      rethrow;
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error fetching random verse: $e');
+      }
+      if (NetworkErrorHandler.isNoInternetError(e)) {
+        throw NoInternetException(e.toString());
       }
       rethrow;
     }
@@ -495,6 +517,14 @@ class QuranService {
   }
 
   Future<bool> toggleBookmarkVerse(int surahId, int verseId) async {
+    final result = await toggleBookmarkVerseAction(surahId, verseId);
+    return result.success;
+  }
+
+  Future<ApiActionResult> toggleBookmarkVerseAction(
+    int surahId,
+    int verseId,
+  ) async {
     final url = Uri.parse('$baseUrl/api/auth/bookmark/verse/$surahId/$verseId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
@@ -516,17 +546,32 @@ class QuranService {
         print('Toggle bookmark verse response body: ${response.body}');
       }
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        return body['success'] == true;
-      } else {
-        return false;
+      Map<String, dynamic> body = {};
+      try {
+        body = jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        body = {};
       }
+
+      final String message =
+          (body['message']?.toString().trim().isNotEmpty ?? false)
+          ? body['message'].toString().trim()
+          : 'Failed to update bookmark';
+
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          body['success'] == true) {
+        return ApiActionResult(success: true, message: message);
+      }
+
+      return ApiActionResult(success: false, message: message);
     } catch (e) {
       if (kDebugMode) {
         print('Error toggling bookmark verse: $e');
       }
-      return false;
+      return ApiActionResult(
+        success: false,
+        message: 'Failed to update bookmark',
+      );
     }
   }
 
@@ -559,7 +604,7 @@ class QuranService {
   }
 
   Future<List<AzkarItem>> fetchAzkarByGroup(String time) async {
-    final url = Uri.parse('$azkarGroupEndpoint');
+    final url = Uri.parse(azkarGroupEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.get(
@@ -812,6 +857,111 @@ class QuranService {
   }
 
   Future<bool> bookmarkHistory(String historyId) async {
+    final result = await bookmarkHistoryAction(historyId);
+    return result.success;
+  }
+
+  Future<List<BookmarkedHistoryModel>> fetchBookmarkedHistory() async {
+    final url = Uri.parse('$baseUrl/api/auth/history/bookmark/');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Fetch bookmarked history status: ${response.statusCode}');
+        print('Fetch bookmarked history body: ${response.body}');
+      }
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to fetch bookmarked stories: ${response.statusCode}',
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception('Invalid bookmarked stories payload');
+      }
+
+      if (decoded['success'] != true) {
+        throw Exception(
+          decoded['message'] ?? 'Failed to fetch bookmarked stories',
+        );
+      }
+
+      final data = decoded['data'];
+      if (data is! List) {
+        return const <BookmarkedHistoryModel>[];
+      }
+
+      final List<BookmarkedHistoryModel> stories = [];
+      for (final entry in data) {
+        if (entry is! Map<String, dynamic>) continue;
+        stories.add(BookmarkedHistoryModel.fromJson(entry));
+      }
+
+      return stories;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching bookmarked history: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<ApiActionResult> deleteHistoryBookmarkAction(String bookmarkId) async {
+    final url = Uri.parse(
+      '$baseUrl/api/auth/history/bookmark/delete/$bookmarkId',
+    );
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (kDebugMode) {
+        print('Delete history bookmark status: ${response.statusCode}');
+        print('Delete history bookmark body: ${response.body}');
+      }
+
+      Map<String, dynamic>? body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          body = decoded;
+        }
+      } catch (_) {}
+
+      final message = (body?['message'] ?? '').toString();
+      final apiSuccess = body?['success'] == true;
+
+      return ApiActionResult(
+        success: apiSuccess,
+        message: message.isNotEmpty
+            ? message
+            : (apiSuccess
+                  ? 'Bookmark removed'
+                  : 'Failed to remove bookmark (status: ${response.statusCode})'),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting history bookmark: $e');
+      }
+      return ApiActionResult(success: false, message: 'Failed to remove: $e');
+    }
+  }
+
+  Future<ApiActionResult> bookmarkHistoryAction(String historyId) async {
     final url = Uri.parse('$baseUrl/api/auth/history/bookmark/$historyId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
@@ -826,10 +976,33 @@ class QuranService {
         print('Bookmark history status: ${response.statusCode}');
         print('Bookmark history body: ${response.body}');
       }
-      return response.statusCode == 200 || response.statusCode == 201;
+
+      Map<String, dynamic>? body;
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          body = decoded;
+        }
+      } catch (_) {}
+
+      final message = (body?['message'] ?? '').toString();
+      final normalizedMessage = message.toLowerCase();
+      final apiSuccess = body?['success'] == true;
+      final alreadyExists = normalizedMessage.contains('already exists');
+
+      return ApiActionResult(
+        success:
+            apiSuccess ||
+            alreadyExists ||
+            response.statusCode == 200 ||
+            response.statusCode == 201,
+        message: message.isNotEmpty
+            ? message
+            : 'Failed to bookmark story (status: ${response.statusCode})',
+      );
     } catch (e) {
       if (kDebugMode) print('Error bookmarking history: $e');
-      return false;
+      return ApiActionResult(success: false, message: 'Failed to bookmark: $e');
     }
   }
 

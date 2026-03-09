@@ -807,8 +807,8 @@ class QuranScreen extends StatelessWidget {
             ),
             // Progress circle
             SizedBox(
-              width: 60.w,
-              height: 60.w,
+              width: 100.w,
+              height: 100.w,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -821,7 +821,7 @@ class QuranScreen extends StatelessWidget {
                   Text(
                     "${(progress * 100).round()}%",
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 11.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

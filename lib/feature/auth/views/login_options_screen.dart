@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +9,7 @@ import 'package:qurany/feature/welcome/view/preparing_space_screen.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 
 import '../services/google_auth_service.dart';
+import '../services/apple_auth_service.dart';
 
 class LoginOptionsScreen extends StatelessWidget {
   const LoginOptionsScreen({super.key});
@@ -109,19 +112,43 @@ class LoginOptionsScreen extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: 16.h),
+          if (Platform.isIOS) ...[
+            SizedBox(height: 16.h),
 
-          // Apple Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: _buildSocialButton(
-              onPressed: () {
-                Get.to(() => const PreparingSpaceScreen());
-              },
-              icon: Icon(Icons.apple, color: Colors.black, size: 28.sp),
-              label: "Continue with Apple",
+            // Apple Button (iOS only)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Obx(
+                () => _buildSocialButton(
+                  onPressed: AppleSignInService.isLoading.value
+                      ? () {}
+                      : () async {
+                          EasyLoading.show(status: 'Signing in with Apple...');
+                          final success =
+                              await AppleSignInService.signInWithApple();
+                          EasyLoading.dismiss();
+
+                          if (success) {
+                            Get.offAll(() => const PreparingSpaceScreen());
+                          }
+                        },
+                  icon: AppleSignInService.isLoading.value
+                      ? SizedBox(
+                          width: 28.sp,
+                          height: 28.sp,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.black,
+                            ),
+                          ),
+                        )
+                      : Icon(Icons.apple, color: Colors.black, size: 28.sp),
+                  label: "Continue with Apple",
+                ),
+              ),
             ),
-          ),
+          ],
 
           SizedBox(height: 24.h),
 

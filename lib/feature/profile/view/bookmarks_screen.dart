@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../quran/view/quran_screen.dart';
+import '../../home/controller/history_controller.dart';
+import '../../home/model/history_model.dart';
 import '../../home/model/surah_model.dart';
 import '../../home/controller/azkar_controller.dart';
 import '../../home/model/azkar_model.dart';
 import '../../home/view/azkar_detail_screen.dart';
+import '../../home/view/detail_screen.dart';
 import '../../quran/model/bookmarked_verse_model.dart';
 
 class BookmarksScreen extends StatefulWidget {
@@ -24,7 +27,7 @@ class _BookmarksScreenState extends State<BookmarksScreen>
     'Ayah',
     'Quranic Stories',
     'Azkar',
-    'Knowledge',
+    //'Knowledge',
   ];
 
   @override
@@ -39,6 +42,13 @@ class _BookmarksScreenState extends State<BookmarksScreen>
     final QuranController controller = Get.find<QuranController>();
     controller.fetchFavoriteSurahs(forceRefresh: true);
     controller.fetchBookmarkedVerses(forceRefresh: true);
+
+    if (!Get.isRegistered<HistoryController>()) {
+      Get.put(HistoryController());
+    } else {
+      final HistoryController historyController = Get.find<HistoryController>();
+      historyController.fetchBookmarkedHistory();
+    }
 
     if (!Get.isRegistered<AzkarController>()) {
       Get.put(AzkarController());
@@ -460,108 +470,161 @@ class _BookmarksScreenState extends State<BookmarksScreen>
 
   // ==================== QURANIC STORIES TAB ====================
   Widget _buildQuranicStoriesTab() {
-    final stories = [
-      {
-        'title': 'Story of Prophet Yusuf',
-        'image':
-            'https://images.unsplash.com/photo-1585036156171-384164a8c675?w=400',
-      },
-      {
-        'title': 'The People of the Cave',
-        'image':
-            'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400',
-      },
-      {
-        'title': 'Musa & Al-Khidr',
-        'image':
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-      },
-      {
-        'title': 'The Story of Maryam',
-        'image':
-            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400',
-      },
-    ];
+    final HistoryController controller = Get.find<HistoryController>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Saved Quranic Stories",
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 16.h),
-        Expanded(
-          child: GridView.builder(
+    return Obx(() {
+      final stories = controller.bookmarkedHistoryList;
+      final isLoading = controller.isLoadingBookmarked.value;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12.w,
-              mainAxisSpacing: 12.h,
-              childAspectRatio: 1.1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Saved Quranic Stories",
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            itemCount: stories.length,
-            itemBuilder: (context, index) {
-              return _buildStoryCard(stories[index]);
-            },
           ),
-        ),
-      ],
-    );
+          SizedBox(height: 16.h),
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : stories.isEmpty
+                ? const Center(child: Text('No bookmarked stories found'))
+                : GridView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12.w,
+                      mainAxisSpacing: 12.h,
+                      childAspectRatio: 1.1,
+                    ),
+                    itemCount: stories.length,
+                    itemBuilder: (context, index) {
+                      return _buildStoryCard(
+                        context,
+                        stories[index],
+                        controller,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    });
   }
 
-  Widget _buildStoryCard(Map<String, String> story) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16.r),
-        image: DecorationImage(
-          image: NetworkImage(story['image']!),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.r),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+  Widget _buildStoryCard(
+    BuildContext context,
+    BookmarkedHistoryModel story,
+    HistoryController controller,
+  ) {
+    final history = story.history;
+    final isRemoving = controller.bookmarkingIds.contains(history.id);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailScreen(
+              data: {
+                'title': history.name,
+                'image': history.image,
+                'description': history.description,
+              },
+            ),
           ),
-        ),
+        );
+      },
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(16.r)),
         child: Stack(
           children: [
-            // Bookmark icon top right
+            if (history.image.trim().isNotEmpty)
+              Image.network(
+                history.image,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade300,
+                    child: Center(
+                      child: Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                        size: 30.sp,
+                      ),
+                    ),
+                  );
+                },
+              )
+            else
+              Container(
+                color: Colors.grey.shade300,
+                child: Center(
+                  child: Icon(
+                    Icons.menu_book,
+                    color: Colors.grey.shade600,
+                    size: 30.sp,
+                  ),
+                ),
+              ),
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.r),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                ),
+              ),
+            ),
             Positioned(
               top: 8.h,
               right: 8.w,
-              child: Container(
-                padding: EdgeInsets.all(6.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Icon(
-                  Icons.bookmark,
-                  size: 14.sp,
-                  color: const Color(0xFF2E7D32),
+              child: GestureDetector(
+                onTap: () => controller.removeBookmarkedHistory(history.id),
+                child: Container(
+                  padding: EdgeInsets.all(6.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: isRemoving
+                      ? SizedBox(
+                          width: 14.sp,
+                          height: 14.sp,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        )
+                      : Icon(
+                          Icons.bookmark,
+                          size: 14.sp,
+                          color: const Color(0xFF2E7D32),
+                        ),
                 ),
               ),
             ),
-            // Title at bottom
             Positioned(
               left: 12.w,
               right: 12.w,
               bottom: 12.h,
               child: Text(
-                story['title']!,
+                history.name,
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,

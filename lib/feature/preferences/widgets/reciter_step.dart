@@ -14,6 +14,7 @@ class ReciterStep extends StatefulWidget {
 
 class _ReciterStepState extends State<ReciterStep> {
   String selectedReciter = 'Mishary Rashid Alafasy';
+  String scriptFont = 'Imlaei';
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   final List<Map<String, String>> reciters = [
@@ -30,6 +31,16 @@ class _ReciterStepState extends State<ReciterStep> {
   void initState() {
     super.initState();
     _loadReciter();
+    _loadScriptFont();
+  }
+
+  Future<void> _loadScriptFont() async {
+    final script = await SharedPreferencesHelper.getArabicScript();
+    if (mounted) {
+      setState(() {
+        scriptFont = script;
+      });
+    }
   }
 
   @override
@@ -108,7 +119,9 @@ class _ReciterStepState extends State<ReciterStep> {
                       style: TextStyle(
                         fontSize: 24.sp,
                         fontWeight: FontWeight.bold,
-                        // Placeholder fonts
+                        fontFamily: scriptFont == 'IndoPak'
+                            ? 'IndoPak'
+                            : 'Arial',
                       ),
                       textAlign: TextAlign.center,
                     ),

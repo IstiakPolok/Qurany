@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:qurany/core/services/notification_service.dart';
 import '../../../core/services/location_service.dart';
 import '../model/prayer_time_model.dart';
 import '../services/prayer_service.dart';
@@ -8,12 +10,14 @@ import '../services/prayer_service.dart';
 class PrayerController extends GetxController {
   final PrayerService _prayerService = PrayerService();
   final LocationService _locationService = Get.find<LocationService>();
+  final NotificationService _notificationService = NotificationService();
 
   final Rx<PrayerTimeModel?> prayerData = Rx<PrayerTimeModel?>(null);
   final RxBool isLoading = false.obs;
   final RxString error = ''.obs;
   final Rx<DateTime> currentTime = DateTime.now().obs;
   final Rx<DateTime> selectedDate = DateTime.now().obs;
+  final RxMap<String, bool> manualPrayerChecks = <String, bool>{}.obs;
 
   Timer? _timer;
 
@@ -22,6 +26,7 @@ class PrayerController extends GetxController {
     super.onInit();
     _startTimer();
     _loadPrayerTimes();
+    _loadManualPrayerChecks();
 
     // Listen to location changes
     ever(_locationService.currentPosition, (position) {
@@ -33,6 +38,7 @@ class PrayerController extends GetxController {
     // Listen to date changes
     ever(selectedDate, (_) {
       _loadPrayerTimes();
+      _loadManualPrayerChecks();
     });
   }
 
@@ -76,6 +82,7 @@ class PrayerController extends GetxController {
 
       if (data != null) {
         prayerData.value = data;
+        _schedulePrayerReminders(data);
         print('Prayer times loaded successfully');
         print('Qibla direction: ${data.qibla.direction.degrees}°');
         print(
@@ -93,8 +100,70 @@ class PrayerController extends GetxController {
     }
   }
 
+  Future<void> _schedulePrayerReminders(PrayerTimeModel data) async {
+    // Only schedule if we are looking at today's logic, or always for current location
+    // Typically we want to schedule for today and maybe the next few days.
+    // For simplicity, let's schedule for today.
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+
+    final prayersToSchedule = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+    for (int i = 0; i < prayersToSchedule.length; i++) {
+      final prayerName = prayersToSchedule[i];
+      final prayerTime = data.times[prayerName];
+
+      if (prayerTime != null) {
+        try {
+          final prayerDateTime = DateFormat(
+            'yyyy-MM-dd HH:mm',
+          ).parse('$todayStr $prayerTime');
+
+          if (prayerDateTime.isAfter(now)) {
+            await _notificationService.schedulePrayerNotification(
+              id: i, // Unique ID per prayer
+              prayerName: prayerName,
+              title: 'Reminder: $prayerName Prayer',
+              body:
+                  "It's time for $prayerName prayer. May Allah accept our prayers.",
+              scheduleTime: prayerDateTime,
+            );
+            print('Scheduled $prayerName at $prayerDateTime');
+          }
+        } catch (e) {
+          print('Error scheduling $prayerName: $e');
+        }
+      }
+    }
+  }
+
   Future<void> refreshPrayerTimes() async {
     await _loadPrayerTimes();
+    await _loadManualPrayerChecks();
+  }
+
+  Future<void> _loadManualPrayerChecks() async {
+    final checks = await SharedPreferencesHelper.getPrayerChecklist(
+      selectedDate.value,
+    );
+    manualPrayerChecks.assignAll(checks);
+    update();
+  }
+
+  bool isPrayerChecked(String prayerName) {
+    return manualPrayerChecks[prayerName] ?? false;
+  }
+
+  Future<void> togglePrayerChecked(String prayerName) async {
+    final nextValue = !isPrayerChecked(prayerName);
+    manualPrayerChecks[prayerName] = nextValue;
+    update();
+
+    await SharedPreferencesHelper.savePrayerCheckStatus(
+      date: selectedDate.value,
+      prayerName: prayerName,
+      isChecked: nextValue,
+    );
   }
 
   String getNextPrayerName() {

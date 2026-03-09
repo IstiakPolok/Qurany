@@ -3,11 +3,17 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:qurany/core/services/location_service.dart';
 import 'package:qurany/feature/permissions/views/notification_permission_screen.dart';
 import 'package:qurany/core/global_widgets/outlined_close_button.dart';
 
 class LocationPermissionScreen extends StatelessWidget {
   const LocationPermissionScreen({super.key});
+
+  Future<void> _handleAllowLocationAccess() async {
+    await LocationService.instance.fetchLocation(requestPermission: true);
+    Get.to(() => const NotificationPermissionScreen());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +89,7 @@ class LocationPermissionScreen extends StatelessWidget {
                         width: double.infinity,
                         height: buttonHeight,
                         child: ElevatedButton(
-                          onPressed: () {
-                            Get.to(() => NotificationPermissionScreen());
-                          },
+                          onPressed: _handleAllowLocationAccess,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(
                               0xFFFFF9F0,
@@ -114,7 +118,7 @@ class LocationPermissionScreen extends StatelessWidget {
                         height: buttonHeight,
                         child: OutlinedButton(
                           onPressed: () {
-                            Get.to(NotificationPermissionScreen());
+                            Get.to(() => const NotificationPermissionScreen());
                           },
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Colors.white),

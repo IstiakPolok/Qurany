@@ -1,53 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:qurany/feature/home/controller/verse_of_day_controller.dart';
 
-// 1. DATA MODEL (Renamed to Reciter)
+// 1. DATA MODEL (Enhanced to handle API audio)
 class Reciter {
   final String name;
   final String title;
   final String imageUrl;
+  final String? audioUrl;
 
-  Reciter({required this.name, required this.title, required this.imageUrl});
+  Reciter({
+    required this.name,
+    required this.title,
+    required this.imageUrl,
+    this.audioUrl,
+  });
 }
 
 // 2. THE MAIN LIST WIDGET
 class HorizontalReciterList extends StatelessWidget {
-  HorizontalReciterList({super.key});
-
-  // Sample data for Reciters
-  final List<Reciter> reciters = [
-    Reciter(
-      name: "Mishary Al-Afasy",
-      title: "The Voice of Devotion",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10",
-    ),
-    Reciter(
-      name: "Sheikh Sudais",
-      title: "Imam of Masjid al-Haram",
-      imageUrl:
-          "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1",
-    ),
-    Reciter(
-      name: "Maher Al Muaiqly",
-      title: "Imam of Masjid Al-Haram",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSkIhUZ2LpPTse0VvW-roPi1L5cGLFCQm9zPERRQJUgy2ZvDTI_aek9PHHE5HVZqIa_eh9sbS0fiMtJ8HAkloqNCVrpHkbIDK_x8qfzCQ&s=10",
-    ),
-  ];
+  const HorizontalReciterList({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final VerseOfDayController controller = Get.find<VerseOfDayController>();
+
     return SizedBox(
       height: 200,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: reciters.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 16),
-        itemBuilder: (context, index) {
-          return ReciterCard(reciter: reciters[index]);
-        },
-      ),
+      child: Obx(() {
+        if (controller.isLoading.value ||
+            controller.randomVerse.value == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final audioData = controller.randomVerse.value!.data.verse.verse.audio;
+        if (audioData == null || audioData.isEmpty) {
+          return const Center(child: Text("No audio available"));
+        }
+
+        // Map API reciters to our Reciter model
+        final List<Reciter> reciters = audioData.values.map((audioInfo) {
+          // Determine placeholder image based on reciter name
+          String placeholderImg =
+              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+
+          if (audioInfo.reciter.contains("Sudais")) {
+            placeholderImg =
+                "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1";
+          } else if (audioInfo.reciter.contains("Yasser") ||
+              audioInfo.reciter.contains("Dussary")) {
+            placeholderImg =
+                "https://i.scdn.co/image/ab67616100005174e4bd7040657e8e61dc4667be";
+          } else if (audioInfo.reciter.contains("Nasser") ||
+              audioInfo.reciter.contains("Qatami")) {
+            placeholderImg =
+                "https://scontent.fdac207-1.fna.fbcdn.net/v/t39.30808-6/470019064_1119048786249564_9159029543174380749_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=O9kA8gkeLGMQ7kNvwGNr5oH&_nc_oc=AdnT-OiSE9RjU0v0kTD07qPFSudAeHeqDozhECy78a0zZ8DxGG4kud8d2Wg7InObuBY&_nc_zt=23&_nc_ht=scontent.fdac207-1.fna&_nc_gid=7xGR-giX8dhXhYZ-X3B0xg&_nc_ss=8&oh=00_AfwTIfRlr9uHLOvZeNeCuTaXLMyn9KiQObXJwr7oy-Ctmg&oe=69B44A59"; // Spotify profile style placeholder for Nasser
+          } else if (audioInfo.reciter.contains("Mishary") ||
+              audioInfo.reciter.contains("Alafasy")) {
+            placeholderImg =
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+          } else if (audioInfo.reciter.contains("Abu Bakr") ||
+              audioInfo.reciter.contains("Shatri")) {
+            placeholderImg =
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUmPkcySF56YidTERKU54hBnQ0lf734dwb4w&s";
+          }
+
+          return Reciter(
+            name: audioInfo.reciter,
+            title: "Qurany Reciter",
+            imageUrl: placeholderImg,
+            audioUrl: audioInfo.url,
+          );
+        }).toList();
+
+        return ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          itemCount: reciters.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 16),
+          itemBuilder: (context, index) {
+            return ReciterCard(reciter: reciters[index]);
+          },
+        );
+      }),
     );
   }
 }
@@ -60,6 +95,8 @@ class ReciterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final VerseOfDayController controller = Get.find<VerseOfDayController>();
+
     return Container(
       width: 220,
       decoration: BoxDecoration(
@@ -120,11 +157,24 @@ class ReciterCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildCircleButton(
-                    Icons.play_arrow_rounded,
-                    Colors.green[800]!,
-                  ),
-                  _buildCircleButton(Icons.download_rounded, Colors.black),
+                  Obx(() {
+                    final bool isPlaying =
+                        controller.currentlyPlayingUrl.value ==
+                        reciter.audioUrl;
+                    return GestureDetector(
+                      onTap: () {
+                        if (reciter.audioUrl != null) {
+                          controller.toggleAudio(reciter.audioUrl!);
+                        }
+                      },
+                      child: _buildCircleButton(
+                        isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        Colors.green[800]!,
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),

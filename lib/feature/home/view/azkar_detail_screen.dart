@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/feature/home/controller/azkar_controller.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:share_plus/share_plus.dart';
 
 class AzkarDetailScreen extends StatefulWidget {
   final Map<String, dynamic> categoryData;
@@ -73,6 +76,15 @@ class _AzkarDetailScreenState extends State<AzkarDetailScreen> {
           return const Center(child: Text("No Azkar found for this group"));
         }
 
+        final int safeIndex =
+            (_currentIndex >= 0 &&
+                _currentIndex < _controller.azkarGroup.length)
+            ? _currentIndex
+            : 0;
+        final String? currentAudio = _controller.azkarGroup[safeIndex].audio;
+        final bool hasAudio =
+            currentAudio != null && currentAudio.trim().isNotEmpty;
+
         return Column(
           children: [
             SizedBox(height: 20.h),
@@ -127,13 +139,25 @@ class _AzkarDetailScreenState extends State<AzkarDetailScreen> {
                                       children: [
                                         Align(
                                           alignment: Alignment.topRight,
-                                          child: Text(
-                                            item.azkar,
-                                            textAlign: TextAlign.right,
-                                            style: TextStyle(
-                                              fontSize: 22.sp,
-                                              height: 1.8,
-                                            ),
+                                          child: FutureBuilder<String>(
+                                            future:
+                                                SharedPreferencesHelper.getArabicScript(),
+                                            builder: (context, snapshot) {
+                                              final scriptFont =
+                                                  snapshot.data ?? 'Imlaei';
+                                              return Text(
+                                                item.azkar,
+                                                textAlign: TextAlign.right,
+                                                style: TextStyle(
+                                                  fontSize: 22.sp,
+                                                  height: 1.8,
+                                                  fontFamily:
+                                                      scriptFont == 'IndoPak'
+                                                      ? 'IndoPak'
+                                                      : 'Arial',
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ),
                                         SizedBox(height: 24.h),
@@ -155,10 +179,29 @@ class _AzkarDetailScreenState extends State<AzkarDetailScreen> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(
-                                          Icons.copy_all_outlined,
-                                          color: Colors.grey,
-                                          size: 24.sp,
+                                        GestureDetector(
+                                          onTap: () async {
+                                            final String textToCopy =
+                                                '${item.name}\n\n${item.azkar}\n\n${item.translation}';
+                                            await Clipboard.setData(
+                                              ClipboardData(text: textToCopy),
+                                            );
+                                            if (!mounted) return;
+                                            ScaffoldMessenger.of(context)
+                                              ..hideCurrentSnackBar()
+                                              ..showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Azkar copied to clipboard',
+                                                  ),
+                                                ),
+                                              );
+                                          },
+                                          child: Icon(
+                                            Icons.copy_all_outlined,
+                                            color: Colors.grey,
+                                            size: 24.sp,
+                                          ),
                                         ),
                                         SizedBox(width: 16.w),
                                         Icon(
@@ -167,10 +210,17 @@ class _AzkarDetailScreenState extends State<AzkarDetailScreen> {
                                           size: 24.sp,
                                         ),
                                         SizedBox(width: 16.w),
-                                        Icon(
-                                          Icons.share_outlined,
-                                          color: Colors.grey,
-                                          size: 24.sp,
+                                        GestureDetector(
+                                          onTap: () {
+                                            final String shareText =
+                                                '${item.name}\n\n${item.azkar}\n\n${item.translation}';
+                                            Share.share(shareText);
+                                          },
+                                          child: Icon(
+                                            Icons.share_outlined,
+                                            color: Colors.grey,
+                                            size: 24.sp,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -218,54 +268,59 @@ class _AzkarDetailScreenState extends State<AzkarDetailScreen> {
 
             SizedBox(height: 20.h),
 
-            // Playback Controls
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
-              margin: EdgeInsets.symmetric(horizontal: 40.w),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(50.r),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      _pageController.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    child: Icon(
-                      Icons.skip_previous_outlined,
-                      color: Colors.grey,
-                      size: 28.sp,
+            // Playback Controls (only for azkar items with audio)
+            if (hasAudio)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                margin: EdgeInsets.symmetric(horizontal: 40.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(50.r),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 5),
                     ),
-                  ),
-                  Icon(Icons.play_arrow, color: Color(0xFF388E3C), size: 36.sp),
-                  GestureDetector(
-                    onTap: () {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    },
-                    child: Icon(
-                      Icons.skip_next_outlined,
-                      color: Colors.grey,
-                      size: 28.sp,
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                      child: Icon(
+                        Icons.skip_previous_outlined,
+                        color: Colors.grey,
+                        size: 28.sp,
+                      ),
                     ),
-                  ),
-                ],
+                    Icon(
+                      Icons.play_arrow,
+                      color: Color(0xFF388E3C),
+                      size: 36.sp,
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        _pageController.nextPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      },
+                      child: Icon(
+                        Icons.skip_next_outlined,
+                        color: Colors.grey,
+                        size: 28.sp,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             SizedBox(height: 12.h),
             Text(

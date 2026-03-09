@@ -33,7 +33,7 @@ class _FeelingWidgetState extends State<FeelingWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          padding: EdgeInsets.symmetric(horizontal: 24.w,vertical: 16.h),
           child: Text(
             "Personalized your recommendation",
             style: TextStyle(

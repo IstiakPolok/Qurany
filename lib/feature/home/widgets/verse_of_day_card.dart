@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/feature/home/controller/verse_of_day_controller.dart';
 import 'package:qurany/feature/home/view/verse_of_day_screen.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class VerseOfDayCard extends StatelessWidget {
   const VerseOfDayCard({super.key});
@@ -125,16 +126,25 @@ class VerseOfDayCard extends StatelessWidget {
                           ),
                           SizedBox(width: 8.w),
                           Expanded(
-                            child: Text(
-                              verse.data.verse.verse.text,
-                              textDirection: TextDirection.rtl,
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.bold,
-                                height: 1.5,
-                              ),
+                            child: FutureBuilder<String>(
+                              future: SharedPreferencesHelper.getArabicScript(),
+                              builder: (context, snapshot) {
+                                final scriptFont = snapshot.data ?? 'Imlaei';
+                                return Text(
+                                  verse.data.verse.verse.text,
+                                  textDirection: TextDirection.rtl,
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.5,
+                                    fontFamily: scriptFont == 'IndoPak'
+                                        ? 'IndoPak'
+                                        : 'Arial',
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],

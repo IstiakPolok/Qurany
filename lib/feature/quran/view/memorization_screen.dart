@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/core/const/static_surah_data.dart';
+import 'package:qurany/core/services/notification_service.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
@@ -173,8 +174,6 @@ class MemorizationController extends GetxController {
 
   AudioPlayer get _activePlayer =>
       _activePlayerIndex.value == 1 ? _player1 : _player2;
-  AudioPlayer get _inactivePlayer =>
-      _activePlayerIndex.value == 1 ? _player2 : _player1;
 
   final RxInt currentPracticeSurahId = 0.obs;
   final RxInt currentPracticeVerseIndex = 0.obs;
@@ -189,7 +188,6 @@ class MemorizationController extends GetxController {
   final AudioRecorder _recorder = AudioRecorder();
   final RxBool isRecording = false.obs;
   final RxBool isAIProcessing = false.obs;
-  String? _lastRecordingPath;
 
   @override
   void onClose() {
@@ -275,6 +273,8 @@ class MemorizationController extends GetxController {
       if (!isRepeat) {
         await _player1.stop();
         await _player2.stop();
+      } else {
+        await _activePlayer.stop();
       }
 
       String? audioUrl = await _getAudioUrlForCurrentVerse();
@@ -284,8 +284,7 @@ class MemorizationController extends GetxController {
       );
 
       if (audioUrl != null) {
-        await _activePlayer.setSourceUrl(audioUrl);
-        await _activePlayer.resume();
+        await _activePlayer.play(UrlSource(audioUrl));
         isPlayingAudio.value = true;
       }
     } catch (e, st) {
@@ -413,7 +412,6 @@ class MemorizationController extends GetxController {
 
         await _recorder.start(config, path: path);
         isRecording.value = true;
-        _lastRecordingPath = path;
       } else {
         _log('startRecording: permission denied');
         Get.snackbar("Permission Denied", "Microphone permission is required");
@@ -459,6 +457,8 @@ class MemorizationController extends GetxController {
         _showResultsDialog(result);
         // Refresh stats to include new points
         fetchStats();
+        // Track daily memorized verse
+        SharedPreferencesHelper.incrementDailyMemorized();
       } else {
         _log('AI result: null');
         Get.snackbar("Error", "Failed to process pronunciation");
@@ -695,6 +695,153 @@ class MemorizationController extends GetxController {
 class MemorizationScreen extends StatelessWidget {
   const MemorizationScreen({super.key});
 
+  void _showDailyPracticeReminderDialog(BuildContext context) {
+    TimeOfDay? selectedTime;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final timeText = selectedTime == null
+                ? 'Select Time'
+                : selectedTime!.format(context);
+
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 18.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(dialogContext),
+                        child: Container(
+                          width: 34.w,
+                          height: 34.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.grey.shade400),
+                          ),
+                          child: Icon(
+                            Icons.close,
+                            size: 18.sp,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Container(
+                      width: 56.w,
+                      height: 56.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE3EEE4),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.notifications_none,
+                        size: 28.sp,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    Text(
+                      'Daily Practice Reminder',
+                      style: TextStyle(
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      'Set your daily memorization time',
+                      style: TextStyle(fontSize: 14.sp, color: Colors.black54),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 20.h),
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: selectedTime ?? TimeOfDay.now(),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            selectedTime = picked;
+                          });
+
+                          await NotificationService()
+                              .requestNotificationPermission();
+                          await NotificationService()
+                              .scheduleDailyMemorizationReminder(
+                                hour: picked.hour,
+                                minute: picked.minute,
+                              );
+                          await SharedPreferencesHelper.saveDailyPracticeReminderTime(
+                            picked.format(context),
+                          );
+
+                          if (context.mounted) {
+                            Get.snackbar(
+                              'Reminder Set',
+                              'Daily reminder set for ${picked.format(context)}',
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          }
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 12.h,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10.r),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                timeText,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: selectedTime == null
+                                      ? Colors.grey
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.access_time,
+                              color: Colors.grey.shade600,
+                              size: 20.sp,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final MemorizationController controller = Get.put(MemorizationController());
@@ -852,7 +999,7 @@ class MemorizationScreen extends StatelessWidget {
                         Text(
                           "${surah['id']}",
                           style: TextStyle(
-                            fontSize: 12.sp,
+                            fontSize: 10.sp,
                             fontWeight: FontWeight.bold,
                             color: primaryColor,
                           ),
@@ -948,42 +1095,69 @@ class MemorizationScreen extends StatelessWidget {
     int surahId,
     int totalVerses,
   ) {
-    // Determine how many verses to show (limiting for UI demo)
-    int displayLimit = 15;
-
-    return Wrap(
-      spacing: 12.w,
-      runSpacing: 12.h,
-      alignment: WrapAlignment.start,
-      children: List.generate(
-        totalVerses > displayLimit ? displayLimit : totalVerses,
-        (index) {
+    if (totalVerses <= 15) {
+      // For 15 or fewer verses, show them in a static grid (5 columns = up to 3 rows)
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: totalVerses,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 5,
+          mainAxisSpacing: 12.w,
+          crossAxisSpacing: 12.w,
+          childAspectRatio: 1.0,
+        ),
+        itemBuilder: (context, index) {
           final verseNum = index + 1;
-          final isSelected =
-              verseNum <= (controller.completedCounts[surahId] ?? 0);
-
-          return GestureDetector(
-            onTap: () => controller.startPracticeSession(surahId, verseNum),
-            child: Container(
-              width: 50.w,
-              height: 50.w,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isSelected ? primaryColor : bgColor.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(12.r),
-                // Could use a custom clipper for hexagon shape if strict adherence is needed
-              ),
-              child: Text(
-                "$verseNum",
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.black87,
-                ),
-              ),
-            ),
-          );
+          return _buildVerseItem(controller, surahId, verseNum);
         },
+      );
+    }
+
+    // For more than 15 verses, show horizontal scrolling with 3 fixed rows
+    return SizedBox(
+      height: 180.w, // Approx 60.w per row
+      child: GridView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: totalVerses,
+        padding: EdgeInsets.symmetric(vertical: 4.w),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12.w,
+          crossAxisSpacing: 12.w,
+          childAspectRatio: 1.0,
+        ),
+        itemBuilder: (context, index) {
+          final verseNum = index + 1;
+          return _buildVerseItem(controller, surahId, verseNum);
+        },
+      ),
+    );
+  }
+
+  Widget _buildVerseItem(
+    MemorizationController controller,
+    int surahId,
+    int verseNum,
+  ) {
+    final isSelected = verseNum <= (controller.completedCounts[surahId] ?? 0);
+
+    return GestureDetector(
+      onTap: () => controller.startPracticeSession(surahId, verseNum),
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor : bgColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Text(
+          "$verseNum",
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : Colors.black87,
+          ),
+        ),
       ),
     );
   }
@@ -1448,16 +1622,19 @@ class MemorizationScreen extends StatelessWidget {
         isPractice
             ? SizedBox(width: 40.w)
             : // Placeholder for centering
-              Container(
-                padding: EdgeInsets.all(8.w),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                ),
-                child: Icon(
-                  Icons.chat_bubble_outline,
-                  size: 20.sp,
-                  color: Colors.black87,
+              GestureDetector(
+                onTap: () => _showDailyPracticeReminderDialog(context),
+                child: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                  ),
+                  child: Icon(
+                    Icons.notifications_none,
+                    size: 20.sp,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
       ],

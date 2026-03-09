@@ -4,7 +4,6 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
-import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/prayer/controller/prayer_controller.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
@@ -508,7 +507,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
 
           // First row - Unlocked styles
           SizedBox(
-            height: 100.h,
+            height: 103.h,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [

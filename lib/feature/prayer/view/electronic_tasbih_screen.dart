@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'dart:ui' as ui;
 
 class ElectronicTasbihScreen extends StatefulWidget {
@@ -26,6 +27,14 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   final AudioPlayer _audioPlayer = AudioPlayer();
   PlayerState _playerState = PlayerState.stopped;
   int? _currentlyPlayingIndex;
+
+  // Bead style: maps style name to ball image asset
+  static const Map<String, String> _beadStyles = {
+    'Green': 'assets/image/greenball.png',
+    'Orange': 'assets/image/ornageball.png',
+    'Parrot': 'assets/image/parrotball.png',
+  };
+  String _selectedBeadStyle = 'Green';
 
   final List<Map<String, String>> _dhikrList = [
     {
@@ -123,6 +132,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         _round = prefs.getInt('electronic_tasbih_round') ?? 1;
         _targetCount = prefs.getInt('electronic_tasbih_target') ?? 100;
         _selectedDhikrIndex = prefs.getInt('electronic_tasbih_dhikr_index');
+        _selectedBeadStyle =
+            prefs.getString('electronic_tasbih_bead_style') ?? 'Green';
       });
     }
   }
@@ -137,6 +148,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     } else {
       await prefs.remove('electronic_tasbih_dhikr_index');
     }
+    await prefs.setString('electronic_tasbih_bead_style', _selectedBeadStyle);
   }
 
   void _calculatePath(Size size) {
@@ -184,6 +196,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       }
     });
     _savePreferences();
+    SharedPreferencesHelper.incrementDailyDhikr();
   }
 
   void _decrementCounter() {
@@ -586,7 +599,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   Text(
                     "Choose Your Dhikr",
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 14.sp,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
                     ),
@@ -596,7 +609,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   Text(
                     "Start counting blessings with the zikr that speaks to your heart.",
                     style: TextStyle(
-                      fontSize: 14.sp,
+                      fontSize: 12.sp,
                       color: Colors.grey[800],
                       height: 1.2,
                     ),
@@ -626,7 +639,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             ),
             Image.asset(
               'assets/image/tasbih_hand.png',
-              height: 80.h,
+              height: 70.h,
               fit: BoxFit.contain,
             ),
           ],
@@ -648,7 +661,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
               "Current Dhikr",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 14.sp,
+                fontSize: 12.sp,
                 color: Colors.black87,
               ),
             ),
@@ -661,18 +674,22 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                 style: TextStyle(
                   color: Colors.green[900],
                   fontWeight: FontWeight.bold,
-                  fontSize: 13.sp,
+                  fontSize: 12.sp,
                   decoration: TextDecoration.underline,
                 ),
               ),
             ),
             IconButton(
               onPressed: _showClearDialog,
-              icon: Icon(Icons.delete_outline, color: Colors.black87),
+              icon: Icon(
+                Icons.delete_outline,
+                color: Colors.black87,
+                size: 20.sp,
+              ),
             ),
           ],
         ),
-        SizedBox(height: 12.h),
+
         Container(
           margin: EdgeInsets.only(bottom: 8.h),
           padding: EdgeInsets.all(20.w),
@@ -1035,12 +1052,16 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           ),
                         ),
                         ..._buildVisibleBeads(constraints.maxWidth, beadHeight),
-                        Text(
-                          "Right to left swipe will\ndecrease count",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.grey[600],
+
+                        Positioned(
+                          bottom: 20.h,
+                          child: Text(
+                            "Right to left swipe will\ndecrease count",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ),
                       ],
@@ -1057,9 +1078,21 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildStyleItem("Green", 'assets/image/1.png', true),
-                _buildStyleItem("Orange", 'assets/image/2.png', false),
-                _buildStyleItem("Parrot", 'assets/image/3.png', false),
+                _buildStyleItem(
+                  "Green",
+                  'assets/image/1.png',
+                  _selectedBeadStyle == 'Green',
+                ),
+                _buildStyleItem(
+                  "Orange",
+                  'assets/image/2.png',
+                  _selectedBeadStyle == 'Orange',
+                ),
+                _buildStyleItem(
+                  "Parrot",
+                  'assets/image/3.png',
+                  _selectedBeadStyle == 'Parrot',
+                ),
                 _buildStyleItem(
                   "Galaxy",
                   'assets/image/4.png',
@@ -1223,7 +1256,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                 child: isCenterBead
                     ? null
                     : Image.asset(
-                        'assets/image/greenball.png',
+                        _beadStyles[_selectedBeadStyle] ??
+                            'assets/image/greenball.png',
                         fit: BoxFit.cover,
                       ),
               ),
@@ -1241,20 +1275,46 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     bool isSelected, {
     bool isLocked = false,
   }) {
-    return Stack(
-      children: [
-        Image.asset(imagePath, width: 100.w, height: 80.h, fit: BoxFit.contain),
-        if (isLocked)
-          Positioned(
-            top: 0.h,
-            right: 12.w,
-            child: Container(
-              padding: EdgeInsets.all(3.w),
-
-              child: Icon(Icons.lock, size: 12.sp, color: Colors.grey),
+    return GestureDetector(
+      onTap: isLocked
+          ? null
+          : () {
+              setState(() {
+                _selectedBeadStyle = label;
+              });
+              _savePreferences();
+            },
+      child: Stack(
+        children: [
+          Container(
+            decoration: isSelected
+                ? BoxDecoration(
+                    border: Border.all(
+                      color: const Color(0xFF2E7D32),
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(12.r),
+                  )
+                : null,
+            child: Image.asset(
+              imagePath,
+              width: 100.w,
+              height: 80.h,
+              fit: BoxFit.contain,
             ),
           ),
-      ],
+          if (isLocked)
+            Positioned(
+              top: 0.h,
+              right: 12.w,
+              child: Container(
+                padding: EdgeInsets.all(3.w),
+
+                child: Icon(Icons.lock, size: 12.sp, color: Colors.grey),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

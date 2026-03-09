@@ -1,11 +1,16 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/quran/view/listen_mode_screen.dart';
 import 'package:qurany/feature/quran/view/memorization_screen.dart';
+import 'package:qurany/feature/quran/view/quran_read_mode_screen.dart';
 import 'package:qurany/feature/ask_ai/view/ask_ai_intro_screen.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
@@ -13,6 +18,7 @@ import 'package:qurany/feature/quran/model/tafsir_model.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 import '../../../core/const/static_surah_data.dart';
+import '../../../core/network_caller/endpoints.dart' as Urls;
 
 // Controller
 class SurahReadingController extends GetxController {
@@ -21,6 +27,7 @@ class SurahReadingController extends GetxController {
   final String surahName;
   final String arabicName;
   final int totalAyaCount;
+  final int? initialVerseId;
 
   final AudioPlayer _player1 = AudioPlayer();
   final AudioPlayer _player2 = AudioPlayer();
@@ -50,22 +57,55 @@ class SurahReadingController extends GetxController {
   RxBool isLoadingTafsir = false.obs;
   RxInt tafsirPage = 1.obs;
   RxBool hasMoreTafsir = true.obs;
+  RxString selectedScriptName = 'Imlaei'.obs;
+
+  // Reading time tracking
+  Timer? _readingTimer;
+  int _sessionSeconds = 0;
 
   SurahReadingController({
     required this.surahId,
     required this.surahName,
     required this.arabicName,
     required this.totalAyaCount,
+    this.initialVerseId,
   });
 
   @override
   void onInit() {
     super.onInit();
+
+    // Set initial playing verse if provided
+    if (initialVerseId != null) {
+      currentPlayingVerse.value = initialVerseId!;
+    }
+
     fetchSurahDetails();
     fetchTafsir();
+    _loadScriptPreference();
 
     _setupPlayerListeners(_player1);
     _setupPlayerListeners(_player2);
+
+    // Start reading time tracker
+    _startReadingTimer();
+  }
+
+  Future<void> _loadScriptPreference() async {
+    final script = await SharedPreferencesHelper.getArabicScript();
+    selectedScriptName.value = script;
+  }
+
+  Future<void> _startReadingTimer() async {
+    // Load already-accumulated seconds for today
+    _sessionSeconds = await SharedPreferencesHelper.getDailyReadingSeconds();
+    _readingTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      _sessionSeconds++;
+      // Save every 30 seconds to avoid too many writes
+      if (_sessionSeconds % 30 == 0) {
+        await SharedPreferencesHelper.saveDailyReadingSeconds(_sessionSeconds);
+      }
+    });
   }
 
   void _setupPlayerListeners(AudioPlayer player) {
@@ -194,6 +234,9 @@ class SurahReadingController extends GetxController {
 
   @override
   void onClose() {
+    // Save final reading seconds before closing
+    SharedPreferencesHelper.saveDailyReadingSeconds(_sessionSeconds);
+    _readingTimer?.cancel();
     _player1.dispose();
     _player2.dispose();
     super.onClose();
@@ -201,8 +244,11 @@ class SurahReadingController extends GetxController {
 
   Future<void> toggleBookmark(int verseId) async {
     try {
-      final success = await _quranService.toggleBookmarkVerse(surahId, verseId);
-      if (success) {
+      final result = await _quranService.toggleBookmarkVerseAction(
+        surahId,
+        verseId,
+      );
+      if (result.success) {
         Get.snackbar(
           "Success",
           "Bookmark updated",
@@ -213,7 +259,7 @@ class SurahReadingController extends GetxController {
       } else {
         Get.snackbar(
           "Error",
-          "Failed to update bookmark",
+          result.message,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.black,
@@ -399,6 +445,7 @@ class SurahReadingScreen extends StatelessWidget {
   final String origin;
   final int ayaCount;
   final String translation;
+  final int? initialVerseId;
 
   const SurahReadingScreen({
     super.key,
@@ -409,7 +456,26 @@ class SurahReadingScreen extends StatelessWidget {
     required this.origin,
     required this.ayaCount,
     required this.translation,
+    this.initialVerseId,
   });
+
+  Future<void> _copyVerseInfo(VerseDetailModel verse) async {
+    final String transliteration = verse.transliteration.trim();
+    final String verseInfo = [
+      '$surahName - Aya ${verse.verseId}',
+      'Arabic: ${verse.text}',
+      if (transliteration.isNotEmpty) 'Transliteration: $transliteration',
+      'Translation: ${verse.translation}',
+    ].join('\n');
+
+    await Clipboard.setData(ClipboardData(text: verseInfo));
+    Get.snackbar(
+      'Copied',
+      'Verse info copied to clipboard',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -419,6 +485,7 @@ class SurahReadingScreen extends StatelessWidget {
         surahName: surahName,
         arabicName: arabicName,
         totalAyaCount: ayaCount,
+        initialVerseId: initialVerseId,
       ),
       tag: surahId.toString(),
     );
@@ -542,6 +609,7 @@ class SurahReadingScreen extends StatelessWidget {
           },
         )
         .toList();
+    String searchQuery = '';
 
     showModalBottomSheet(
       context: context,
@@ -555,114 +623,187 @@ class SurahReadingScreen extends StatelessWidget {
         maxChildSize: 0.9,
         minChildSize: 0.5,
         expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: EdgeInsets.symmetric(vertical: 12.h),
-              width: 40.w,
-              height: 4.h,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
+        builder: (context, scrollController) => StatefulBuilder(
+          builder: (context, setModalState) {
+            final query = searchQuery.trim().toLowerCase();
+            final filteredSurahs = surahs.where((surah) {
+              if (query.isEmpty) return true;
+              final number = (surah['number'] ?? '').toString().toLowerCase();
+              final name = (surah['name'] ?? '').toString().toLowerCase();
+              final arabicName = (surah['arabicName'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              final translation = (surah['translation'] ?? '')
+                  .toString()
+                  .toLowerCase();
 
-            // Search bar
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12.r),
+              return number.contains(query) ||
+                  name.contains(query) ||
+                  arabicName.contains(query) ||
+                  translation.contains(query);
+            }).toList();
+
+            return Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: EdgeInsets.symmetric(vertical: 12.h),
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "Search",
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 14.sp,
-                        ),
-                      ),
+
+                // Search bar
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
-                    Icon(Icons.search, color: Colors.grey[500], size: 20.sp),
-                  ],
-                ),
-              ),
-            ),
-
-            SizedBox(height: 12.h),
-
-            // Surah list
-            Expanded(
-              child: ListView.builder(
-                controller: scrollController,
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                itemCount: surahs.length,
-                itemBuilder: (context, index) {
-                  final surah = surahs[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showSurahInfoSheet(context, surah);
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: Colors.grey[200]!,
-                            width: 0.5,
-                          ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.search,
+                          color: Colors.grey[500],
+                          size: 20.sp,
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Surah number in image
-                          Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/icons/Layer_1.png',
-                                width: 32.w,
-                                height: 32.w,
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: TextField(
+                            onChanged: (value) {
+                              setModalState(() {
+                                searchQuery = value;
+                              });
+                            },
+                            decoration: InputDecoration(
+                              hintText: 'Search surah',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 14.sp,
                               ),
-                              Text(
-                                surah["number"].toString(),
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(width: 16.w),
-                          // Surah name
-                          Text(
-                            surah["name"],
-                            style: TextStyle(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w500,
+                              border: InputBorder.none,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
-            ),
-          ],
+                  ),
+                ),
+
+                SizedBox(height: 12.h),
+
+                // Surah list
+                Expanded(
+                  child: filteredSurahs.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No surah found',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          itemCount: filteredSurahs.length,
+                          itemBuilder: (context, index) {
+                            final surah = filteredSurahs[index];
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.pop(context);
+                                _showSurahInfoSheet(context, surah);
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(vertical: 14.h),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: Colors.grey[200]!,
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Surah number in image
+                                    Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Image.asset(
+                                          'assets/icons/Layer_1.png',
+                                          width: 32.w,
+                                          height: 32.w,
+                                        ),
+                                        Text(
+                                          surah['number'].toString(),
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 12.sp,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(width: 16.w),
+                                    // Surah name
+                                    Text(
+                                      surah['name'],
+                                      style: TextStyle(
+                                        fontSize: 15.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
+  Future<Map<String, dynamic>?> _fetchSurahDetails(int surahId) async {
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final url = Uri.parse('${Urls.baseUrl}/api/quran/surah-details/$surahId');
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer ${token ?? ''}',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        if (body['success'] == true) {
+          return body['data'] as Map<String, dynamic>;
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[DEBUG] fetchSurahDetails error: $e');
+    }
+    return null;
+  }
+
   void _showSurahInfoSheet(BuildContext context, Map<String, dynamic> surah) {
+    final int surahNumber = surah['number'] ?? 1;
+    final String arabicName = surah['arabicName'] ?? '';
+    final int ayaCount = surah['ayaCount'] ?? 0;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -675,159 +816,213 @@ class SurahReadingScreen extends StatelessWidget {
         maxChildSize: 0.95,
         minChildSize: 0.5,
         expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: EdgeInsets.all(4.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      size: 16.sp,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                controller: scrollController,
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, scrollController) =>
+            FutureBuilder<Map<String, dynamic>?>(
+              future: _fetchSurahDetails(surahNumber),
+              builder: (context, snapshot) {
+                final details = snapshot.data;
+                final isLoading =
+                    snapshot.connectionState == ConnectionState.waiting;
+
+                return Column(
                   children: [
-                    // Surah name and Arabic name
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          surah["name"].toString().toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: EdgeInsets.all(4.w),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close,
+                              size: 16.sp,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ),
-                        Text(
-                          "الفاتحة",
-                          style: TextStyle(
-                            fontSize: 24.sp,
-                            fontFamily: 'Arial',
+                      ),
+                    ),
+                    if (isLoading)
+                      const Expanded(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: scrollController,
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Surah name and Arabic name
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      (details?['name'] ?? surah['name'])
+                                          .toString()
+                                          .toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  FutureBuilder<String>(
+                                    future:
+                                        SharedPreferencesHelper.getArabicScript(),
+                                    builder: (context, fontSnap) {
+                                      final scriptFont =
+                                          fontSnap.data ?? 'Imlaei';
+                                      return Text(
+                                        arabicName,
+                                        style: TextStyle(
+                                          fontSize: 24.sp,
+                                          fontFamily: scriptFont == 'IndoPak'
+                                              ? 'IndoPak'
+                                              : 'Arial',
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 16.h),
+
+                              // Info row
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildInfoColumn(
+                                    'Meaning',
+                                    details?['meaning'] ??
+                                        surah['translation'] ??
+                                        '-',
+                                  ),
+                                  SizedBox(width: 24.w),
+                                  _buildInfoColumn(
+                                    'Revelation',
+                                    details?['revelation'] ??
+                                        surah['origin'] ??
+                                        '-',
+                                  ),
+                                  SizedBox(width: 24.w),
+                                  _buildInfoColumn(
+                                    'Ayahs',
+                                    '${details?['totalVerses'] ?? ayaCount} Aya',
+                                  ),
+                                ],
+                              ),
+
+                              SizedBox(height: 24.h),
+                              Divider(color: Colors.grey[200]),
+                              SizedBox(height: 16.h),
+
+                              // Short Description
+                              if ((details?['shortDescription'] ?? '')
+                                  .isNotEmpty)
+                                Text(
+                                  details!['shortDescription'],
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    color: Colors.grey[700],
+                                    height: 1.6,
+                                  ),
+                                ),
+
+                              if ((details?['shortDescription'] ?? '')
+                                  .isNotEmpty)
+                                SizedBox(height: 24.h),
+
+                              // Period of Revelation
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(16.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Period of Revelation',
+                                      style: TextStyle(
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 12.h),
+                                    Text(
+                                      details?['periodOfRevelation'] ?? '-',
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        color: Colors.grey[700],
+                                        height: 1.6,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              SizedBox(height: 16.h),
+
+                              // Long Description / Theme
+                              if ((details?['longDescription'] ?? '')
+                                  .isNotEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(16.w),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(12.r),
+                                    border: Border.all(
+                                      color: Colors.grey[200]!,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Theme',
+                                        style: TextStyle(
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 12.h),
+                                      Text(
+                                        details!['longDescription'],
+                                        style: TextStyle(
+                                          fontSize: 13.sp,
+                                          color: Colors.grey[700],
+                                          height: 1.6,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                              SizedBox(height: 32.h),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-
-                    SizedBox(height: 16.h),
-
-                    // Info row
-                    Row(
-                      children: [
-                        _buildInfoColumn("Meaning", "The opener"),
-                        SizedBox(width: 40.w),
-                        _buildInfoColumn("Revelation Place", "Meccan"),
-                        SizedBox(width: 40.w),
-                        _buildInfoColumn("Ayahs", "7 Aya"),
-                      ],
-                    ),
-
-                    SizedBox(height: 24.h),
-                    Divider(color: Colors.grey[200]),
-                    SizedBox(height: 16.h),
-
-                    // Description
-                    Text(
-                      "This Surah is named Al-Fatihah because of its subject matter. Fatihah is that which opens a subject or a book or any other thing. In other words, Al-Fatihah is a sort of preface.",
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey[700],
-                        height: 1.6,
                       ),
-                    ),
-
-                    SizedBox(height: 24.h),
-
-                    // Period of Revelation
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Period of Revelation",
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 12.h),
-                          Text(
-                            "Surah Al-Fatihah is one of the very earliest Revelations to the Holy Prophet. As a matter of fact, we learn from authentic traditions that it was the first complete Surah that was revealed to Muhammad (Allah's peace be upon him). Before this, only a few miscellaneous verses were revealed which form parts of Alaq, Muzzammil, Muddaththir, etc.",
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.grey[700],
-                              height: 1.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 16.h),
-
-                    // Theme
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Theme",
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 12.h),
-                          Text(
-                            "This Surah is in fact a prayer that Allah has taught to all those who want to make a study of His book. It has been placed at the very beginning of the Quran to teach this lesson to the reader: if you sincerely want to benefit from the Quran, you should offer this prayer to the Lord of the Universe.\n\nThis preface is meant to create a strong desire in the heart of the reader to seek guidance from the Lord of the Universe Who alone can grant it. Thus Al-Fatihah indirectly teaches that the best thing for a man is to pray for guidance to the straight path, to study the Quran with the mental attitude of a seeker searching for the truth, and to recognize the fact that the Lord of the Universe is the source of all knowledge.",
-                            style: TextStyle(
-                              fontSize: 13.sp,
-                              color: Colors.grey[700],
-                              height: 1.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 32.h),
                   ],
-                ),
-              ),
+                );
+              },
             ),
-          ],
-        ),
       ),
     );
   }
@@ -1052,7 +1247,7 @@ class SurahReadingScreen extends StatelessWidget {
             return _buildLoadMoreButton(controller);
           }
           final verse = controller.verses[index];
-          return _buildTransliterationCard(verse, controller);
+          return _buildTransliterationCard(verse, controller, context);
         },
       );
     });
@@ -1194,74 +1389,111 @@ class SurahReadingScreen extends StatelessWidget {
   }
 
   Widget _buildTafsirDetailedHeader() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: const Color(0xFFEEEEEE)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Tafsir",
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _fetchSurahDetails(surahId),
+      builder: (context, snapshot) {
+        final details = snapshot.data;
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+        final name = details?['name'] ?? surahName;
+        final revelation = details?['revelation'] ?? origin;
+        final shortDescription = details?['shortDescription'] ?? '';
+        final periodOfRevelation = details?['periodOfRevelation'] ?? '';
+        final longDescription = details?['longDescription'] ?? '';
+
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 16.w),
+          padding: EdgeInsets.all(16.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF9F9F9),
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: const Color(0xFFEEEEEE)),
+          ),
+          child: isLoading
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Tafsir",
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.black87,
+                          size: 20.sp,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      "INTRODUCTION TO ${name.toUpperCase()}",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF2E7D32),
+                      ),
+                    ),
+                    if (revelation.isNotEmpty) ...[
+                      SizedBox(height: 8.h),
+                      Text(
+                        "Which was revealed in $revelation",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                    if (shortDescription.isNotEmpty) ...[
+                      SizedBox(height: 8.h),
+                      Text(
+                        shortDescription,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                    if (periodOfRevelation.isNotEmpty) ...[
+                      SizedBox(height: 8.h),
+                      Text(
+                        "Period of Revelation: $periodOfRevelation",
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                    if (longDescription.isNotEmpty) ...[
+                      SizedBox(height: 8.h),
+                      Text(
+                        longDescription,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-              Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.black87,
-                size: 20.sp,
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Text(
-            "INTRODUCTION TO FATIHAH",
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF2E7D32),
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            "Which was revealed in Makkah?",
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            "The Meaning of Al-Fatihah and its Various Names",
-            style: TextStyle(
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            "This Surah is called\n- Al-Fatihah, that is, the Opener of the Book, the Surah with which prayers are begun.\n- It is also called, Umm Al-Kitab (the Mother of the Book), according to the majority of the scholars. In an authentic Hadith recorded by At-Tirmidhi, who graded it Sahih, Abu Hurayrah said that the Messenger of Allah ﷺ said,",
-            style: TextStyle(
-              fontSize: 13.sp,
-              color: Colors.grey[700],
-              height: 1.5,
-            ),
-          ),
-          // Add more static content here as needed or make it expandable
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1315,47 +1547,67 @@ class SurahReadingScreen extends StatelessWidget {
               SizedBox(width: 12.w),
               // Arabic text with verse number
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Image.asset(
-                              'assets/icons/Layer_1.png',
+                child: GestureDetector(
+                  onTap: () {
+                    Get.to(
+                      () => QuranReadModeScreen(
+                        surahName: surahName,
+                        arabicName: arabicName,
+                        meaning: meaning,
+                        origin: origin,
+                        ayaCount: ayaCount,
+                        translation: translation,
+                        verses: controller.verses,
+                        controller: controller,
+                      ),
+                    );
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/icons/Layer_1.png',
 
-                              height: 35.w,
-                            ),
-                            Text(
-                              verse.ayate,
-                              style: TextStyle(
-                                color: const Color(0xFF2E7D32),
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.bold,
+                                height: 35.w,
                               ),
-                            ),
-                          ],
-                        ),
-
-                        Expanded(
-                          child: Text(
-                            verse.text,
-                            style: TextStyle(
-                              fontSize: 22.sp,
-                              fontFamily: 'Arial',
-                              height: 1.8,
-                            ),
-                            textDirection: TextDirection.rtl,
-                            textAlign: TextAlign.right,
+                              Text(
+                                verse.ayate,
+                                style: TextStyle(
+                                  color: const Color(0xFF2E7D32),
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+
+                          Expanded(
+                            child: Text(
+                              verse.text,
+                              style: TextStyle(
+                                fontSize: 22.sp,
+                                fontFamily:
+                                    controller.selectedScriptName.value ==
+                                        'IndoPak'
+                                    ? 'IndoPak'
+                                    : 'Arial',
+                                height: 1.8,
+                              ),
+                              textDirection: TextDirection.rtl,
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1390,13 +1642,13 @@ class SurahReadingScreen extends StatelessWidget {
               ),
               Row(
                 children: [
-                  Image.asset(
-                    'assets/icons/1.solar_notes-outline.png',
-                    width: 18.sp,
-                    height: 18.sp,
-                    // color: verse.notes.isNotEmpty
-                    //     ? const Color(0xFF2E7D32)
-                    //     : null,
+                  GestureDetector(
+                    onTap: () => _copyVerseInfo(verse),
+                    child: Image.asset(
+                      'assets/icons/1.solar_notes-outline.png',
+                      width: 18.sp,
+                      height: 18.sp,
+                    ),
                   ),
                   SizedBox(width: 16.w),
                   GestureDetector(
@@ -1637,9 +1889,9 @@ class SurahReadingScreen extends StatelessWidget {
     final TextEditingController noteController = TextEditingController(
       text: existingNote?.description ?? '',
     );
-    final QuranService _noteService = QuranService();
-    bool _isSaving = false;
-    bool _isDeleting = false;
+    final QuranService noteService = QuranService();
+    bool isSaving = false;
+    bool isDeleting = false;
 
     showDialog(
       context: context,
@@ -1727,21 +1979,32 @@ class SurahReadingScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isSaving
+                    onPressed: isSaving
                         ? null
                         : () async {
                             final text = noteController.text.trim();
                             if (text.isEmpty) return;
-                            setState(() => _isSaving = true);
-                            final msg = await _noteService.createNote(
+                            setState(() => isSaving = true);
+                            final msg = await noteService.createNote(
                               description: text,
                               surahId: surahId,
                               verseId: verseId,
                               id: id,
                             );
-                            setState(() => _isSaving = false);
+                            setState(() => isSaving = false);
                             if (context.mounted) Navigator.pop(context);
                             if (msg != null) {
+                              // Update verse notes in-memory so the UI refreshes
+                              final updatedNote = NoteModel(
+                                id: existingNote?.id ?? '',
+                                title: '$surahName, Aya $verseId',
+                                description: text,
+                                surahId: surahId,
+                                verseId: verseId,
+                              );
+                              controller.updateVerseNotes(verseId, [
+                                updatedNote,
+                              ]);
                               Get.snackbar(
                                 'Note Saved',
                                 msg,
@@ -1769,7 +2032,7 @@ class SurahReadingScreen extends StatelessWidget {
                       ),
                       elevation: 0,
                     ),
-                    child: _isSaving
+                    child: isSaving
                         ? SizedBox(
                             width: 18.w,
                             height: 18.w,
@@ -1793,14 +2056,14 @@ class SurahReadingScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isDeleting
+                      onPressed: isDeleting
                           ? null
                           : () async {
-                              setState(() => _isDeleting = true);
-                              final ok = await _noteService.deleteNote(
+                              setState(() => isDeleting = true);
+                              final ok = await noteService.deleteNote(
                                 existingNote!.id,
                               );
-                              setState(() => _isDeleting = false);
+                              setState(() => isDeleting = false);
                               if (context.mounted) Navigator.pop(context);
                               if (ok) {
                                 controller.updateVerseNotes(verseId, []);
@@ -1831,7 +2094,7 @@ class SurahReadingScreen extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: _isDeleting
+                      child: isDeleting
                           ? SizedBox(
                               width: 18.w,
                               height: 18.w,
@@ -1861,6 +2124,7 @@ class SurahReadingScreen extends StatelessWidget {
   Widget _buildTransliterationCard(
     VerseDetailModel verse,
     SurahReadingController controller,
+    BuildContext context,
   ) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -1917,7 +2181,10 @@ class SurahReadingScreen extends StatelessWidget {
                         verse.text,
                         style: TextStyle(
                           fontSize: 22.sp,
-                          fontFamily: 'Arial',
+                          fontFamily:
+                              controller.selectedScriptName.value == 'IndoPak'
+                              ? 'IndoPak'
+                              : 'Arial',
                           height: 1.8,
                         ),
                         textDirection: TextDirection.rtl,
@@ -1983,28 +2250,48 @@ class SurahReadingScreen extends StatelessWidget {
               Icon(Icons.more_horiz, color: Colors.grey[500], size: 20.sp),
               Row(
                 children: [
-                  Icon(
-                    Icons.message_outlined,
-                    color: Colors.grey[400],
-                    size: 20.sp,
+                  GestureDetector(
+                    onTap: () => _copyVerseInfo(verse),
+                    child: Image.asset(
+                      'assets/icons/1.solar_notes-outline.png',
+                      width: 18.sp,
+                      height: 18.sp,
+                    ),
                   ),
                   SizedBox(width: 16.w),
-                  Icon(
-                    Icons.edit_outlined,
-                    color: Colors.grey[400],
-                    size: 20.sp,
+                  GestureDetector(
+                    onTap: () => _showAddNoteDialog(
+                      context,
+                      verse.id,
+                      verse.verseId,
+                      verse.notes,
+                      controller,
+                    ),
+                    child: Image.asset(
+                      'assets/icons/2.solar_document-add-broken.png',
+                      width: 18.sp,
+                      height: 18.sp,
+                      color: verse.notes.isNotEmpty
+                          ? const Color(0xFF2E7D32)
+                          : null,
+                    ),
+                  ),
+
+                  SizedBox(width: 16.w),
+                  Image.asset(
+                    'assets/icons/3.iconoir_double-check.png',
+                    width: 18.sp,
+                    height: 18.sp,
+                    color: verse.isVerseRead ? Colors.green : null,
                   ),
                   SizedBox(width: 16.w),
-                  Icon(
-                    Icons.check,
-                    color: verse.isVerseRead ? Colors.green : Colors.grey[400],
-                    size: 20.sp,
-                  ),
-                  SizedBox(width: 16.w),
-                  Icon(
-                    Icons.bookmark_border,
-                    color: Colors.grey[400],
-                    size: 20.sp,
+                  GestureDetector(
+                    onTap: () => controller.toggleBookmark(verse.verseId),
+                    child: Image.asset(
+                      'assets/icons/4.material-symbols_bookmark-outline-rounded.png',
+                      width: 18.sp,
+                      height: 18.sp,
+                    ),
                   ),
                 ],
               ),
@@ -2038,7 +2325,9 @@ class SurahReadingScreen extends StatelessWidget {
                   tafsir.verse,
                   style: TextStyle(
                     fontSize: 20.sp,
-                    fontFamily: 'Arial',
+                    fontFamily: controller.selectedScriptName.value == 'IndoPak'
+                        ? 'IndoPak'
+                        : 'Arial',
                     height: 1.8,
                   ),
                   textDirection: TextDirection.rtl,

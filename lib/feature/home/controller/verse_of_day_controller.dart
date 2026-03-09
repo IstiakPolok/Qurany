@@ -1,9 +1,14 @@
 import 'package:get/get.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:qurany/core/network_caller/network_error_handler.dart';
+import 'package:qurany/core/services/notification_service.dart';
 import 'package:qurany/feature/home/model/random_verse_model.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 
 class VerseOfDayController extends GetxController {
   final QuranService _quranService = QuranService();
+  final AudioPlayer audioPlayer = AudioPlayer();
+  final NotificationService _notificationService = NotificationService();
 
   final Rx<RandomVerseResponse?> randomVerse = Rx<RandomVerseResponse?>(null);
   final RxBool isLoading = true.obs;
@@ -13,10 +18,33 @@ class VerseOfDayController extends GetxController {
   final RxBool isAiReflectionLoading = false.obs;
   final RxString aiReflectionErrorMessage = ''.obs;
 
+  final RxnString currentlyPlayingUrl = RxnString();
+
   @override
   void onInit() {
     super.onInit();
     fetchRandomVerse();
+
+    audioPlayer.onPlayerComplete.listen((event) {
+      currentlyPlayingUrl.value = null;
+    });
+  }
+
+  @override
+  void onClose() {
+    audioPlayer.dispose();
+    super.onClose();
+  }
+
+  Future<void> toggleAudio(String url) async {
+    if (currentlyPlayingUrl.value == url) {
+      await audioPlayer.pause();
+      currentlyPlayingUrl.value = null;
+    } else {
+      await audioPlayer.stop(); // Stop any previous audio
+      await audioPlayer.play(UrlSource(url));
+      currentlyPlayingUrl.value = url;
+    }
   }
 
   Future<void> fetchRandomVerse() async {
@@ -28,12 +56,37 @@ class VerseOfDayController extends GetxController {
       final response = await _quranService.fetchRandomVerse();
       randomVerse.value = response;
 
+      // Show notification for verse of the day
+      _notificationService.showInstantNotification(
+        id: 100, // Unique ID for Verse
+        title: 'Verse of the Day',
+        body:
+            '"${response.data.verse.ayate}" [${response.data.verse.transliteration} ${response.data.verse.verseId}]',
+      );
+
       await _fetchAiReflectionForVerse(
         surahId: response.data.verse.surahId,
         verseId: response.data.verse.verseId,
       );
+    } on NoInternetException {
+      errorMessage('No internet connection');
+      NetworkErrorHandler.showNoInternetDialog(
+        onRetry: () => fetchRandomVerse(),
+      );
+    } on MaintenanceException {
+      errorMessage('App is under maintenance');
+      NetworkErrorHandler.showMaintenanceMessage(
+        onRetry: () => fetchRandomVerse(),
+      );
     } catch (e) {
-      errorMessage('Failed to load verse: $e');
+      if (NetworkErrorHandler.isNoInternetError(e)) {
+        errorMessage('No internet connection');
+        NetworkErrorHandler.showNoInternetDialog(
+          onRetry: () => fetchRandomVerse(),
+        );
+      } else {
+        errorMessage('Failed to load verse: $e');
+      }
       print('Error in VerseOfDayController: $e');
     } finally {
       isLoading(false);

@@ -8,6 +8,10 @@ class SharedPreferencesHelper {
   static const String _isWelcomeDialogShownKey =
       'isDriverVerificationDialogShown';
   static const String _feelingKey = 'user_feeling';
+  static const String _dailyPracticeReminderTimeKey =
+      'daily_practice_reminder_time';
+  static const String _prayerNotificationSettingsPrefix =
+      'prayer_notification_settings_';
 
   // Save categories (id and name only)
   static Future<void> saveCategories(
@@ -269,5 +273,152 @@ class SharedPreferencesHelper {
   static Future<void> clearRecentReadingHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_recentReadingKey);
+  }
+
+  // --- Daily Reading Time ---
+  static String _dailyReadingKey() {
+    final now = DateTime.now();
+    return 'daily_reading_${now.year}_${now.month}_${now.day}';
+  }
+
+  static Future<void> saveDailyReadingSeconds(int seconds) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_dailyReadingKey(), seconds);
+  }
+
+  static Future<int> getDailyReadingSeconds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_dailyReadingKey()) ?? 0;
+  }
+
+  // --- Daily Dhikr Count ---
+  static String _dailyDhikrKey() {
+    final now = DateTime.now();
+    return 'daily_dhikr_${now.year}_${now.month}_${now.day}';
+  }
+
+  static Future<void> incrementDailyDhikr() async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getInt(_dailyDhikrKey()) ?? 0;
+    await prefs.setInt(_dailyDhikrKey(), current + 1);
+  }
+
+  static Future<int> getDailyDhikrCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_dailyDhikrKey()) ?? 0;
+  }
+
+  // --- Daily Memorized Verses ---
+  static String _dailyMemorizedKey() {
+    final now = DateTime.now();
+    return 'daily_memorized_${now.year}_${now.month}_${now.day}';
+  }
+
+  static Future<void> incrementDailyMemorized() async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getInt(_dailyMemorizedKey()) ?? 0;
+    await prefs.setInt(_dailyMemorizedKey(), current + 1);
+  }
+
+  static Future<int> getDailyMemorizedCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_dailyMemorizedKey()) ?? 0;
+  }
+
+  // --- Completed Prayers Today (count checked from checklist) ---
+  static Future<int> getCompletedPrayersToday() async {
+    final checklist = await getPrayerChecklist(DateTime.now());
+    return checklist.values.where((v) => v == true).length;
+  }
+
+  static String _prayerChecklistKeyForDate(DateTime date) {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final dateKey = normalizedDate.toIso8601String().split('T').first;
+    return 'prayer_checklist_$dateKey';
+  }
+
+  static Future<void> savePrayerCheckStatus({
+    required DateTime date,
+    required String prayerName,
+    required bool isChecked,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _prayerChecklistKeyForDate(date);
+    final existingJson = prefs.getString(key);
+
+    final Map<String, dynamic> data = existingJson != null
+        ? Map<String, dynamic>.from(jsonDecode(existingJson))
+        : <String, dynamic>{};
+
+    data[prayerName] = isChecked;
+    await prefs.setString(key, jsonEncode(data));
+  }
+
+  static Future<Map<String, bool>> getPrayerChecklist(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _prayerChecklistKeyForDate(date);
+    final savedJson = prefs.getString(key);
+
+    if (savedJson == null) return {};
+
+    final decoded = Map<String, dynamic>.from(jsonDecode(savedJson));
+    return decoded.map((k, v) => MapEntry(k, v == true));
+  }
+
+  static Future<bool> getPrayerCheckStatus({
+    required DateTime date,
+    required String prayerName,
+  }) async {
+    final checklist = await getPrayerChecklist(date);
+    return checklist[prayerName] ?? false;
+  }
+
+  // --- Daily Memorization Reminder Time ---
+  static Future<void> saveDailyPracticeReminderTime(String timeText) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_dailyPracticeReminderTimeKey, timeText);
+  }
+
+  static Future<String?> getDailyPracticeReminderTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_dailyPracticeReminderTimeKey);
+    if (value == null || value.trim().isEmpty) return null;
+    return value;
+  }
+
+  static Future<void> savePrayerNotificationSettings({
+    required String prayerName,
+    required bool isAllowed,
+    required List<int> selectedDays,
+    required String notificationSound,
+    required String preAdhanReminder,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_prayerNotificationSettingsPrefix$prayerName';
+    final payload = <String, dynamic>{
+      'isAllowed': isAllowed,
+      'selectedDays': selectedDays,
+      'notificationSound': notificationSound,
+      'preAdhanReminder': preAdhanReminder,
+    };
+    await prefs.setString(key, jsonEncode(payload));
+  }
+
+  static Future<Map<String, dynamic>?> getPrayerNotificationSettings(
+    String prayerName,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_prayerNotificationSettingsPrefix$prayerName';
+    final raw = prefs.getString(key);
+    if (raw == null || raw.trim().isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+
+    return null;
   }
 }

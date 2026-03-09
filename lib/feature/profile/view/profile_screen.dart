@@ -6,7 +6,6 @@ import '../../../core/services_class/local_service/shared_preferences_helper.dar
 import '../../auth/services/google_auth_service.dart';
 import 'appearance_settings_screen.dart';
 import 'bookmarks_screen.dart';
-import 'downlaod_reciters_screen.dart';
 import 'edit_profile_screen.dart';
 import 'invite_friends_screen.dart';
 import 'notes_screen.dart';
@@ -470,19 +469,19 @@ class ProfileScreen extends StatelessWidget {
                   "English",
                 ),
                 _buildDivider(),
-                _buildSettingsItem(
-                  Icons.record_voice_over_outlined,
-                  "Reciter",
-                  "Download reciters",
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const DownloadedRecitersScreen(),
-                      ),
-                    );
-                  },
-                ),
+                // _buildSettingsItem(
+                //   Icons.record_voice_over_outlined,
+                //   "Reciter",
+                //   "Download reciters",
+                //   onTap: () {
+                //     Navigator.push(
+                //       context,
+                //       MaterialPageRoute(
+                //         builder: (context) => const DownloadedRecitersScreen(),
+                //       ),
+                //     );
+                //   },
+                // ),
                 _buildDivider(),
                 _buildSettingsItem(
                   Icons.color_lens_outlined,

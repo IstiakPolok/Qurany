@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:qurany/feature/home/view/notification_screen.dart';
 import 'package:qurany/feature/profile/view/profile_screen.dart';
 
 import 'dayProgressWidgets.dart';
@@ -28,34 +29,47 @@ class HomeHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Notification Icon
-                  Stack(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(8.w),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotificationScreen(),
                         ),
-                        child: Icon(
-                          Icons.notifications_outlined,
-                          size: 24.sp,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Positioned(
-                        right: 8.w,
-                        top: 8.w,
-                        child: Container(
-                          width: 8.w,
-                          height: 8.w,
+                      );
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(8.w),
                           decoration: BoxDecoration(
-                            color: Colors.green,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
+                            color: Colors.white,
+                          ),
+                          child: Icon(
+                            Icons.notifications_outlined,
+                            size: 24.sp,
+                            color: Colors.black87,
                           ),
                         ),
-                      ),
-                    ],
+                        Positioned(
+                          right: 8.w,
+                          top: 8.w,
+                          child: Container(
+                            width: 8.w,
+                            height: 8.w,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   // Profile Icon

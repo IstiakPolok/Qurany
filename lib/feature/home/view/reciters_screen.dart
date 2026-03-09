@@ -1,56 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
+import 'package:qurany/feature/home/controller/verse_of_day_controller.dart';
 
 class RecitersScreen extends StatelessWidget {
   const RecitersScreen({super.key});
 
-  final List<Map<String, String>> items = const [
-    {
-      'name': "Mishary Al-Afasy",
-      'description': "The Voice of Devotion",
-      'image':
-          'https://images.unsplash.com/photo-1564121211835-e88c852648ab?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-    {
-      'name': "Sheikh Sudais",
-      'description': "Imam of Masjid al-Haram",
-      'image':
-          'https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-    {
-      'name': "Sheikh Abdul Basit",
-      'description': "The Golden Voice of Egypt",
-      'image':
-          'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-    {
-      'name': "Sheikh Abdullah Zahir",
-      'description': "The Voice of the UAE",
-      'image':
-          'https://images.unsplash.com/photo-1542353436-312f0e1f67ff?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-    {
-      'name': "Sheikh Mansour",
-      'description': "The Guiding Light of Mecca",
-      'image':
-          'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-    {
-      'name': "Yasir al-Dawsari",
-      'description': "Saudi Islamic scholar",
-      'image':
-          'https://images.unsplash.com/photo-1602693822003-8d689b0d1e0d?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-    {
-      'name': "Saud Al-Shuraim",
-      'description': "The voice of Saudi Arabia",
-      'image':
-          'https://images.unsplash.com/photo-1554508494-b295996fdef1?q=80&w=500&auto=format&fit=crop', // Placeholder
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final VerseOfDayController controller = Get.find<VerseOfDayController>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFFFF9F0), // Cream background
       appBar: AppBar(
@@ -58,7 +17,7 @@ class RecitersScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: true,
         leading: Padding(
-          padding: EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(8.0),
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(
@@ -83,120 +42,158 @@ class RecitersScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: GridView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12.w,
-          mainAxisSpacing: 12.h,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.r),
-              image: DecorationImage(
-                image: NetworkImage(item['image']!),
-                fit: BoxFit.cover,
+      body: Obx(() {
+        if (controller.isLoading.value ||
+            controller.randomVerse.value == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final audioData = controller.randomVerse.value!.data.verse.verse.audio;
+        if (audioData == null || audioData.isEmpty) {
+          return const Center(child: Text("No audio available"));
+        }
+
+        final List<Map<String, String>> reciters = audioData.values.map((
+          audioInfo,
+        ) {
+          String placeholderImg =
+              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+
+          if (audioInfo.reciter.contains("Sudais")) {
+            placeholderImg =
+                "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1";
+          } else if (audioInfo.reciter.contains("Yasser") ||
+              audioInfo.reciter.contains("Dussary")) {
+            placeholderImg =
+                "https://i.scdn.co/image/ab67616100005174e4bd7040657e8e61dc4667be";
+          } else if (audioInfo.reciter.contains("Nasser") ||
+              audioInfo.reciter.contains("Qatami")) {
+            placeholderImg =
+                "https://scontent.fdac207-1.fna.fbcdn.net/v/t39.30808-6/470019064_1119048786249564_9159029543174380749_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=O9kA8gkeLGMQ7kNvwGNr5oH&_nc_oc=AdnT-OiSE9RjU0v0kTD07qPFSudAeHeqDozhECy78a0zZ8DxGG4kud8d2Wg7InObuBY&_nc_zt=23&_nc_ht=scontent.fdac207-1.fna&_nc_gid=7xGR-giX8dhXhYZ-X3B0xg&_nc_ss=8&oh=00_AfwTIfRlr9uHLOvZeNeCuTaXLMyn9KiQObXJwr7oy-Ctmg&oe=69B44A59";
+          } else if (audioInfo.reciter.contains("Mishary") ||
+              audioInfo.reciter.contains("Alafasy")) {
+            placeholderImg =
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+          } else if (audioInfo.reciter.contains("Abu Bakr") ||
+              audioInfo.reciter.contains("Shatri")) {
+            placeholderImg =
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUmPkcySF56YidTERKU54hBnQ0lf734dwb4w&s";
+          }
+
+          return {
+            'name': audioInfo.reciter,
+            'description': "Qurany Reciter",
+            'image': placeholderImg,
+            'audio': audioInfo.url,
+          };
+        }).toList();
+
+        return GridView.builder(
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12.w,
+            mainAxisSpacing: 12.h,
+            childAspectRatio: 0.8,
+          ),
+          itemCount: reciters.length,
+          itemBuilder: (context, index) {
+            final item = reciters[index];
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16.r),
+                image: DecorationImage(
+                  image: NetworkImage(item['image']!),
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
-            child: Stack(
-              children: [
-                // Gradient Overlay
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16.r),
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                      colors: [
-                        Colors.black.withOpacity(
-                          0.9,
-                        ), // Darker for text readability
-                        Colors.transparent,
-                      ],
-                      stops: [0.0, 0.5],
-                    ),
-                  ),
-                ),
-
-                // Play Button (Top Left)
-                Positioned(
-                  top: 12.h,
-                  left: 12.w,
-                  child: Container(
-                    padding: EdgeInsets.all(6.w),
+              child: Stack(
+                children: [
+                  // Gradient Overlay
+                  Container(
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    child: Icon(
-                      Icons.play_arrow,
-                      size: 20.sp,
-                      color: Color(0xFF2E7D32),
-                    ),
-                  ),
-                ),
-
-                // Download Button (Top Right)
-                Positioned(
-                  top: 12.h,
-                  right: 12.w,
-                  child: Container(
-                    padding: EdgeInsets.all(6.w),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    child: Icon(
-                      Icons.download,
-                      size: 20.sp,
-                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(16.r),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.9),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.5],
+                      ),
                     ),
                   ),
-                ),
 
-                // Text (Bottom Left)
-                Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.w),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['name']!,
-                          style: TextStyle(
+                  // Play Button (Top Left)
+                  Positioned(
+                    top: 12.h,
+                    left: 12.w,
+                    child: Obx(() {
+                      final bool isPlaying =
+                          controller.currentlyPlayingUrl.value == item['audio'];
+                      return GestureDetector(
+                        onTap: () {
+                          if (item['audio'] != null) {
+                            controller.toggleAudio(item['audio']!);
+                          }
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(6.w),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
                             color: Colors.white,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          item['description']!,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
+                          child: Icon(
+                            isPlaying ? Icons.pause : Icons.play_arrow,
+                            size: 20.sp,
+                            color: const Color(0xFF2E7D32),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
+                      );
+                    }),
+                  ),
+
+                  // Text (Bottom Left)
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: EdgeInsets.all(12.w),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['name']!,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 4.h),
+                          Text(
+                            item['description']!,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+                ],
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }

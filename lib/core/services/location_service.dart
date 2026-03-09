@@ -12,10 +12,11 @@ class LocationService extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    fetchLocation();
+    // Avoid prompting permission at app startup.
+    fetchLocation(requestPermission: false);
   }
 
-  Future<void> fetchLocation() async {
+  Future<void> fetchLocation({bool requestPermission = true}) async {
     try {
       isLoading(true);
       currentLocation.value = 'Loading...';
@@ -31,6 +32,12 @@ class LocationService extends GetxService {
       // Check location permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
+        if (!requestPermission) {
+          currentLocation.value = 'Location permission denied';
+          isLoading(false);
+          return;
+        }
+
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           currentLocation.value = 'Location permission denied';
@@ -98,6 +105,6 @@ class LocationService extends GetxService {
 
   // Refresh location
   Future<void> refreshLocation() async {
-    await fetchLocation();
+    await fetchLocation(requestPermission: true);
   }
 }

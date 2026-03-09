@@ -7,6 +7,7 @@ import 'package:qurany/core/const/static_juz_data.dart';
 import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/view/surah_reading_screen.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Removed as not used and caused error
 
 class QuranTabSection extends StatefulWidget {
@@ -490,14 +491,22 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            surah.arabicName,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Arial',
-                              color: primaryColor,
-                            ),
+                          FutureBuilder<String>(
+                            future: SharedPreferencesHelper.getArabicScript(),
+                            builder: (context, snapshot) {
+                              final scriptFont = snapshot.data ?? 'Imlaei';
+                              return Text(
+                                surah.arabicName,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: scriptFont == 'IndoPak'
+                                      ? 'IndoPak'
+                                      : 'Arial',
+                                  color: primaryColor,
+                                ),
+                              );
+                            },
                           ),
                           Text(
                             surah.versesRange,
@@ -680,14 +689,22 @@ class _QuranTabSectionState extends State<QuranTabSection> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  surah.arabicName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
-                    fontFamily: 'Arial', // Ensure font covers Arabic
-                    color: primaryColor,
-                  ),
+                FutureBuilder<String>(
+                  future: SharedPreferencesHelper.getArabicScript(),
+                  builder: (context, snapshot) {
+                    final scriptFont = snapshot.data ?? 'Imlaei';
+                    return Text(
+                      surah.arabicName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp,
+                        fontFamily: scriptFont == 'IndoPak'
+                            ? 'IndoPak'
+                            : 'Arial',
+                        color: primaryColor,
+                      ),
+                    );
+                  },
                 ),
                 Text(
                   "${surah.totalVerses} VERSES",
