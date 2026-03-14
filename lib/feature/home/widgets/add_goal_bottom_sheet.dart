@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:get/get.dart';
 
 import 'dart:async';
 
@@ -15,26 +16,26 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
   // Mock data for goals
   final List<Map<String, dynamic>> _goals = [
     {
-      'title': 'Read Quran Daily',
-      'target': 'Target: 30 minutes',
+      'title': 'goal_read_quran',
+      'target_key': '30 minutes',
       'icon': 'assets/icons/navquranIcons.png',
       'isSelected': false,
     },
     {
-      'title': 'Memorize New Verses',
-      'target': 'Target: 10 verses',
+      'title': 'goal_memorize',
+      'target_key': '10 verses',
       'icon': 'assets/icons/123.png',
       'isSelected': false,
     },
     {
-      'title': 'Complete All 5 Prayers',
-      'target': 'Target: 7 days',
+      'title': 'goal_prayers',
+      'target_key': '7 days',
       'icon': 'assets/icons/navquranIcons.png',
       'isSelected': false,
     },
     {
-      'title': 'Daily Dhikr',
-      'target': 'Target: 100 times',
+      'title': 'goal_dhikr',
+      'target_key': '100 times',
       'icon': 'assets/icons/123.png',
       'isSelected': false,
     },
@@ -131,7 +132,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
-                      "$title add in your goal",
+                      "${title.tr} ${'goal_add_success'.tr}",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14.sp,
@@ -188,7 +189,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Add New Goal",
+                    "add_new_goal".tr,
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
@@ -197,7 +198,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    "Choose a goal to track your spiritual progress.",
+                    "choose_goal_desc".tr,
                     style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
                   ),
                 ],
@@ -276,17 +277,17 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              goal['title'],
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
+                             Text(
+                               goal['title'].toString().tr,
+                               style: TextStyle(
+                                 fontSize: 14.sp,
+                                 fontWeight: FontWeight.bold,
+                                 color: Colors.black87,
+                               ),
+                             ),
                             SizedBox(height: 4.h),
                             Text(
-                              goal['target'],
+                              "${'target_prefix'.tr} ${goal['target_key']}", // Simplified translation for now
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 color: Colors.grey[600],

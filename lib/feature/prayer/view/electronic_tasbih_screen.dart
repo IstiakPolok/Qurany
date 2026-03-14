@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'dart:ui' as ui;
+import 'package:get/get.dart';
 
 class ElectronicTasbihScreen extends StatefulWidget {
   const ElectronicTasbihScreen({super.key});
@@ -39,68 +40,64 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   final List<Map<String, String>> _dhikrList = [
     {
       "arabic": "سُبْحَانَ الله",
-      "meaning": "Glory be to Allah",
+      "meaning": "dhikr_subhanallah".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "الْحَمْدُ لِلّٰهِ",
-      "meaning": "All praise is due to Allah",
+      "meaning": "dhikr_alhamdulillah".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "اللهُ أَكْبَرُ",
-      "meaning": "Allah is the Greatest",
+      "meaning": "dhikr_allahuakbar".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "لَا إِلٰهَ إِلَّا الله",
-      "meaning": "There is no deity except Allah",
+      "meaning": "dhikr_lailahaillallah".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "أَسْتَغْفِرُ الله",
-      "meaning": "I seek forgiveness from Allah",
+      "meaning": "dhikr_astaghfirullah".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "سُبْحَانَ اللهِ وَبِحَمْدِهِ",
-      "meaning": "Glory be to Allah and all praise is due to Him",
+      "meaning": "dhikr_subhanallah_wabitahmidihi".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "لا حول ولاقوة إلا بالله",
-      "meaning": "There is no power nor strength except with Allah",
+      "meaning": "dhikr_lahawla".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "حسبي الله لا إله إلا هو",
-      "meaning": "Allah is sufficient for me; there is no deity except Him",
+      "meaning": "dhikr_hasbiyallah".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ",
-      "meaning":
-          "O Allah! Send blessings upon Muhammad and the family of Muhammad",
+      "meaning": "dhikr_salawat".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic": "سُبْحَانَ اللهِ وَبِحَمْدِهِ، سُبْحَانَ اللهِ الْعَظِيم",
-      "meaning":
-          "Glory be to Allah and all praise is due to Him; Glory be to Allah the Almighty",
+      "meaning": "dhikr_subhanallah_alazim".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic":
           "لا إِلٰهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِير",
-      "meaning":
-          "There is no deity except Allah alone; He has no partner. His is the dominion and His is the praise, and He is over all things competent",
+      "meaning": "dhikr_lailahaillallah_wahdahu".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
     {
       "arabic":
           "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيم",
-      "meaning":
-          "In the name of Allah, with whose name nothing in the earth or the heaven can cause harm, and He is the All-Hearing, All-Knowing",
+      "meaning": "dhikr_bismillah_la_yadurru".tr,
       "audio": "assets/audio/subhanallah.mp3",
     },
   ];
@@ -209,14 +206,6 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     }
   }
 
-  void _resetCounter() {
-    setState(() {
-      _counter = 0;
-      _round = 1;
-    });
-    _savePreferences();
-  }
-
   @override
   void dispose() {
     _audioPlayer.dispose();
@@ -299,7 +288,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                         Expanded(
                           child: Center(
                             child: Text(
-                              "Customize Tasbih Counts",
+                              "customize_tasbih".tr,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18.sp,
@@ -315,7 +304,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
                     // Target Count per Round
                     Text(
-                      "Target Count per Round",
+                      "target_count_round".tr,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
@@ -348,7 +337,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
                     // Custom Count
                     Text(
-                      "Custom Count",
+                      "custom_count".tr,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
@@ -411,7 +400,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
                     // Number of Rounds
                     Text(
-                      "Number of Rounds",
+                      "number_of_rounds".tr,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
@@ -476,7 +465,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Sound Feedback",
+                          "sound_feedback".tr,
                           style: TextStyle(
                             fontSize: 14.sp,
                             color: Colors.black87,
@@ -496,7 +485,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Vibration",
+                          "vibration".tr,
                           style: TextStyle(
                             fontSize: 14.sp,
                             color: Colors.black87,
@@ -535,7 +524,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           ),
                         ),
                         child: Text(
-                          "Save",
+                          "save".tr,
                           style: TextStyle(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.bold,
@@ -597,7 +586,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Choose Your Dhikr",
+                    "choose_your_dhikr".tr,
                     style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.bold,
@@ -607,7 +596,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   SizedBox(height: 3.h),
 
                   Text(
-                    "Start counting blessings with the zikr that speaks to your heart.",
+                    "start_counting_blessings".tr,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12.sp,
                       color: Colors.grey[800],
@@ -630,7 +621,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                       elevation: 0,
                     ),
                     child: Text(
-                      "Select Your Dhikr",
+                      "select_your_dhikr".tr,
                       style: TextStyle(fontSize: 12.sp),
                     ),
                   ),
@@ -658,7 +649,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Current Dhikr",
+              "current_dhikr".tr,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 12.sp,
@@ -670,7 +661,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             GestureDetector(
               onTap: _showDhikrPicker,
               child: Text(
-                "View all",
+                "view_all".tr,
                 style: TextStyle(
                   color: Colors.green[900],
                   fontWeight: FontWeight.bold,
@@ -787,7 +778,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                         Expanded(
                           child: Center(
                             child: Text(
-                              "Select Dhikr",
+                              "select_your_dhikr".tr,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18.sp,
@@ -891,21 +882,22 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Clear Data"),
-          content: const Text(
-            "Are you sure you want to clear your count and Dhikr?",
-          ),
+          title: Text("clear_data".tr),
+          content: Text("clear_confirm_msg".tr),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
+              child: Text("cancel".tr),
             ),
             TextButton(
               onPressed: () {
                 _clearData();
                 Navigator.pop(context);
               },
-              child: const Text("Clear", style: TextStyle(color: Colors.red)),
+              child: Text(
+                "clear".tr,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           ],
         );
@@ -938,7 +930,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         ),
         centerTitle: true,
         title: Text(
-          "Electric Tasbih",
+          "electronic_tasbih".tr,
           style: TextStyle(
             color: Colors.black87,
             fontSize: 18.sp,
@@ -957,7 +949,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
           // Dhikr Count
           Text(
-            "Dhikr Count",
+            "dhikr_count".tr,
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.bold,
@@ -993,7 +985,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                     ),
                     SizedBox(height: 2.h),
                     Text(
-                      "Round $_round",
+                      "round".tr + " $_round",
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.bold,
@@ -1026,7 +1018,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             ],
           ),
 
-          SizedBox(height: 30.h),
+          SizedBox(height: 5.h),
 
           // Beads Curve & Interaction
           Expanded(
@@ -1052,23 +1044,20 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           ),
                         ),
                         ..._buildVisibleBeads(constraints.maxWidth, beadHeight),
-
-                        Positioned(
-                          bottom: 20.h,
-                          child: Text(
-                            "Right to left swipe will\ndecrease count",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   );
                 },
               ),
+            ),
+          ),
+
+          Padding(
+            padding: EdgeInsets.only(bottom: 20.h),
+            child: Text(
+              "swipe_instruction".tr,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
             ),
           ),
 
@@ -1154,7 +1143,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Unlock Premium Styles",
+                              "unlock_premium_styles".tr,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13.sp,
@@ -1162,7 +1151,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                             ),
                             SizedBox(height: 3.h),
                             Text(
-                              "Continue using and engaging with Qurani+ to unlock beautiful new compass styles!",
+                              "compass_unlock_desc".tr,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: FontWeight.normal,
                                 fontSize: 13.sp,
@@ -1193,11 +1184,16 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                               ],
                             ),
                             Text(
-                              'Complete 2 more goals to unlock "Other" colors',
+                              "compass_unlock_progress".trParams({
+                                'count': '2',
+                                'name': 'Other',
+                              }),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11.sp,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF2F7D33),
+                                color: const Color(0xFF2F7D33),
                               ),
                             ),
                           ],

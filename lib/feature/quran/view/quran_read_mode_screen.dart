@@ -46,11 +46,10 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
   int? _selectedVerseIndex;
 
   // Settings state
-  int _selectedReciter = 0;
   String _selectedLanguage = 'English';
   int _selectedScript = 0;
   String _selectedScriptName = 'Imlaei';
-  String _endOfSurahAction = 'Play the Next Surah';
+  String _endOfSurahAction = 'play_next_surah';
   int _viewMode = 0; // 0 = List, 1 = Page
 
   late SurahReadingController _controller;
@@ -73,6 +72,44 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
     _translation = widget.translation;
     _loadFontSize();
     _loadScript();
+    _loadLanguage();
+  }
+
+  Future<void> _loadLanguage() async {
+    final lang = await SharedPreferencesHelper.getLanguage();
+    if (mounted) {
+      setState(() {
+        _selectedLanguage = lang;
+      });
+    }
+    _updateLocale(lang);
+  }
+
+  void _updateLocale(String lang) {
+    Locale locale;
+    switch (lang) {
+      case 'English':
+        locale = const Locale('en');
+        break;
+      case 'العربية':
+        locale = const Locale('ar');
+        break;
+      case 'اردو':
+        locale = const Locale('ur');
+        break;
+      case 'Türkçe':
+        locale = const Locale('tr');
+        break;
+      case 'Bahasa':
+        locale = const Locale('id');
+        break;
+      case 'Français':
+        locale = const Locale('fr');
+        break;
+      default:
+        locale = const Locale('en');
+    }
+    Get.updateLocale(locale);
   }
 
   Future<void> _loadScript() async {
@@ -198,7 +235,11 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
       'Bahasa',
       'Français',
     ];
-    final endOfSurahOptions = ['Play the Next Surah', 'Stop', 'Repeat'];
+    final endOfSurahOptions = [
+      {'key': 'play_next_surah', 'label': 'play_next_surah'.tr},
+      {'key': 'stop', 'label': 'stop'.tr},
+      {'key': 'repeat', 'label': 'repeat'.tr},
+    ];
 
     return StatefulBuilder(
       builder: (ctx, setSheetState) {
@@ -230,7 +271,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                   children: [
                     SizedBox(width: 32.w),
                     Text(
-                      'Setting',
+                      'settings'.tr,
                       style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.bold,
@@ -269,7 +310,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                     children: [
                       // Text Size
                       Text(
-                        'Text Size',
+                        'text_size'.tr,
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
@@ -322,7 +363,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                       SizedBox(height: 20.h),
                       // Select Your Reciter
                       Text(
-                        'Select Your Reciter',
+                        'select_reciter'.tr,
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
@@ -334,7 +375,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                       SizedBox(height: 20.h),
                       // Choose your language
                       Text(
-                        'Choose your language',
+                        'language'.tr,
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
@@ -354,6 +395,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
+                            dropdownColor: const Color(0xFFFFF9F0),
                             value: _selectedLanguage,
                             isExpanded: true,
                             icon: const Icon(Icons.keyboard_arrow_down),
@@ -369,19 +411,22 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                                   ),
                                 )
                                 .toList(),
-                            onChanged: (v) {
+                            onChanged: (v) async {
                               if (v != null) {
                                 setState(() => _selectedLanguage = v);
                                 setSheetState(() {});
+                                await SharedPreferencesHelper.saveLanguage(v);
+                                _updateLocale(v);
                               }
                             },
                           ),
                         ),
                       ),
+
                       SizedBox(height: 20.h),
                       // Select your Arabic script
                       Text(
-                        'Select your Arabic script',
+                        'select_arabic_script'.tr,
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
@@ -393,7 +438,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                       SizedBox(height: 20.h),
                       // At the end of Surah
                       Text(
-                        'At the end of Surah',
+                        'at_end_of_surah'.tr,
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
@@ -423,8 +468,8 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                             items: endOfSurahOptions
                                 .map(
                                   (opt) => DropdownMenuItem(
-                                    value: opt,
-                                    child: Text(opt),
+                                    value: opt['key'],
+                                    child: Text(opt['label']!),
                                   ),
                                 )
                                 .toList(),
@@ -440,7 +485,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                       SizedBox(height: 20.h),
                       // View Mode
                       Text(
-                        'View Mode',
+                        'view_mode'.tr,
                         style: TextStyle(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w600,
@@ -481,7 +526,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                                       ),
                                       SizedBox(width: 6.w),
                                       Text(
-                                        'List',
+                                        'list'.tr,
                                         style: TextStyle(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w600,
@@ -521,7 +566,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                                       ),
                                       SizedBox(width: 6.w),
                                       Text(
-                                        'Page',
+                                        'page'.tr,
                                         style: TextStyle(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w600,
@@ -593,7 +638,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Text(
-                "[All] praise is [due] to Allah, Lord of the worlds -",
+                'arabic'.tr,
                 style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                 textAlign: TextAlign.left,
               ),
@@ -681,7 +726,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
     return Obx(() {
       final audioData = controller!.randomVerse.value?.data.verse.verse.audio;
       if (audioData == null || audioData.isEmpty) {
-        return const Center(child: Text("No reciters available"));
+        return Center(child: Text('no_reciters_available'.tr));
       }
       final reciters = audioData.values.map((audioInfo) {
         String placeholderImg =
@@ -716,13 +761,12 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
           scrollDirection: Axis.horizontal,
           itemCount: reciters.length,
           itemBuilder: (context, index) {
-            final isSelected = _selectedReciter == index;
+            final isSelected = _controller.selectedReciterName.value == reciters[index]['name'];
             return GestureDetector(
               onTap: () async {
-                setState(() => _selectedReciter = index);
-                setSheetState(() {});
                 final selectedReciterName = reciters[index]['name']!;
-                await SharedPreferencesHelper.saveReciter(selectedReciterName);
+                await _controller.saveReciter(selectedReciterName);
+                setSheetState(() {});
               },
               child: Container(
                 width: 100.w,
@@ -1062,7 +1106,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
             ),
             _buildDot(),
             Text(
-              "$_ayaCount Aya",
+              'aya_count'.trParams({'count': _ayaCount.toString()}),
               style: TextStyle(fontSize: 11.sp, color: Colors.black54),
             ),
           ],
@@ -1202,7 +1246,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 ),
                 SizedBox(width: 8.w),
                 Text(
-                  'Load More Verses',
+                  'load_more_verses'.tr,
                   style: TextStyle(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
@@ -1242,7 +1286,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 Icon(Icons.zoom_in, size: 20.sp, color: Colors.black87),
                 SizedBox(width: 6.w),
                 Text(
-                  'Zoom In',
+                  'zoom_in'.tr,
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w500,
@@ -1299,7 +1343,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 Icon(Icons.zoom_out, size: 20.sp, color: Colors.black87),
                 SizedBox(width: 6.w),
                 Text(
-                  'Zoom Out',
+                  'zoom_out'.tr,
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w500,
@@ -1371,7 +1415,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                       style: TextStyle(color: Colors.white, fontSize: 13.sp),
                       onSubmitted: (_) => sendToAI(),
                       decoration: InputDecoration(
-                        hintText: 'Ask about this aya',
+                        hintText: 'ask_about_aya'.tr,
                         hintStyle: TextStyle(
                           color: Colors.white70,
                           fontSize: 13.sp,
@@ -1411,7 +1455,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
               children: [
                 _buildOptionButton(
                   icon: Icons.copy_outlined,
-                  label: 'Copy',
+                  label: 'copy'.tr,
                   onTap: () {
                     Clipboard.setData(
                       ClipboardData(
@@ -1420,8 +1464,8 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                     );
                     _clearSelection();
                     Get.snackbar(
-                      'Copied',
-                      'Verse copied to clipboard',
+                      'copied'.tr,
+                      'verse_copied_msg'.tr,
                       backgroundColor: const Color(0xFF2E7D32),
                       colorText: Colors.white,
                       snackPosition: SnackPosition.BOTTOM,
@@ -1430,7 +1474,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 ),
                 _buildOptionButton(
                   icon: Icons.done_all,
-                  label: 'Read',
+                  label: 'read'.tr,
                   onTap: () {
                     controller.playVerse(verse.verseId);
                     _clearSelection();
@@ -1438,7 +1482,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 ),
                 _buildOptionButton(
                   icon: Icons.bookmark_outline,
-                  label: 'Bookmark',
+                  label: 'bookmark'.tr,
                   onTap: () {
                     controller.toggleBookmark(verse.verseId);
                     _clearSelection();
@@ -1446,7 +1490,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 ),
                 _buildOptionButton(
                   icon: Icons.note_alt_outlined,
-                  label: 'Note',
+                  label: 'notes'.tr,
                   onTap: () {
                     _clearSelection();
                     _showAddNoteDialog(
@@ -1469,7 +1513,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
               children: [
                 _buildOptionButton(
                   icon: Icons.share_outlined,
-                  label: 'Share',
+                  label: 'share'.tr,
                   onTap: () {
                     _clearSelection();
                   },
@@ -1477,7 +1521,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 SizedBox(width: 32.w),
                 _buildOptionButton(
                   icon: Icons.psychology_outlined,
-                  label: 'Memorise',
+                  label: 'memorize'.tr,
                   onTap: () {
                     _clearSelection();
                     if (Get.isRegistered<MemorizationController>()) {
@@ -1494,7 +1538,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 SizedBox(width: 32.w),
                 _buildOptionButton(
                   icon: Icons.repeat,
-                  label: 'Repeat',
+                  label: 'repeat'.tr,
                   onTap: () {
                     controller.playVerse(verse.verseId);
                     _clearSelection();
@@ -1548,7 +1592,10 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                     Column(
                       children: [
                         Text(
-                          '$_surahName, Aya $verseId',
+                          'surah_aya'.trParams({
+                            'surah': _surahName,
+                            'aya': verseId.toString(),
+                          }),
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 12.sp,
@@ -1556,7 +1603,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                         ),
                         SizedBox(height: 2.h),
                         Text(
-                          hasNote ? 'View / Edit Note' : 'Add a note',
+                          hasNote ? 'view_edit_note'.tr : 'add_note'.tr,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16.sp,
@@ -1594,7 +1641,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                     minLines: 5,
                     style: TextStyle(color: Colors.white, fontSize: 14.sp),
                     decoration: InputDecoration(
-                      hintText: 'Type here',
+                      hintText: 'type_here'.tr,
                       hintStyle: TextStyle(
                         color: Colors.white54,
                         fontSize: 14.sp,
@@ -1629,7 +1676,10 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                               // Update verse notes in-memory so the UI refreshes
                               final updatedNote = NoteModel(
                                 id: existingNote?.id ?? '',
-                                title: '$_surahName, Aya $verseId',
+                                title: 'surah_aya'.trParams({
+                                  'surah': _surahName,
+                                  'aya': verseId.toString(),
+                                }),
                                 description: text,
                                 surahId: _controller.surahId,
                                 verseId: verseId,
@@ -1638,7 +1688,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                                 updatedNote,
                               ]);
                               Get.snackbar(
-                                'Note Saved',
+                                'note_saved'.tr,
                                 msg,
                                 backgroundColor: const Color(0xFF2E7D32),
                                 colorText: Colors.white,
@@ -1646,8 +1696,8 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                               );
                             } else {
                               Get.snackbar(
-                                'Error',
-                                'Failed to save note',
+                                'error'.tr,
+                                'failed_save_note'.tr,
                                 backgroundColor: Colors.red,
                                 colorText: Colors.white,
                                 snackPosition: SnackPosition.BOTTOM,
@@ -1674,7 +1724,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                             ),
                           )
                         : Text(
-                            'Save Note',
+                            'save_note'.tr,
                             style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.bold,
@@ -1700,16 +1750,16 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                               if (ok) {
                                 controller.updateVerseNotes(verseId, []);
                                 Get.snackbar(
-                                  'Note Deleted',
-                                  'Note removed successfully',
+                                  'note_deleted'.tr,
+                                  'note_removed_msg'.tr,
                                   backgroundColor: Colors.grey[800],
                                   colorText: Colors.white,
                                   snackPosition: SnackPosition.BOTTOM,
                                 );
                               } else {
                                 Get.snackbar(
-                                  'Error',
-                                  'Failed to delete note',
+                                  'error'.tr,
+                                  'failed_delete_note'.tr,
                                   backgroundColor: Colors.red,
                                   colorText: Colors.white,
                                   snackPosition: SnackPosition.BOTTOM,
@@ -1736,7 +1786,7 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                               ),
                             )
                           : Text(
-                              'Delete Note',
+                              'delete_note'.tr,
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold,

@@ -53,7 +53,8 @@ class NotificationPermissionScreen extends StatelessWidget {
                           color: Colors.white,
                           size: (width * 0.05).clamp(16.0, 22.0),
                         ),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () =>
+                            Get.to(() => const PreferencesFlowScreen()),
                       ),
                     ),
                   ),

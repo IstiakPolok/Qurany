@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'package:qurany/feature/home/widgets/feeling_bottom_sheet.dart';
 import 'dart:math';
@@ -35,7 +36,7 @@ class _FeelingWidgetState extends State<FeelingWidget> {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.w,vertical: 16.h),
           child: Text(
-            "Personalized your recommendation",
+            "personalized_recommendation".tr,
             style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
@@ -102,15 +103,19 @@ class _FeelingWidgetState extends State<FeelingWidget> {
             ),
           ),
           SizedBox(width: 12.w),
-          Text(
-            "How do you feel today?",
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
+          Expanded(
+            child: Text(
+              "how_feel_today".tr,
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Spacer(),
+          SizedBox(width: 8.w),
           Icon(Icons.arrow_forward_ios, size: 16.sp, color: Colors.black54),
         ],
       ),
@@ -139,14 +144,19 @@ class _FeelingWidgetState extends State<FeelingWidget> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            "You're feeling:",
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
+          Expanded(
+            child: Text(
+              "youre_feeling".tr,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          SizedBox(width: 12.w),
           GestureDetector(
             onTap: () async {
               await SharedPreferencesHelper.clearFeeling();
@@ -167,12 +177,16 @@ class _FeelingWidgetState extends State<FeelingWidget> {
                     style: TextStyle(fontSize: 18.sp),
                   ),
                   SizedBox(width: 8.w),
-                  Text(
-                    _selectedFeeling!['label']!,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14.sp,
+                  Flexible(
+                    child: Text(
+                      _selectedFeeling!['label']!,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.sp,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   SizedBox(width: 8.w),

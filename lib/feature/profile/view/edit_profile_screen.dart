@@ -118,7 +118,7 @@ class EditProfileScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: const Color(0xFFFFF9F0),
                   border: Border.all(color: Colors.grey[300]!, width: 2),
-                  image: currentUrl != null
+                  image: (currentUrl != null && currentUrl.isNotEmpty)
                       ? DecorationImage(
                           image: NetworkImage(currentUrl),
                           fit: BoxFit.cover,
@@ -132,7 +132,7 @@ class EditProfileScreen extends StatelessWidget {
                           strokeWidth: 2,
                         ),
                       )
-                    : currentUrl == null
+                    : (currentUrl == null || currentUrl.isEmpty)
                     ? Center(
                         child: Text(
                           initials,

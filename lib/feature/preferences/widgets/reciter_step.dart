@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:get/get.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -81,7 +82,7 @@ class _ReciterStepState extends State<ReciterStep> {
         children: [
           SizedBox(height: 40.h),
           Text(
-            "Select Your Reciter",
+            "select_reciter".tr,
             style: GoogleFonts.abhayaLibre(
               fontSize: 24.sp,
               fontWeight: FontWeight.bold,
@@ -90,7 +91,7 @@ class _ReciterStepState extends State<ReciterStep> {
           ),
           SizedBox(height: 10.h),
           Text(
-            "Choose your preferred Quran reciter.",
+            "choose_reciter_desc".tr,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
           ),
@@ -150,7 +151,7 @@ class _ReciterStepState extends State<ReciterStep> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "Recommended Reciter",
+              "recommended_reciter".tr,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
             ),
           ),

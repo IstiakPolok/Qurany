@@ -76,8 +76,8 @@ class MemorizationController extends GetxController {
           "name": surah.englishName,
           "arabicName": surah.arabicName,
           "origin": surah.revelationType,
-          "versesCount": "${surah.totalVerses} VERSES",
-          "progress": "0 / ${surah.totalVerses} Aya",
+          "versesCount": "${surah.totalVerses} ${'verses'.tr}",
+          "progress": "0 / ${surah.totalVerses} ${'aya'.tr}",
           "verses": surah.totalVerses,
           "completed": false,
         };
@@ -121,7 +121,7 @@ class MemorizationController extends GetxController {
 
             updatedProgress.add({
               "surah": surah.englishName,
-              "verses": "$totalCompleted/${surah.totalVerses} Aya",
+              "verses": "$totalCompleted/${surah.totalVerses} ${'aya'.tr}",
               "progress": progress,
               "color": primaryColor,
               "surahId": surahId,
@@ -135,7 +135,7 @@ class MemorizationController extends GetxController {
                 surahList[surahIndex],
               );
               updatedSurah["progress"] =
-                  "$totalCompleted / ${surah.totalVerses} Aya";
+                  "$totalCompleted / ${surah.totalVerses} ${'aya'.tr}";
               // Mark as completed if all verses are done
               updatedSurah["completed"] = totalCompleted >= surah.totalVerses;
               surahList[surahIndex] = updatedSurah;
@@ -414,7 +414,7 @@ class MemorizationController extends GetxController {
         isRecording.value = true;
       } else {
         _log('startRecording: permission denied');
-        Get.snackbar("Permission Denied", "Microphone permission is required");
+        Get.snackbar("memo_perm_denied".tr, "memo_mic_perm_required".tr);
       }
     } catch (e, st) {
       _logError('Error starting record', e, st);
@@ -461,11 +461,11 @@ class MemorizationController extends GetxController {
         SharedPreferencesHelper.incrementDailyMemorized();
       } else {
         _log('AI result: null');
-        Get.snackbar("Error", "Failed to process pronunciation");
+        Get.snackbar("error".tr, "memo_fail_pronunciation".tr);
       }
     } catch (e, st) {
       _logError('sendAudioToAI failed', e, st);
-      Get.snackbar("Error", "Failed to process pronunciation");
+      Get.snackbar("error".tr, "memo_fail_pronunciation".tr);
     } finally {
       isAIProcessing.value = false;
     }
@@ -500,21 +500,21 @@ class MemorizationController extends GetxController {
                 ),
               ),
               Text(
-                "Recitation Results",
+                "memo_recitation_results".tr,
                 style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 24.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildResultScore("Accuracy", accuracy, primaryColor),
-                  _buildResultScore("Fluency", fluency, Colors.blue),
-                  _buildResultScore("Comp", completeness, Colors.redAccent),
+                  _buildResultScore("memo_accuracy".tr, accuracy, primaryColor),
+                  _buildResultScore("memo_fluency".tr, fluency, Colors.blue),
+                  _buildResultScore("memo_completeness".tr, completeness, Colors.redAccent),
                 ],
               ),
               SizedBox(height: 32.h),
               Text(
-                accuracy > 80 ? "Excellent Progress!" : "Keep Practicing!",
+                accuracy > 80 ? "memo_excellent_progress".tr : "memo_keep_practicing".tr,
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
@@ -526,7 +526,7 @@ class MemorizationController extends GetxController {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    "Word-by-Word Analysis:",
+                    "memo_word_analysis".tr,
                     style: TextStyle(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
@@ -542,14 +542,17 @@ class MemorizationController extends GetxController {
                   children: wordsDetails.map((wordData) {
                     final String word = wordData['word'] ?? "";
                     final String errorType = wordData['error_type'] ?? "None";
+                    String translatedError = "";
 
                     Color wordColor;
                     if (errorType == "None") {
                       wordColor = primaryColor;
                     } else if (errorType == "Omission") {
                       wordColor = Colors.red;
+                      translatedError = "memo_omission".tr;
                     } else {
                       wordColor = Colors.orange;
+                      translatedError = errorType;
                     }
 
                     return Container(
@@ -575,7 +578,7 @@ class MemorizationController extends GetxController {
                           ),
                           if (errorType != "None")
                             Text(
-                              errorType,
+                              translatedError,
                               style: TextStyle(
                                 fontSize: 8.sp,
                                 color: wordColor,
@@ -589,7 +592,7 @@ class MemorizationController extends GetxController {
                 SizedBox(height: 24.h),
               ],
               Text(
-                "Full Transcription:",
+                "memo_full_transcription".tr,
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
@@ -622,7 +625,7 @@ class MemorizationController extends GetxController {
                         side: BorderSide(color: Colors.grey.shade300),
                       ),
                       child: Text(
-                        "Try Again",
+                        "memo_try_again".tr,
                         style: TextStyle(color: Colors.black87),
                       ),
                     ),
@@ -642,7 +645,7 @@ class MemorizationController extends GetxController {
                         ),
                       ),
                       child: Text(
-                        "Next Verse",
+                        "memo_next_verse".tr,
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
@@ -705,7 +708,7 @@ class MemorizationScreen extends StatelessWidget {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final timeText = selectedTime == null
-                ? 'Select Time'
+                ? 'memo_select_time'.tr
                 : selectedTime!.format(context);
 
             return Dialog(
@@ -754,7 +757,7 @@ class MemorizationScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 14.h),
                     Text(
-                      'Daily Practice Reminder',
+                      'daily_practice_reminder'.tr,
                       style: TextStyle(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.bold,
@@ -764,7 +767,7 @@ class MemorizationScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 6.h),
                     Text(
-                      'Set your daily memorization time',
+                      'memo_set_daily_time'.tr,
                       style: TextStyle(fontSize: 14.sp, color: Colors.black54),
                       textAlign: TextAlign.center,
                     ),
@@ -793,8 +796,10 @@ class MemorizationScreen extends StatelessWidget {
 
                           if (context.mounted) {
                             Get.snackbar(
-                              'Reminder Set',
-                              'Daily reminder set for ${picked.format(context)}',
+                              'memo_reminder_set'.tr,
+                              'memo_reminder_desc'.trParams({
+                                'time': picked.format(context),
+                              }),
                               snackPosition: SnackPosition.BOTTOM,
                             );
                           }
@@ -887,7 +892,7 @@ class MemorizationScreen extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(height: 12.h),
-          _buildHeader(context, "Memorization"),
+          _buildHeader(context, "memorization".tr),
           SizedBox(height: 24.h),
           Obx(
             () => controller.isLoading.value
@@ -902,7 +907,7 @@ class MemorizationScreen extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              "Your Progress",
+              "memo_your_progress".tr,
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
@@ -928,7 +933,7 @@ class MemorizationScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 16.w),
           child: _buildHeader(
             context,
-            "Practice Session",
+            "memo_practice_session".tr,
             isPractice: true,
             onBack: controller.backToDashboard,
           ),
@@ -1173,7 +1178,7 @@ class MemorizationScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 16.w),
           child: _buildHeader(
             context,
-            "Practice Session",
+            "memo_practice_session".tr,
             isPractice: true,
             onBack: controller.backToSelection,
           ),
@@ -1191,7 +1196,7 @@ class MemorizationScreen extends StatelessWidget {
 
             final verse = controller.currentVerseModel.value;
             if (verse == null) {
-              return const Center(child: Text("No verse loaded"));
+              return Center(child: Text("memo_no_verse_loaded".tr));
             }
 
             return Container(
@@ -1337,7 +1342,7 @@ class MemorizationScreen extends StatelessWidget {
               Padding(
                 padding: EdgeInsets.only(left: 8.w),
                 child: Text(
-                  "Repeat Count",
+                  "memo_repeat_count".tr,
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -1369,7 +1374,7 @@ class MemorizationScreen extends StatelessWidget {
                   Icon(Icons.mic_none, color: Colors.white, size: 20.sp),
                   SizedBox(width: 8.w),
                   Text(
-                    "AI Voice Recognition",
+                    "memo_ai_recognition".tr,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1380,7 +1385,7 @@ class MemorizationScreen extends StatelessWidget {
               ),
               SizedBox(height: 8.h),
               Text(
-                "Tap the button and recite the verse to check your accuracy.",
+                "memo_ai_desc".tr,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.9),
                   fontSize: 12.sp,
@@ -1424,8 +1429,8 @@ class MemorizationScreen extends StatelessWidget {
                           SizedBox(width: 8.w),
                           Text(
                             controller.isRecording.value
-                                ? "Stop Recording"
-                                : "Start Recording",
+                                ? "memo_stop_recording".tr
+                                : "memo_start_recording".tr,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: controller.isRecording.value
@@ -1518,7 +1523,7 @@ class MemorizationScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20.r),
                     ),
                     child: Text(
-                      "Continue",
+                      "continue".tr,
                       style: TextStyle(
                         fontSize: 12.sp,
                         color: Colors.white,
@@ -1646,7 +1651,7 @@ class MemorizationScreen extends StatelessWidget {
       children: [
         Expanded(
           child: _buildStatCard(
-            title: "Verses Learned",
+            title: "memo_verses_learned".tr,
             value: "${controller.versesLearned.value}",
             icon: Icons.check_circle_outline,
           ),
@@ -1654,7 +1659,7 @@ class MemorizationScreen extends StatelessWidget {
         SizedBox(width: 16.w),
         Expanded(
           child: _buildStatCard(
-            title: "Avg Accuracy",
+            title: "memo_avg_accuracy".tr,
             value: "${controller.avgAccuracy.value}%",
             icon: Icons.trending_up,
           ),
@@ -1723,7 +1728,7 @@ class MemorizationScreen extends StatelessWidget {
             Icon(Icons.play_arrow, color: Colors.white, size: 24.sp),
             SizedBox(width: 8.w),
             Text(
-              "Start New Practice Session",
+              "memo_start_practice".tr,
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w600,

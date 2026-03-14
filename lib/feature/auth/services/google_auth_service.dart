@@ -123,14 +123,4 @@ class GoogleSignInService {
 
   /// Check if user is signed in
   static bool get isSignedIn => _auth.currentUser != null;
-
-  /// Helper method to split long strings for printing
-  static List<String> _splitString(String text, int chunkSize) {
-    final chunks = <String>[];
-    for (var i = 0; i < text.length; i += chunkSize) {
-      final end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
-      chunks.add(text.substring(i, end));
-    }
-    return chunks;
-  }
 }

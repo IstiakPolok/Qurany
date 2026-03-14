@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 
 class DayProgressWidget extends StatelessWidget {
   final int currentDay;
@@ -57,7 +58,7 @@ class DayProgressWidget extends StatelessWidget {
                 ),
               ),
               Text(
-                'Day',
+                'day'.tr,
                 style: TextStyle(
                   fontSize: effectiveSize * 0.1,
                   fontWeight: FontWeight.w500,

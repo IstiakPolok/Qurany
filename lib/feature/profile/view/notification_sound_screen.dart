@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class NotificationSoundScreen extends StatefulWidget {
-  const NotificationSoundScreen({super.key});
+  final String? initialAlert;
+  final String? initialAdhan;
+  const NotificationSoundScreen({super.key, this.initialAlert, this.initialAdhan});
 
   @override
   State<NotificationSoundScreen> createState() =>
@@ -15,10 +18,83 @@ class _NotificationSoundScreenState extends State<NotificationSoundScreen> {
   String playingAdhan =
       ''; // Track which adhan is "playing" (showing pause icon)
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialAlert != null) selectedAlert = widget.initialAlert!;
+    if (widget.initialAdhan != null) {
+      // Map label back to id if needed, or just handle it
+      // For now, if it's a label like "Adhan(Makkah)", we might need a reverse map
+      // but if the UI is used consistent with labels, we can just use them.
+      // However, the screen uses IDs like 'madinah'.
+      _mapLabelToId(widget.initialAdhan!);
+    }
+  }
+
+  void _mapLabelToId(String label) {
+    if (label.contains("Azan1")) selectedAdhan = 'azan1';
+    else if (label.contains("Madinah")) selectedAdhan = 'madinah';
+    else if (label.contains("Makkah")) selectedAdhan = 'makkah';
+    else if (label.contains("Indonesia")) selectedAdhan = 'indonesia1';
+    else if (label.contains("Without")) selectedAdhan = 'without';
+  }
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlaySound(String value) async {
+    if (playingAdhan == value) {
+      await _audioPlayer.stop();
+      setState(() {
+        playingAdhan = 'stopped';
+      });
+      return;
+    }
+
+    String assetPath = "";
+    switch (value) {
+      case 'azan1':
+        assetPath = "audio/azan1.mp3";
+        break;
+      case 'madinah':
+        assetPath = "audio/Mishary Rashid Al-Afasy.mp3";
+        break;
+      case 'makkah':
+        assetPath = "audio/Nasser Al-Qatami.mp3";
+        break;
+      case 'indonesia1':
+        assetPath = "audio/Yasser Al-Dosari.mp3";
+        break;
+      case 'indonesia2':
+        assetPath = "audio/Abu Bakr Al-Shatri.mp3";
+        break;
+      case 'makkah2':
+        assetPath = "audio/azan1.mp3";
+        break;
+      default:
+        return;
+    }
+
+    if (assetPath.isNotEmpty) {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource(assetPath));
+      setState(() {
+        playingAdhan = value;
+      });
+    }
+  }
+
   String _selectedAdhanLabel() {
     switch (selectedAdhan) {
       case 'without':
         return 'Without sound';
+      case 'azan1':
+        return 'Adhan(Azan1)';
       case 'madinah':
         return 'Adhan(Madinah)';
       case 'makkah':
@@ -81,6 +157,12 @@ class _NotificationSoundScreenState extends State<NotificationSoundScreen> {
                       ),
                     ),
                     SizedBox(height: 12.h),
+                    _buildAdhanCard(
+                      id: 'azan1',
+                      title: "Adhan(Azan1)",
+                      subtitle: "Default Azan Tone",
+                      showPlayButton: true,
+                    ),
                     _buildAdhanCard(id: 'without', title: "Without sound"),
                     _buildAdhanCard(
                       id: 'madinah',
@@ -260,13 +342,7 @@ class _NotificationSoundScreenState extends State<NotificationSoundScreen> {
             if (showPlayButton) ...[
               GestureDetector(
                 onTap: () {
-                  setState(() {
-                    if (playingAdhan == id) {
-                      playingAdhan = 'stopped';
-                    } else {
-                      playingAdhan = id;
-                    }
-                  });
+                  _togglePlaySound(id);
                 },
                 child: Icon(
                   isPlaying

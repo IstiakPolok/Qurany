@@ -36,127 +36,130 @@ class ModernCompass extends StatelessWidget {
     final double compassSize = 220; // Reduced from 300
     final double innerSize = 130; // Reduced from 170
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 20),
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
 
-        // const Icon(Icons.arrow_drop_up, color: Colors.red, size: 30),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // Rotating Part
-            Transform.rotate(
-              angle: rotationAngle,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Outer Background Circle
-                  Container(
-                    width: compassSize,
-                    height: compassSize,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black12, blurRadius: 20),
-                      ],
+          // const Icon(Icons.arrow_drop_up, color: Colors.red, size: 30),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // Rotating Part
+              Transform.rotate(
+                angle: rotationAngle,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer Background Circle
+                    Container(
+                      width: compassSize,
+                      height: compassSize,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.black12, blurRadius: 20),
+                        ],
+                      ),
                     ),
-                  ),
-                  // Degree Ticks and Cardinal Letters
-                  CustomPaint(
-                    size: Size(compassSize, compassSize),
-                    painter: CompassPainter(),
-                  ),
-                  // The Green Dot Indicator (Positioned at 260 degrees on the dial)
-                  Transform.rotate(
-                    angle: 260 * (math.pi / 180),
-                    child: Align(
-                      alignment: const Alignment(0, -0.75),
-                      child: Container(
-                        width: 20, // Slightly smaller dot
-                        height: 20,
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 4),
-                          ],
+                    // Degree Ticks and Cardinal Letters
+                    CustomPaint(
+                      size: Size(compassSize, compassSize),
+                      painter: CompassPainter(),
+                    ),
+                    // The Green Dot Indicator (Positioned at 260 degrees on the dial)
+                    Transform.rotate(
+                      angle: 260 * (math.pi / 180),
+                      child: Align(
+                        alignment: const Alignment(0, -0.75),
+                        child: Container(
+                          width: 20, // Slightly smaller dot
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Fixed Center Info (Doesn't rotate)
-            Container(
-              width: innerSize,
-              height: innerSize,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFDFBF7),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Color(0XFFDCE9DC),
-                  width: 15,
-                ), // Thinner border
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "${heading.toInt()}°",
-                    style: const TextStyle(
-                      fontSize: 32, // Smaller font
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF455A64),
+              // Fixed Center Info (Doesn't rotate)
+              Container(
+                width: innerSize,
+                height: innerSize,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDFBF7),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Color(0XFFDCE9DC),
+                    width: 15,
+                  ), // Thinner border
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "${heading.toInt()}°",
+                      style: const TextStyle(
+                        fontSize: 32, // Smaller font
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF455A64),
+                      ),
                     ),
-                  ),
-                  Text(
-                    _getDirectionAbbreviation(heading),
-                    style: const TextStyle(
-                      fontSize: 16, // Smaller font
-                      fontWeight: FontWeight.w500,
-                      color: Colors.blueGrey,
+                    Text(
+                      _getDirectionAbbreviation(heading),
+                      style: const TextStyle(
+                        fontSize: 16, // Smaller font
+                        fontWeight: FontWeight.w500,
+                        color: Colors.blueGrey,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            // Kaaba Icon (Fixed at the top)
-            Builder(
-              builder: (context) {
-                final double size = compassSize;
-                final double radius = size / 2;
-                // place the icon slightly inside the outer edge
-                final double placeR = radius + 35; // Adjusted offset
-                final double theta = (qiblaAngle - heading) * (math.pi / 180);
-                final double dx = placeR * math.sin(theta);
-                final double dy = -placeR * math.cos(theta);
+              // Kaaba Icon (Fixed at the top)
+              Builder(
+                builder: (context) {
+                  final double size = compassSize;
+                  final double radius = size / 2;
+                  // place the icon slightly inside the outer edge
+                  final double placeR = radius + 35; // Adjusted offset
+                  final double theta = (qiblaAngle - heading) * (math.pi / 180);
+                  final double dx = placeR * math.sin(theta);
+                  final double dy = -placeR * math.cos(theta);
 
-                return Positioned.fill(
-                  child: Center(
-                    child: Transform.translate(
-                      offset: Offset(dx, dy),
-                      child: SizedBox(
-                        width: 32, // Smaller icon container
-                        height: 32,
-                        child: Center(
-                          child: Text(
-                            '🕋',
-                            style: TextStyle(fontSize: 20),
-                          ), // Smaller emoji
+                  return Positioned.fill(
+                    child: Center(
+                      child: Transform.translate(
+                        offset: Offset(dx, dy),
+                        child: SizedBox(
+                          width: 32, // Smaller icon container
+                          height: 32,
+                          child: Center(
+                            child: Text(
+                              '🕋',
+                              style: TextStyle(fontSize: 20),
+                            ), // Smaller emoji
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

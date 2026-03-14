@@ -66,14 +66,14 @@ class BottomNavbar extends StatelessWidget {
                 controller: controller,
                 index: 0,
                 iconPath: 'assets/icons/navhomeIcon.png',
-                label: "Home",
+                label: "nav_home".tr,
               ),
               _buildNavItem(
                 context,
                 controller: controller,
                 index: 1,
                 iconPath: 'assets/icons/navquranIcons.png',
-                label: "Quran",
+                label: "nav_quran".tr,
               ),
               // Ask Button (Special)
               _buildAskButton(controller, 2),
@@ -83,14 +83,14 @@ class BottomNavbar extends StatelessWidget {
                 controller: controller,
                 index: 3,
                 iconPath: 'assets/icons/navprayerIcons.png',
-                label: "Prayer",
+                label: "nav_prayer".tr,
               ),
               _buildNavItem(
                 context,
                 controller: controller,
                 index: 4,
                 iconPath: 'assets/icons/navqiblaIcons.png',
-                label: "Qibla",
+                label: "nav_qibla".tr,
               ),
             ],
           ),
@@ -131,7 +131,6 @@ class BottomNavbar extends StatelessWidget {
   }
 
   Widget _buildAskButton(BottomNavbarController controller, int index) {
-    final bool isSelected = controller.currentIndex.value == index;
 
     return GestureDetector(
       onTap: () => controller.changeIndex(index),
@@ -160,7 +159,7 @@ class BottomNavbar extends StatelessWidget {
           ),
           SizedBox(height: 4.h),
           Text(
-            "Ask",
+            "nav_ask".tr,
             style: TextStyle(
               color: Colors
                   .grey, // Label is grey even if active? Or green? Design shows label 'Ask' below.

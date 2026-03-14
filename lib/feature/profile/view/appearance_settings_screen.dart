@@ -18,18 +18,26 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   String selectedTranslation = 'English';
   int selectedScriptIndex = 0;
   String selectedScript = 'Imlaei';
+  String _selectedReciterName = 'Mishary Rashid Alafasy';
+
   @override
   void initState() {
     super.initState();
-    _loadScript();
+    _loadSettings();
   }
 
-  Future<void> _loadScript() async {
+  Future<void> _loadSettings() async {
     final script = await SharedPreferencesHelper.getArabicScript();
+    final reciter = await SharedPreferencesHelper.getReciter();
+    // For now, these aren't saved/loaded explicitly in SharedPreferencesHelper
+    // but we can initialize them from defaults or add helpers later if needed.
+    // selectedTranslation and selectedThemeIndex are handled via state for now.
+
     if (mounted) {
       setState(() {
         selectedScript = script;
         selectedScriptIndex = _getScriptIndex(script);
+        _selectedReciterName = reciter;
       });
     }
   }
@@ -83,10 +91,10 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   int selectedThemeIndex = 1; // Islamic selected by default
 
   final List<Map<String, String>> arabicScripts = [
-    {'name': 'IndoPak', 'sample': 'بِسْمِ اللّٰهِ'},
-    {'name': 'Uthmani', 'sample': 'بِسْمِ اللّٰهِ'},
-    {'name': 'No symbol', 'sample': 'بِسْمِ اللّٰهِ'},
-    {'name': 'Compatible', 'sample': 'بِسْمِ اللّٰهِ'},
+    {'name': 'IndoPak', 'key': 'indopak', 'sample': 'بِسْمِ اللّٰهِ'},
+    {'name': 'Uthmani', 'key': 'uthmani', 'sample': 'بِسْمِ اللّٰهِ'},
+    {'name': 'No symbol', 'key': 'no_symbol', 'sample': 'بِسْمِ اللّٰهِ'},
+    {'name': 'Compatible', 'key': 'compatible', 'sample': 'بِسْمِ اللّٰهِ'},
   ];
 
   final List<String> themes = ['Minimal', 'Islamic', 'Ornate'];
@@ -112,7 +120,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
 
                     // Select Your Reciter
                     Text(
-                      "Select Your Reciter",
+                      "select_reciter".tr,
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
@@ -125,7 +133,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
 
                     // Translation
                     Text(
-                      "Translation",
+                      "translation".tr,
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
@@ -140,7 +148,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
 
                     // Select your Arabic script
                     Text(
-                      "Select your Arabic script",
+                      "select_arabic_script".tr,
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
@@ -149,34 +157,18 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                     SizedBox(height: 12.h),
                     _buildArabicScriptSelector(),
 
-                    SizedBox(height: 24.h),
+                    // SizedBox(height: 24.h),
 
-                    // Translation (second)
-                    Text(
-                      "Translation",
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildDropdown(selectedTranslation2, (value) {
-                      setState(() => selectedTranslation2 = value!);
-                    }),
-
-                    SizedBox(height: 24.h),
-
-                    // Theme
-                    Text(
-                      "Theme",
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    _buildThemeSelector(),
-
+                    // // Theme
+                    // Text(
+                    //   "theme".tr,
+                    //   style: TextStyle(
+                    //     fontSize: 14.sp,
+                    //     fontWeight: FontWeight.w600,
+                    //   ),
+                    // ),
+                    // SizedBox(height: 12.h),
+                    // _buildThemeSelector(),
                     SizedBox(height: 40.h),
 
                     // Save Button
@@ -216,7 +208,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
           Expanded(
             child: Center(
               child: Text(
-                "Appearance Setting",
+                "appearance_settings".tr,
                 style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
               ),
             ),
@@ -232,33 +224,28 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
     return Obx(() {
       final audioData = controller.randomVerse.value?.data.verse.verse.audio;
       if (audioData == null || audioData.isEmpty) {
-        return const Center(child: Text("No reciters available"));
+        return Center(child: Text("no_reciters_available".tr));
       }
       final reciters = audioData.values.map((audioInfo) {
-        String placeholderImg =
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+        String assetPath = "assets/image/MisharyRashidAIAlfasy.jpg"; // Default
 
         if (audioInfo.reciter.contains("Sudais")) {
-          placeholderImg =
-              "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1";
+          assetPath =
+              "assets/image/MisharyRashidAIAlfasy.jpg"; // Fallback if Sudais not found
         } else if (audioInfo.reciter.contains("Yasser") ||
             audioInfo.reciter.contains("Dussary")) {
-          placeholderImg =
-              "https://i.scdn.co/image/ab67616100005174e4bd7040657e8e61dc4667be";
+          assetPath = "assets/image/YasserAlDosari.jpg";
         } else if (audioInfo.reciter.contains("Nasser") ||
             audioInfo.reciter.contains("Qatami")) {
-          placeholderImg =
-              "https://scontent.fdac207-1.fna.fbcdn.net/v/t39.30808-6/470019064_1119048786249564_9159029543174380749_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=O9kA8gkeLGMQ7kNvwGNr5oH&_nc_oc=AdnT-OiSE9RjU0v0kTD07qPFSudAeHeqDozhECy78a0zZ8DxGG4kud8d2Wg7InObuBY&_nc_zt=23&_nc_ht=scontent.fdac207-1.fna&_nc_gid=7xGR-giX8dhXhYZ-X3B0xg&_nc_ss=8&oh=00_AfwTIfRlr9uHLOvZeNeCuTaXLMyn9KiQObXJwr7oy-Ctmg&oe=69B44A59";
+          assetPath = "assets/image/NasserAlQatami.jpg";
         } else if (audioInfo.reciter.contains("Mishary") ||
             audioInfo.reciter.contains("Alafasy")) {
-          placeholderImg =
-              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+          assetPath = "assets/image/MisharyRashidAIAlfasy.jpg";
         } else if (audioInfo.reciter.contains("Abu Bakr") ||
             audioInfo.reciter.contains("Shatri")) {
-          placeholderImg =
-              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUmPkcySF56YidTERKU54hBnQ0lf734dwb4w&s";
+          assetPath = "assets/image/abu_bakr_shatri.jpg";
         }
-        return {'name': audioInfo.reciter, 'image': placeholderImg};
+        return {'name': audioInfo.reciter, 'image': assetPath};
       }).toList();
 
       return SizedBox(
@@ -267,9 +254,10 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
           scrollDirection: Axis.horizontal,
           itemCount: reciters.length,
           itemBuilder: (context, index) {
-            final isSelected = selectedReciterIndex == index;
+            final reciterName = reciters[index]['name']!;
+            final isSelected = _selectedReciterName == reciterName;
             return GestureDetector(
-              onTap: () => setState(() => selectedReciterIndex = index),
+              onTap: () => setState(() => _selectedReciterName = reciterName),
               child: Container(
                 width: 100.w,
                 margin: EdgeInsets.only(right: 12.w),
@@ -289,7 +277,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                                   )
                                 : null,
                             image: DecorationImage(
-                              image: NetworkImage(reciters[index]['image']!),
+                              image: AssetImage(reciters[index]['image']!),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -351,10 +339,11 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
         icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
         items: [
           'English',
-          'Arabic',
-          'Urdu',
-          'Bengali',
-          'Indonesian',
+          'العربية',
+          'اردو',
+          'Türkçe',
+          'Bahasa',
+          'François',
         ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
         onChanged: onChanged,
       ),
@@ -381,7 +370,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                 height: 32.h,
               ),
               Text(
-                "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+                "alhamdulillah_verse".tr,
                 style: TextStyle(
                   fontSize: 24.sp,
                   fontWeight: FontWeight.bold,
@@ -396,7 +385,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Text(
-                "[All] praise is [due] to Allah, Lord of the worlds -",
+                "alhamdulillah_trans".tr,
                 style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                 textAlign: TextAlign.left,
               ),
@@ -455,7 +444,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
                         ),
                         SizedBox(height: 8.h),
                         Text(
-                          arabicScripts[index]['name']!,
+                          arabicScripts[index]['key']!.tr,
                           style: TextStyle(
                             fontSize: 10.sp,
                             color: Colors.grey[600],
@@ -494,7 +483,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
               ),
               child: Center(
                 child: Text(
-                  themes[index],
+                  themes[index].toLowerCase().tr,
                   style: TextStyle(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w500,
@@ -510,46 +499,14 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
   }
 
   Widget _buildSaveButton() {
-    final VerseOfDayController controller = Get.find<VerseOfDayController>();
     return GestureDetector(
       onTap: () async {
         // Save selected reciter to SharedPreferences
-        final audioData = controller.randomVerse.value?.data.verse.verse.audio;
-        if (audioData != null && audioData.isNotEmpty) {
-          final reciters = audioData.values.map((audioInfo) {
-            String placeholderImg =
-                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
-            if (audioInfo.reciter.contains("Sudais")) {
-              placeholderImg =
-                  "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1";
-            } else if (audioInfo.reciter.contains("Yasser") ||
-                audioInfo.reciter.contains("Dussary")) {
-              placeholderImg =
-                  "https://i.scdn.co/image/ab67616100005174e4bd7040657e8e61dc4667be";
-            } else if (audioInfo.reciter.contains("Nasser") ||
-                audioInfo.reciter.contains("Qatami")) {
-              placeholderImg =
-                  "https://scontent.fdac207-1.fna.fbcdn.net/v/t39.30808-6/470019064_1119048786249564_9159029543174380749_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=O9kA8gkeLGMQ7kNvwGNr5oH&_nc_oc=AdnT-OiSE9RjU0v0kTD07qPFSudAeHeqDozhECy78a0zZ8DxGG4kud8d2Wg7InObuBY&_nc_zt=23&_nc_ht=scontent.fdac207-1.fna&_nc_gid=7xGR-giX8dhXhYZ-X3B0xg&_nc_ss=8&oh=00_AfwTIfRlr9uHLOvZeNeCuTaXLMyn9KiQObXJwr7oy-Ctmg&oe=69B44A59";
-            } else if (audioInfo.reciter.contains("Mishary") ||
-                audioInfo.reciter.contains("Alafasy")) {
-              placeholderImg =
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
-            } else if (audioInfo.reciter.contains("Abu Bakr") ||
-                audioInfo.reciter.contains("Shatri")) {
-              placeholderImg =
-                  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUmPkcySF56YidTERKU54hBnQ0lf734dwb4w&s";
-            }
-            return {'name': audioInfo.reciter, 'image': placeholderImg};
-          }).toList();
-          if (selectedReciterIndex >= 0 &&
-              selectedReciterIndex < reciters.length) {
-            final selectedReciterName = reciters[selectedReciterIndex]['name']!;
-            await SharedPreferencesHelper.saveReciter(selectedReciterName);
-            // Debug print
-            // ignore: avoid_print
-            print('[DEBUG] Saved reciter: $selectedReciterName');
-          }
-        }
+        // No need to rebuild the reciters list here since we use _selectedReciterName directly
+        await SharedPreferencesHelper.saveReciter(_selectedReciterName);
+        // Debug print
+        // ignore: avoid_print
+        print('[DEBUG] Saved reciter: $_selectedReciterName');
         // Save other settings if needed
         Navigator.pop(context);
       },
@@ -562,7 +519,7 @@ class _AppearanceSettingsScreenState extends State<AppearanceSettingsScreen> {
         ),
         child: Center(
           child: Text(
-            "Save",
+            "save".tr,
             style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,

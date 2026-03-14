@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:get/get.dart';
+import '../controller/islamic_calendar_controller.dart';
 
 class IslamicCalendarScreen extends StatefulWidget {
   const IslamicCalendarScreen({super.key});
@@ -12,6 +14,7 @@ class IslamicCalendarScreen extends StatefulWidget {
 }
 
 class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
+  final IslamicCalendarController _controller = Get.put(IslamicCalendarController());
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
@@ -65,7 +68,9 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
                           SizedBox(height: 24.h),
                           _buildSpecialDaysHeader(),
                           SizedBox(height: 16.h),
-                          _buildEventsList(),
+                          Obx(() => _controller.isLoading.value
+                              ? Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32)))
+                              : _buildEventsList()),
                           SizedBox(height: 20.h),
                         ],
                       ),
@@ -111,7 +116,8 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
               ),
               Text(
                 displayDate == DateTime.now()
-                    ? "Today, ${DateFormat('d MMMM').format(displayDate)}"
+                    ? "today".tr +
+                          ", ${DateFormat('d MMMM').format(displayDate)}"
                     : DateFormat('EEEE, d MMMM').format(displayDate),
                 style: TextStyle(color: Colors.white70, fontSize: 14.sp),
               ),
@@ -195,6 +201,13 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
                       _focusedDay = focusedDay;
                     });
                   },
+                  onPageChanged: (focusedDay) {
+                    setState(() {
+                      _focusedDay = focusedDay;
+                    });
+                    _controller.onFocusedDayChanged(focusedDay);
+                  },
+                  eventLoader: _controller.getEventsForDay,
                   calendarFormat: CalendarFormat.month,
                   headerVisible: false,
                   daysOfWeekVisible: false,
@@ -220,6 +233,11 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
                       color: Colors.black87,
                     ),
                     outsideDaysVisible: false,
+                    markersAlignment: Alignment.bottomCenter,
+                    markerDecoration: const BoxDecoration(
+                      color: Color(0xFFC62828),
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
               ),
@@ -250,7 +268,7 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
 
   Widget _buildSpecialDaysHeader() {
     return Text(
-      "Special Days & Events",
+      "special_days_events".tr,
       style: TextStyle(
         fontSize: 18.sp,
         fontWeight: FontWeight.bold,
@@ -260,38 +278,19 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
   }
 
   Widget _buildEventsList() {
-    final List<Map<String, String>> events = [
-      {
-        'title': 'Al-Hijiria',
-        'hijri': '1 Muharram',
-        'gregorian': 'Jun 26, 2025',
-      },
-      {
-        'title': 'Mawlid al-Nabi',
-        'hijri': '12 Rabi al-Awwal',
-        'gregorian': 'Jan 16, 2026',
-      },
-      {
-        'title': 'Laylat al-Bara\'ah',
-        'hijri': '15 Shaban',
-        'gregorian': 'Feb 3, 2026',
-      },
-      {
-        'title': 'Ramadan',
-        'hijri': '1st Ramadan 1447 AH',
-        'gregorian': 'Feb 18, 2026',
-      },
-      {
-        'title': 'Eid-ul-Fitr',
-        'hijri': '1st Shawal 1447 AH',
-        'gregorian': 'Mar 20, 2026',
-      },
-      {
-        'title': 'Waq AL Arafa - Hajj',
-        'hijri': '9 Dhul-Hijjah 1447 AH',
-        'gregorian': 'May 26, 2026',
-      },
-    ];
+    final events = _controller.specialDays;
+
+    if (events.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20.h),
+          child: Text(
+            "no_events_found".tr,
+            style: TextStyle(color: Colors.black54, fontSize: 14.sp),
+          ),
+        ),
+      );
+    }
 
     return ListView.separated(
       shrinkWrap: true,
@@ -300,6 +299,7 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
       separatorBuilder: (context, index) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final event = events[index];
+        final eventDate = event.gregorian.toDateTime();
         return Container(
           padding: EdgeInsets.all(16.w),
           decoration: BoxDecoration(
@@ -316,26 +316,28 @@ class _IslamicCalendarScreenState extends State<IslamicCalendarScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event['title']!,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.name,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    event['hijri']!,
-                    style: TextStyle(fontSize: 13.sp, color: Colors.black54),
-                  ),
-                ],
+                    SizedBox(height: 4.h),
+                    Text(
+                      "${event.hijriDay} ${event.hijriMonthName}",
+                      style: TextStyle(fontSize: 13.sp, color: Colors.black54),
+                    ),
+                  ],
+                ),
               ),
               Text(
-                event['gregorian']!,
+                DateFormat('MMM dd, yyyy').format(eventDate),
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w500,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class AdhanNotificationsScreen extends StatefulWidget {
   const AdhanNotificationsScreen({super.key});
@@ -13,6 +15,78 @@ class _AdhanNotificationsScreenState extends State<AdhanNotificationsScreen> {
   String selectedAlert = 'silent'; // silent, default, long_beep
   String selectedAdhanSound =
       'madinah'; // without, madinah, makkah, indonesia, etc.
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _playingValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = await SharedPreferencesHelper.getGlobalAdhanSettings();
+    setState(() {
+      selectedAlert = settings['alertType'] ?? 'silent';
+      selectedAdhanSound = settings['adhanSound'] ?? 'madinah';
+    });
+  }
+
+  Future<void> _saveSettings() async {
+    await SharedPreferencesHelper.saveGlobalAdhanSettings(
+      alertType: selectedAlert,
+      adhanSound: selectedAdhanSound,
+    );
+  }
+
+  Future<void> _togglePlaySound(String value) async {
+    if (_playingValue == value) {
+      await _audioPlayer.stop();
+      setState(() {
+        _playingValue = null;
+      });
+      return;
+    }
+
+    String assetPath = "";
+    switch (value) {
+      case 'azan1':
+        assetPath = "audio/azan1.mp3";
+        break;
+      case 'madinah':
+        assetPath = "audio/Mishary Rashid Al-Afasy.mp3";
+        break;
+      case 'makkah':
+        assetPath = "audio/Nasser Al-Qatami.mp3";
+        break;
+      case 'indonesia1':
+        assetPath = "audio/Yasser Al-Dosari.mp3";
+        break;
+      case 'indonesia2':
+        assetPath = "audio/Abu Bakr Al-Shatri.mp3";
+        break;
+      case 'makkah2':
+        assetPath = "audio/azan1.mp3"; // Fallback or reuse
+        break;
+      default:
+        return;
+    }
+
+    if (assetPath.isNotEmpty) {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource(assetPath));
+      setState(() {
+        _playingValue = value;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +155,12 @@ class _AdhanNotificationsScreenState extends State<AdhanNotificationsScreen> {
                     SizedBox(height: 8.h),
 
                     // Adhan options
+                    _buildAdhanSoundOption(
+                      "Adhan(Azan1)",
+                      "Default Azan Tone",
+                      'azan1',
+                    ),
+                    SizedBox(height: 8.h),
                     _buildAdhanSoundOption(
                       "Adhan(Madinah)",
                       "Mishary Rashid Alafasy",
@@ -182,6 +262,7 @@ class _AdhanNotificationsScreenState extends State<AdhanNotificationsScreen> {
           setState(() {
             selectedAlert = value;
           });
+          _saveSettings();
         },
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
@@ -242,6 +323,7 @@ class _AdhanNotificationsScreenState extends State<AdhanNotificationsScreen> {
         setState(() {
           selectedAdhanSound = value;
         });
+        _saveSettings();
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -256,10 +338,13 @@ class _AdhanNotificationsScreenState extends State<AdhanNotificationsScreen> {
           children: [
             // Play/Pause button
             if (subtitle != null) ...[
-              Icon(
-                isPaused ? Icons.pause : Icons.play_arrow,
-                size: 24.sp,
-                color: Colors.grey[700],
+              GestureDetector(
+                onTap: () => _togglePlaySound(value),
+                child: Icon(
+                  _playingValue == value ? Icons.pause : Icons.play_arrow,
+                  size: 24.sp,
+                  color: Colors.grey[700],
+                ),
               ),
               SizedBox(width: 12.w),
             ],

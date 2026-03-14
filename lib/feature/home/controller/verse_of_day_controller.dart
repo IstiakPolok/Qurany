@@ -70,20 +70,11 @@ class VerseOfDayController extends GetxController {
       );
     } on NoInternetException {
       errorMessage('No internet connection');
-      NetworkErrorHandler.showNoInternetDialog(
-        onRetry: () => fetchRandomVerse(),
-      );
     } on MaintenanceException {
       errorMessage('App is under maintenance');
-      NetworkErrorHandler.showMaintenanceMessage(
-        onRetry: () => fetchRandomVerse(),
-      );
     } catch (e) {
       if (NetworkErrorHandler.isNoInternetError(e)) {
         errorMessage('No internet connection');
-        NetworkErrorHandler.showNoInternetDialog(
-          onRetry: () => fetchRandomVerse(),
-        );
       } else {
         errorMessage('Failed to load verse: $e');
       }

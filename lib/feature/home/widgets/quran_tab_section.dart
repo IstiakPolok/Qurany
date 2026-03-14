@@ -20,7 +20,6 @@ class QuranTabSection extends StatefulWidget {
 class _QuranTabSectionState extends State<QuranTabSection> {
   final TextEditingController _searchController = TextEditingController();
   final QuranService _quranService = QuranService();
-  final List<SurahModel> _allSurahs = [];
   List<SurahModel> _filteredSurahs = [];
   List<JuzModel> _allJuz = [];
   List<JuzModel> _filteredJuz = [];
@@ -31,7 +30,6 @@ class _QuranTabSectionState extends State<QuranTabSection> {
 
   // Pagination state
   int _currentPage = 1;
-  final int _totalItems = 114;
   final int _pageSize = 10;
 
   Map<int, int> _progressMap = {};
@@ -255,7 +253,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Quran",
+                "quran".tr,
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
               Column(
@@ -263,7 +261,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "View all",
+                    "view_all".tr,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14.sp,
@@ -283,7 +281,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: "Search",
+              hintText: "search".tr,
               hintStyle: TextStyle(color: subheading, fontSize: 14.sp),
 
               suffixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -312,9 +310,9 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           // Tabs
           Row(
             children: [
-              _buildTab("Surah", _selectedTab == "Surah"),
+              _buildTab("surah".tr, _selectedTab == "Surah"),
               SizedBox(width: 8.w),
-              _buildTab("Juzz", _selectedTab == "Juzz"),
+              _buildTab("juz".tr, _selectedTab == "Juzz"),
             ],
           ),
           SizedBox(height: 16.h),
@@ -327,19 +325,19 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                     ? Center(
                         child: Column(
                           children: [
-                            const Text("Failed to load surahs"),
+                            Text("failed_load_surahs".tr),
                             TextButton(
                               onPressed: _fetchSurahs,
-                              child: const Text("Retry"),
+                              child: Text("retry".tr),
                             ),
                           ],
                         ),
                       )
                     : _filteredSurahs.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Padding(
                           padding: EdgeInsets.all(20.0),
-                          child: Text("No Surahs found"),
+                          child: Text("no_surahs_found".tr),
                         ),
                       )
                     : Column(
@@ -395,7 +393,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Juz ${juz.number}",
+              "${'juz'.tr} ${juz.number}",
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
@@ -405,7 +403,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
             GestureDetector(
               onTap: () {},
               child: Text(
-                "Read Juz",
+                "read_juz".tr,
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
@@ -477,7 +475,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
-                                  "${surah.revealedVerses} / ${surah.totalVerses} Aya",
+                                  "${surah.revealedVerses} / ${surah.totalVerses} ${'aya'.tr}",
                                   style: TextStyle(
                                     fontSize: 10.sp,
                                     color: Colors.grey,
@@ -678,7 +676,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                       Icon(Icons.done_all, size: 14.sp, color: Colors.green),
                       SizedBox(width: 4.w),
                       Text(
-                        "${surah.revealedVerses} / ${surah.totalVerses} Aya",
+                        "${surah.revealedVerses} / ${surah.totalVerses} ${'aya'.tr}",
                         style: TextStyle(color: Colors.grey, fontSize: 10.sp),
                       ),
                     ],
@@ -707,7 +705,7 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                   },
                 ),
                 Text(
-                  "${surah.totalVerses} VERSES",
+                  "${surah.totalVerses} ${'verses'.tr}",
                   style: TextStyle(color: Colors.grey, fontSize: 10.sp),
                 ),
               ],

@@ -57,7 +57,7 @@ class NotificationScreen extends StatelessWidget {
           ),
         ),
         title: Text(
-          'Notifications',
+          'notifications'.tr,
           style: TextStyle(
             color: Colors.black,
             fontSize: 18.sp,
@@ -77,9 +77,8 @@ class NotificationScreen extends StatelessWidget {
             if (reminderTime != null && reminderTime.trim().isNotEmpty) {
               dynamicNotifications.add(
                 NotificationModel(
-                  title: 'Daily Practice Reminder',
-                  subtitle:
-                      'Your memorization reminder is set for $reminderTime.',
+                  title: 'daily_practice_reminder'.tr,
+                  subtitle: 'memorization_reminder_desc'.trParams({'time': reminderTime}),
                   date: DateFormat('dd MMM yyyy').format(DateTime.now()),
                   icon: Icons.notifications_active,
                 ),
@@ -91,7 +90,7 @@ class NotificationScreen extends StatelessWidget {
               final verse = verseController.randomVerse.value!.data.verse;
               dynamicNotifications.add(
                 NotificationModel(
-                  title: 'Verse of the Day',
+                  title: 'verse_of_day'.tr,
                   subtitle:
                       '"${verse.ayate}" [${verse.transliteration} ${verse.verseId}]',
                   date: DateFormat('dd MMM yyyy').format(DateTime.now()),
@@ -110,9 +109,11 @@ class NotificationScreen extends StatelessWidget {
               if (nextTime != null) {
                 dynamicNotifications.add(
                   NotificationModel(
-                    title: 'Reminder: $nextPrayer Prayer',
-                    subtitle:
-                        "The $nextPrayer prayer is at $nextTime. Don't forget your dhikr.",
+                    title: 'prayer_reminder_title'.trParams({'prayer': nextPrayer}),
+                    subtitle: 'prayer_reminder_desc'.trParams({
+                      'prayer': nextPrayer,
+                      'time': nextTime,
+                    }),
                     date: DateFormat('dd MMM yyyy').format(DateTime.now()),
                     icon: Icons.access_time,
                   ),
@@ -124,9 +125,8 @@ class NotificationScreen extends StatelessWidget {
             if (dynamicNotifications.isEmpty) {
               dynamicNotifications.add(
                 NotificationModel(
-                  title: 'Welcome to Qurany',
-                  subtitle:
-                      'Stay connected with your daily prayers and Quran reading.',
+                  title: 'welcome_to_qurany'.tr,
+                  subtitle: 'welcome_desc'.tr,
                   date: DateFormat('dd MMM yyyy').format(DateTime.now()),
                   icon: Icons.notifications_active,
                 ),
@@ -139,19 +139,18 @@ class NotificationScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 20.h),
-                  _buildSectionHeader('Today', onMarkAllAsRead: () {}),
+                  _buildSectionHeader('today'.tr, onMarkAllAsRead: () {}),
                   ...dynamicNotifications.map((n) => _buildNotificationTile(n)),
                   SizedBox(height: 10.h),
                   const Divider(),
                   SizedBox(height: 20.h),
-                  _buildSectionHeader('Yesterday'),
+                  _buildSectionHeader('yesterday'.tr),
                   // Sample static notification for "Yesterday"
                   _buildNotificationTile(
                     NotificationModel(
-                      title: 'Al-Kahf Reminder',
-                      subtitle:
-                          'Friday is here, don\'t forget to read Surah Al-Kahf.',
-                      date: 'Last Friday',
+                      title: 'alkahf_reminder'.tr,
+                      subtitle: 'alkahf_desc'.tr,
+                      date: 'last_friday'.tr,
                       icon: Icons.auto_stories,
                     ),
                   ),
@@ -183,7 +182,7 @@ class NotificationScreen extends StatelessWidget {
             GestureDetector(
               onTap: onMarkAllAsRead,
               child: Text(
-                'Mark all as read',
+                'mark_all_read'.tr,
                 style: TextStyle(
                   fontSize: 14.sp,
                   color: const Color(0xFF2E7D32),

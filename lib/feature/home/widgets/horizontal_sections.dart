@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 
 import 'recitersCardwidget.dart';
 import 'package:qurany/feature/home/view/did_you_know_screen.dart';
 import 'package:qurany/feature/home/view/quranic_stories_screen.dart';
 import 'package:qurany/feature/home/view/reciters_screen.dart';
 import 'package:qurany/feature/home/view/azkar_screen.dart';
-import 'package:get/get.dart';
 import 'package:qurany/feature/home/controller/azkar_controller.dart';
 import 'package:qurany/feature/home/controller/history_controller.dart';
 import 'package:qurany/feature/home/view/azkar_detail_screen.dart';
@@ -38,7 +38,7 @@ class SectionHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "See all",
+                  "see_all".tr,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14.sp,
@@ -116,7 +116,7 @@ class DidYouKnowSection extends StatelessWidget {
       }
 
       return ReusableHorizontalSection(
-        title: "Did you know",
+        title: "did_you_know".tr,
         onSeeAll: () {
           Navigator.push(
             context,
@@ -201,7 +201,7 @@ class RecitersSection extends StatelessWidget {
     return Column(
       children: [
         SectionHeader(
-          title: "Reciters",
+          title: "reciters".tr,
           onSeeAll: () {
             Navigator.push(
               context,
@@ -235,7 +235,7 @@ class StoriesSection extends StatelessWidget {
       }
 
       return ReusableHorizontalSection(
-        title: "Quranic Stories",
+        title: "quranic_stories".tr,
         onSeeAll: () {
           Navigator.push(
             context,
@@ -343,7 +343,7 @@ class AzkarSection extends StatelessWidget {
           child: Column(
             children: [
               SectionHeader(
-                title: "Azkar",
+                title: "azkar".tr,
                 onSeeAll: () {
                   Navigator.push(
                     context,
@@ -359,15 +359,15 @@ class AzkarSection extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        "No Azkar available yet",
-                        style: TextStyle(color: Colors.grey),
+                      Text(
+                        "no_azkar_available".tr,
+                        style: const TextStyle(color: Colors.grey),
                       ),
                       SizedBox(height: 8.h),
                       GestureDetector(
                         onTap: () => controller.fetchAllAzkar(),
                         child: Text(
-                          "Retry",
+                          "retry".tr,
                           style: TextStyle(
                             color: Colors.green,
                             fontSize: 12.sp,

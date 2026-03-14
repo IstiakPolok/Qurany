@@ -180,7 +180,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                       Expanded(
                         child: Center(
                           child: Text(
-                            "Compass View",
+                            "compass_view".tr,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18.sp,
@@ -281,19 +281,19 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         //   ),
         // ),
         // Expand map button
-        Positioned(
-          top: 50.h,
-          right: 16.w,
-          child: Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8.r),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Icon(Icons.open_in_full, size: 20.sp, color: Colors.black87),
-          ),
-        ),
+        // Positioned(
+        //   top: 50.h,
+        //   right: 16.w,
+        //   child: Container(
+        //     padding: EdgeInsets.all(8.w),
+        //     decoration: BoxDecoration(
+        //       color: Colors.white,
+        //       borderRadius: BorderRadius.circular(8.r),
+        //       border: Border.all(color: Colors.grey[300]!),
+        //     ),
+        //     child: Icon(Icons.open_in_full, size: 20.sp, color: Colors.black87),
+        //   ),
+        // ),
       ],
     );
   }
@@ -386,11 +386,14 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildStatItem("Loading...", "To Makkah"),
+              _buildStatItem("loading".tr, "to_makkah".tr),
               Container(width: 1, height: 40.h, color: Colors.grey[400]),
-              _buildStatItem("${_currentHeading.toInt()}°", "Current Heading"),
+              _buildStatItem(
+                "${_currentHeading.toInt()}°",
+                "current_heading".tr,
+              ),
               Container(width: 1, height: 40.h, color: Colors.grey[400]),
-              _buildStatItem("Loading...", "Qibla direction"),
+              _buildStatItem("loading".tr, "qibla_direction".tr),
             ],
           );
         }
@@ -400,12 +403,12 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           children: [
             _buildStatItem(
               "${_distanceToMakkah.toStringAsFixed(2)} KM",
-              "To Makkah",
+              "to_makkah".tr,
             ),
             Container(width: 1, height: 40.h, color: Colors.grey[400]),
-            _buildStatItem("${_currentHeading.toInt()}°", "Current Heading"),
+            _buildStatItem("${_currentHeading.toInt()}°", "current_heading".tr),
             Container(width: 1, height: 40.h, color: Colors.grey[400]),
-            _buildStatItem("${_qiblaDirection.toInt()}°", "Qibla direction"),
+            _buildStatItem("${_qiblaDirection.toInt()}°", "qibla_direction".tr),
           ],
         );
       }),
@@ -438,6 +441,8 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           _currentHeading = heading;
 
           Widget compass;
+          // Use stable IDs for selection logic instead of translated labels
+          // to ensure selection isn't lost when the language changes.
           switch (_selectedCompass) {
             case 'Modern':
               compass = ModernCompass(
@@ -451,6 +456,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                 qiblaAngle: _qiblaDirection,
               );
               break;
+            case 'Classic':
             default:
               compass = ClassicCompass(
                 heading: heading,
@@ -498,7 +504,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
               ),
               SizedBox(width: 8.w),
               Text(
-                "Qibla Compass",
+                "qibla_compass".tr,
                 style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
               ),
             ],
@@ -513,37 +519,43 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
               children: [
                 SizedBox(width: 8.w),
                 _buildCompassOption(
-                  "Classic",
+                  "Classic", // Internal ID (Stable)
+                  "style_classic".tr, // Display Label (Translated)
                   'assets/image/classic_icon.png',
                   false,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
-                  "Modern",
+                  "Modern", // Internal ID (Stable)
+                  "style_modern".tr, // Display Label (Translated)
                   'assets/image/modern_icon.png',
                   false,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
-                  "Clean",
+                  "Clean", // Internal ID (Stable)
+                  "style_clean".tr, // Display Label (Translated)
                   'assets/image/clean_icon.png',
                   false,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
-                  "Ornate",
+                  "Ornate", // Internal ID (Stable)
+                  "style_ornate".tr, // Display Label (Translated)
                   'assets/image/ornateCompass.png',
                   true,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
-                  "Neon",
+                  "Neon", // Internal ID (Stable)
+                  "style_neon".tr, // Display Label (Translated)
                   'assets/image/neonCOmpass.png',
                   true,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
-                  "Galaxy",
+                  "Galaxy", // Internal ID (Stable)
+                  "style_galaxy".tr, // Display Label (Translated)
                   'assets/image/galaxycompass.png',
                   true,
                 ),
@@ -556,17 +568,23 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
     );
   }
 
-  Widget _buildCompassOption(String label, String imagePath, bool isLocked) {
-    final bool isSelected = _selectedCompass == label;
+  Widget _buildCompassOption(
+    String id,
+    String label,
+    String imagePath,
+    bool isLocked,
+  ) {
+    // IMPORTANT: Compare using 'id' (stable across languages) instead of 'label' (translated)
+    final bool isSelected = _selectedCompass == id;
 
     return GestureDetector(
       onTap: isLocked
           ? null
           : () {
               setState(() {
-                _selectedCompass = label;
+                _selectedCompass = id;
               });
-              _saveCompassStyle(label);
+              _saveCompassStyle(id); // Save ID for persistence
             },
       child: Column(
         children: [
@@ -626,23 +644,6 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
     );
   }
 
-  IconData _getPrayerIcon(String prayerName) {
-    switch (prayerName.toLowerCase()) {
-      case 'fajr':
-        return Icons.wb_twilight;
-      case 'dhuhr':
-        return Icons.wb_sunny;
-      case 'asr':
-        return Icons.cloud_outlined;
-      case 'maghrib':
-        return Icons.wb_twilight;
-      case 'isha':
-        return Icons.nights_stay_outlined;
-      default:
-        return Icons.wb_sunny_outlined;
-    }
-  }
-
   Widget _buildPremiumBanner() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -681,7 +682,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Unlock Premium Styles",
+                        "unlock_premium_styles".tr,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 13.sp,
@@ -689,7 +690,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                       ),
                       SizedBox(height: 3.h),
                       Text(
-                        "Continue using and engaging with Qurani+ to unlock beautiful new compass styles!",
+                        "compass_unlock_desc".tr,
                         style: TextStyle(
                           fontWeight: FontWeight.normal,
                           fontSize: 13.sp,
@@ -720,7 +721,10 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                         ],
                       ),
                       Text(
-                        'Complete 2 more goals to unlock "Other" colors',
+                        "compass_unlock_progress".trParams({
+                          "count": "2",
+                          "name": "Other",
+                        }),
                         style: TextStyle(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.bold,

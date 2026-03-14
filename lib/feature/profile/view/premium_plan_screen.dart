@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:glassmorphism/glassmorphism.dart';
@@ -15,6 +16,11 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
   bool isYearlySelected = true;
   List<Package> packages = [];
   bool isLoading = true;
+  bool isPurchasing = false;
+  bool isRestoring = false;
+  String? errorMessage;
+
+  bool get _isApple => Platform.isIOS || Platform.isMacOS;
 
   @override
   void initState() {
@@ -23,22 +29,111 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
   }
 
   Future<void> _fetchOfferings() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
     try {
       final offerings = await PurchaseApi.fetchOfferings();
-      if (offerings.isNotEmpty) {
-        setState(() {
-          packages = offerings.first.availablePackages;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
+      if (!mounted) return;
       setState(() {
+        packages = offerings;
         isLoading = false;
       });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Failed to load plans. Please check your connection.';
+      });
+    }
+  }
+
+  Future<void> _handlePurchase(Package package) async {
+    setState(() {
+      isPurchasing = true;
+      errorMessage = null;
+    });
+
+    final (success, error) = await PurchaseApi.purchasePackage(package);
+
+    if (!mounted) return;
+    setState(() => isPurchasing = false);
+
+    if (success) {
+      _showSuccessDialog();
+    } else if (error != null) {
+      setState(() => errorMessage = error);
+    }
+  }
+
+  Future<void> _handleRestore() async {
+    setState(() {
+      isRestoring = true;
+      errorMessage = null;
+    });
+
+    final (success, error) = await PurchaseApi.restorePurchases();
+
+    if (!mounted) return;
+    setState(() => isRestoring = false);
+
+    if (success && PurchaseApi.isUserPremium()) {
+      _showSuccessDialog(isRestore: true);
+    } else {
+      setState(() {
+        errorMessage = error ?? 'No active subscriptions found to restore.';
+      });
+    }
+  }
+
+  void _showSuccessDialog({bool isRestore = false}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: const Text(
+          '🎉 Welcome to Premium!',
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          isRestore
+              ? 'Your premium access has been restored successfully.'
+              : 'You now have full access to all Qurany Premium features.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14.sp),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Continue',
+              style: TextStyle(color: Color(0xFF2E7D32)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Package? get _selectedPackage {
+    if (packages.isEmpty) return null;
+    if (isYearlySelected) {
+      return packages.firstWhere(
+        (p) => p.packageType == PackageType.annual,
+        orElse: () => packages.first,
+      );
+    } else {
+      return packages.firstWhere(
+        (p) => p.packageType == PackageType.monthly,
+        orElse: () => packages.first,
+      );
     }
   }
 
@@ -57,7 +152,6 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
               alignment: Alignment.topCenter,
             ),
           ),
-
           child: SafeArea(
             child: SingleChildScrollView(
               child: Column(
@@ -110,13 +204,23 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
 
                   SizedBox(height: 24.h),
 
-                  // CTA Button
-                  _buildTrialButton(),
+                  // Error message if any
+                  if (errorMessage != null) _buildErrorBanner(),
 
-                  SizedBox(height: 16.h),
+                  SizedBox(height: errorMessage != null ? 16.h : 0),
+
+                  // CTA Button (Apple Pay / Google Pay / Subscribe)
+                  _buildPaymentButton(),
+
+                  SizedBox(height: 12.h),
 
                   // Auto-renew text
                   _buildAutoRenewText(),
+
+                  SizedBox(height: 12.h),
+
+                  // Restore Purchases
+                  _buildRestoreButton(),
 
                   SizedBox(height: 12.h),
 
@@ -184,11 +288,26 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
     }
 
     if (packages.isEmpty) {
-      return Center(
-        child: Text(
-          "No plans available at the moment.",
-          style: TextStyle(color: Colors.white, fontSize: 16.sp),
-        ),
+      return Column(
+        children: [
+          Text(
+            "No plans available at the moment.",
+            style: TextStyle(color: Colors.white, fontSize: 16.sp),
+          ),
+          SizedBox(height: 12.h),
+          GestureDetector(
+            onTap: _fetchOfferings,
+            child: Text(
+              "Tap to retry",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14.sp,
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.white,
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -197,25 +316,23 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
       child: Row(
         children: packages.map((package) {
           final isYearly = package.packageType == PackageType.annual;
-          final isMonthly = package.packageType == PackageType.monthly;
-
-          // Use index to add spacing between cards
           final isLast = packages.last == package;
+          final isSelected = isYearly ? isYearlySelected : !isYearlySelected;
 
           return Expanded(
             child: Padding(
               padding: EdgeInsets.only(right: isLast ? 0 : 16.w),
               child: _buildPricingCard(
-                title: package.storeProduct.title.split('(')[0].trim(),
+                title: isYearly ? "Yearly" : "Monthly",
                 price: package.storeProduct.priceString,
-                isSelected: isYearly ? isYearlySelected : !isYearlySelected,
+                period: isYearly ? '/year' : '/month',
+                isSelected: isSelected,
                 showBadge: isYearly,
                 badgeText: isYearly ? "Save 40%" : null,
                 onTap: () {
                   setState(() {
                     isYearlySelected = isYearly;
                   });
-                  _handlePurchase(package);
                 },
               ),
             ),
@@ -225,37 +342,31 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
     );
   }
 
-  Future<void> _handlePurchase(Package package) async {
-    final success = await PurchaseApi.purchasePackage(package);
-    if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Purchase Successful!")));
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Purchase Failed or Cancelled")),
-      );
-    }
-  }
-
   Widget _buildPricingCard({
     required String title,
     required String price,
+    required String period,
     required bool isSelected,
     required VoidCallback onTap,
     bool showBadge = false,
     String? badgeText,
   }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            GlassmorphicContainer(
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.r),
+              border: isSelected
+                  ? Border.all(color: Colors.white, width: 2)
+                  : null,
+            ),
+            child: GlassmorphicContainer(
               width: double.infinity,
-              height: 135.h,
+              height: 145.h,
               borderRadius: 20.r,
               blur: 18,
               alignment: Alignment.center,
@@ -264,8 +375,8 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.10),
-                  Colors.white.withOpacity(0.05),
+                  Colors.white.withOpacity(isSelected ? 0.20 : 0.10),
+                  Colors.white.withOpacity(isSelected ? 0.10 : 0.05),
                 ],
                 stops: const [0.1, 1],
               ),
@@ -279,65 +390,80 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
               ),
               child: Container(
                 width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 24.h),
+                padding: EdgeInsets.symmetric(vertical: 20.h),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 16.sp,
+                        fontSize: 14.sp,
                         color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                     SizedBox(height: 8.h),
                     Text(
                       price,
                       style: TextStyle(
-                        fontSize: 32.sp,
+                        fontSize: 28.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
+                    Text(
+                      period,
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    if (isSelected) ...[
+                      SizedBox(height: 8.h),
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.white,
+                        size: 16.sp,
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
-            if (showBadge && badgeText != null)
-              Positioned(
-                top: -12.h,
-                right: -8.w,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    badgeText,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2E7D32),
+          ),
+          if (showBadge && badgeText != null)
+            Positioned(
+              top: -12.h,
+              right: -8.w,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
+                  ],
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF2E7D32),
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -434,42 +560,131 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
     );
   }
 
-  Widget _buildTrialButton() {
+  Widget _buildErrorBanner() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: Colors.red.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: Colors.red.withOpacity(0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.white, size: 18.sp),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                errorMessage!,
+                style: TextStyle(color: Colors.white, fontSize: 13.sp),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => errorMessage = null),
+              child: Icon(Icons.close, color: Colors.white, size: 16.sp),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentButton() {
+    final package = _selectedPackage;
+    final isDisabled = package == null || isPurchasing || isLoading;
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: GestureDetector(
-        onTap: () {
-          if (packages.isNotEmpty) {
-            final package = packages.firstWhere(
-              (p) => p.packageType == PackageType.annual,
-              orElse: () => packages.first,
-            );
-            _handlePurchase(package);
-          }
-        },
-        child: Container(
+        onTap: isDisabled ? null : () => _handlePurchase(package),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           width: double.infinity,
           padding: EdgeInsets.symmetric(vertical: 16.h),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDisabled ? Colors.white.withOpacity(0.5) : Colors.white,
             borderRadius: BorderRadius.circular(30.r),
+            boxShadow: isDisabled
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
-          child: Center(
-            child: Text(
-              "Get 7 days free trial",
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-          ),
+          child: isPurchasing
+              ? Center(
+                  child: SizedBox(
+                    width: 24.w,
+                    height: 24.w,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Apple Pay / Google Pay logo
+                    if (_isApple) ...[
+                      Icon(Icons.apple, color: Colors.black, size: 22.sp),
+                      SizedBox(width: 6.w),
+                      Text(
+                        "Pay",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ] else ...[
+                      Image.asset(
+                        'assets/icons/google_pay.png',
+                        height: 22.h,
+                        errorBuilder: (ctx, e, s) => Icon(
+                          Icons.payment,
+                          size: 22.sp,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        "Pay",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                    SizedBox(width: 8.w),
+                    Container(width: 1.w, height: 18.h, color: Colors.black38),
+                    SizedBox(width: 8.w),
+                    Text(
+                      package != null
+                          ? "Get 7 days free • ${package.storeProduct.priceString}"
+                          : "Get 7 days free trial",
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
   }
 
   Widget _buildAutoRenewText() {
+    final priceString = _selectedPackage?.storeProduct.priceString ?? '\$29.99';
+    final period = isYearlySelected ? '/year' : '/month';
+
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
@@ -477,12 +692,36 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
         children: [
           const TextSpan(text: "Auto-renews at "),
           TextSpan(
-            text: "\$29.99/year",
+            text: "$priceString$period",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
           ),
           const TextSpan(text: " after trial.\nCancel anytime."),
         ],
       ),
+    );
+  }
+
+  Widget _buildRestoreButton() {
+    return GestureDetector(
+      onTap: isRestoring ? null : _handleRestore,
+      child: isRestoring
+          ? SizedBox(
+              width: 20.w,
+              height: 20.w,
+              child: const CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Text(
+              "Restore Purchases",
+              style: TextStyle(
+                fontSize: 13.sp,
+                color: Colors.white.withOpacity(0.9),
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.white,
+              ),
+            ),
     );
   }
 
@@ -530,7 +769,7 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24.w),
       child: Text(
-        "Payment will be charged to your account at confirmation of purchase. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period.",
+        "Payment will be charged to your ${_isApple ? 'Apple ID' : 'Google Play'} account at confirmation of purchase. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Manage subscriptions in your ${_isApple ? 'App Store' : 'Google Play'} account settings.",
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 11.sp,

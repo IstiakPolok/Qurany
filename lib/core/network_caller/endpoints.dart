@@ -19,3 +19,4 @@ const String noteEndpoint = '$baseUrl/api/auth/note';
 const String surahProgressEndpoint = '$baseUrl/api/progress/surah';
 const String verseProgressEndpoint = '$baseUrl/api/progress';
 const String knowledgeBaseUrl = '$baseUrl/auth/knowledge';
+const String guestLoginEndpoint = '$baseUrl/api/user/guest';

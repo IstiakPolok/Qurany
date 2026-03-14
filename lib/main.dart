@@ -11,6 +11,8 @@ import 'package:qurany/core/services/purchase_api.dart';
 import 'package:qurany/core/services/notification_service.dart';
 
 import 'route/app_routes.dart';
+import 'core/localization/app_translations.dart';
+import 'core/services_class/local_service/shared_preferences_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +36,31 @@ void main() async {
   // Initialize LocationService
   Get.put(LocationService());
 
-  runApp(MyApp());
+  // Get saved language pref
+  final String savedLang = await SharedPreferencesHelper.getLanguage();
+  Locale initialLocale = const Locale('en');
+  switch (savedLang) {
+    case 'English':
+      initialLocale = const Locale('en');
+      break;
+    case 'العربية':
+      initialLocale = const Locale('ar');
+      break;
+    case 'اردو':
+      initialLocale = const Locale('ur');
+      break;
+    case 'Türkçe':
+      initialLocale = const Locale('tr');
+      break;
+    case 'Bahasa':
+      initialLocale = const Locale('id');
+      break;
+    case 'Français':
+      initialLocale = const Locale('fr');
+      break;
+  }
+
+  runApp(MyApp(initialLocale: initialLocale));
 }
 
 void configEasyLoading() {
@@ -49,8 +75,8 @@ void configEasyLoading() {
 }
 
 class MyApp extends StatelessWidget {
-  @override
-  const MyApp({super.key});
+  final Locale initialLocale;
+  const MyApp({super.key, required this.initialLocale});
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +87,9 @@ class MyApp extends StatelessWidget {
       builder: (context, child) => GetMaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Quarany',
+        translations: AppTranslations(),
+        locale: initialLocale,
+        fallbackLocale: const Locale('en'),
         getPages: AppRoute.routes,
         initialRoute: AppRoute.splashScreen,
         theme: ThemeData(textTheme: GoogleFonts.figtreeTextTheme()),

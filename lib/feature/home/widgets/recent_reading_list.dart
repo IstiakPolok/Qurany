@@ -95,7 +95,7 @@ class RecentReadingList extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(20.r),
                                   ),
                                   child: Text(
-                                    "Recently Read",
+                                    "recently_read".tr,
                                     style: TextStyle(
                                       fontSize: 10.sp,
                                       fontWeight: FontWeight.bold,

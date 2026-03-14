@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:qurany/feature/home/controller/verse_of_day_controller.dart';
 import 'package:qurany/feature/home/view/verse_of_day_screen.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:share_plus/share_plus.dart';
 
 class VerseOfDayCard extends StatelessWidget {
   const VerseOfDayCard({super.key});
@@ -48,13 +49,13 @@ class VerseOfDayCard extends StatelessWidget {
                     Icon(Icons.error_outline, color: Colors.white, size: 40.sp),
                     SizedBox(height: 8.h),
                     Text(
-                      'Failed to load verse',
+                      'failed_load_verse'.tr,
                       style: TextStyle(color: Colors.white, fontSize: 14.sp),
                     ),
                     SizedBox(height: 8.h),
                     ElevatedButton(
                       onPressed: controller.refreshVerse,
-                      child: const Text('Retry'),
+                      child: Text('retry'.tr),
                     ),
                   ],
                 );
@@ -74,17 +75,30 @@ class VerseOfDayCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Verse of the Day",
+                        "verse_of_day".tr,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Icon(
-                        Icons.share_outlined,
-                        color: Colors.white,
-                        size: 20.sp,
+                      IconButton(
+                        onPressed: () {
+                          final reference = controller.getVerseReference();
+                          final arabicText = verse.data.verse.verse.text;
+                          final translation =
+                              verse.data.verse.verse.translation;
+
+                          Share.share(
+                            "$arabicText\n\n$translation\n\n— $reference",
+                            subject: "Verse of the Day: $reference",
+                          );
+                        },
+                        icon: Icon(
+                          Icons.share_outlined,
+                          color: Colors.white,
+                          size: 20.sp,
+                        ),
                       ),
                     ],
                   ),
@@ -174,7 +188,7 @@ class VerseOfDayCard extends StatelessWidget {
                       );
                     },
                     child: Text(
-                      'Read Full Surah →',
+                      'read_full_surah'.tr,
                       style: TextStyle(color: Colors.white, fontSize: 12.sp),
                     ),
                   ),

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/feature/ask_ai/services/ask_ai_service.dart';
@@ -8,6 +9,10 @@ import 'package:qurany/feature/profile/controller/profile_controller.dart';
 import 'package:qurany/feature/profile/services/profile_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Controller for Ask AI screen
 class AskAIController extends GetxController {
@@ -18,12 +23,89 @@ class AskAIController extends GetxController {
   final AskAiService _askAiService = AskAiService();
   final ProfileService _profileService = ProfileService();
   RxBool isLoading = false.obs;
-  RxString userName = "User".obs;
+  RxString userName = "ai_user_default".tr.obs;
+
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  final FlutterTts _flutterTts = FlutterTts();
+  RxBool isListening = false.obs;
+  RxBool isSpeaking = false.obs;
+  RxBool isSpeechAvailable = false.obs;
 
   @override
   void onInit() {
     super.onInit();
     _loadUserName();
+    _initSpeech();
+    _initTts();
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      var status = await Permission.microphone.status;
+      if (!status.isGranted) {
+        await Permission.microphone.request();
+      }
+
+      isSpeechAvailable.value = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'listening') {
+            isListening.value = true;
+          } else if (status == 'notListening') {
+            isListening.value = false;
+          }
+        },
+        onError: (errorNotification) {
+          isListening.value = false;
+          print("Speech Error: ${errorNotification.errorMsg}");
+        },
+      );
+    } catch (e) {
+      print("Speech initialization error: $e");
+    }
+  }
+
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("en-US");
+    await _flutterTts.setPitch(1.0);
+    _flutterTts.setCompletionHandler(() {
+      isSpeaking.value = false;
+    });
+  }
+
+  void toggleListening() async {
+    if (!isSpeechAvailable.value) {
+      await _initSpeech();
+      if (!isSpeechAvailable.value) return;
+    }
+
+    if (isListening.value) {
+      _speech.stop();
+      isListening.value = false;
+    } else {
+      await _speech.listen(
+        onResult: (result) {
+          messageController.text = result.recognizedWords;
+          if (result.finalResult) {
+            isListening.value = false;
+          }
+        },
+      );
+    }
+  }
+
+  Future<void> speak(String text) async {
+    if (isSpeaking.value) {
+      await _flutterTts.stop();
+      isSpeaking.value = false;
+    } else {
+      isSpeaking.value = true;
+      await _flutterTts.speak(text);
+    }
+  }
+
+  void stopSpeaking() async {
+    await _flutterTts.stop();
+    isSpeaking.value = false;
   }
 
   Future<void> _loadUserName() async {
@@ -103,8 +185,7 @@ class AskAIController extends GetxController {
         });
       } else {
         messages.add({
-          'text':
-              "Sorry, I'm having trouble connecting to the service. Please try again later.",
+          'text': "ai_error_msg".tr,
           'isUser': false,
           'time': DateFormat('hh:mm a').format(DateTime.now()),
         });
@@ -113,8 +194,30 @@ class AskAIController extends GetxController {
     }
   }
 
+  Future<void> copyToClipboard(String text) async {
+    if (text.isNotEmpty) {
+      await Clipboard.setData(ClipboardData(text: text));
+      Get.snackbar(
+        'success'.tr,
+        'ai_copy_success'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF2E7D32),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 2),
+      );
+    }
+  }
+
+  Future<void> shareMessage(String text) async {
+    if (text.isNotEmpty) {
+      String shareText = "$text\n\n${'ai_share_footer'.tr}";
+      await Share.share(shareText);
+    }
+  }
+
   @override
   void onClose() {
+    stopSpeaking();
     messageController.dispose();
     scrollController.dispose();
     super.onClose();
@@ -190,7 +293,7 @@ class AskAIScreen extends StatelessWidget {
 
                                 // Title
                                 Text(
-                                  "Meet Your AI Companion",
+                                  "ai_intro_title".tr,
                                   style: TextStyle(
                                     fontSize: 24.sp,
                                     fontWeight: FontWeight.bold,
@@ -211,18 +314,15 @@ class AskAIScreen extends StatelessWidget {
                                       height: 1.6,
                                     ),
                                     children: [
-                                      const TextSpan(text: "Discover "),
+                                      TextSpan(text: "ai_intro_desc_1".tr),
                                       TextSpan(
-                                        text: "AI Companion",
+                                        text: "ai_intro_desc_2".tr,
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
                                       ),
-                                      const TextSpan(
-                                        text:
-                                            ": Your personal spiritual guide powered by advanced AI and nurtured from the wisdom of the Holy Quran, authentic Hadith collections, and trusted Islamic scholarship on Qurany.",
-                                      ),
+                                      TextSpan(text: "ai_intro_desc_3".tr),
                                     ],
                                   ),
                                 ),
@@ -248,7 +348,7 @@ class AskAIScreen extends StatelessWidget {
                                     ),
                                     Flexible(
                                       child: Text(
-                                        "Start with 5 free questions daily!",
+                                        "ai_free_questions_msg".tr,
                                         style: TextStyle(
                                           fontSize: 16.sp,
                                           fontWeight: FontWeight.w600,
@@ -270,18 +370,18 @@ class AskAIScreen extends StatelessWidget {
                                     Expanded(
                                       child: _buildFeatureItem(
                                         imagePath: "assets/icons/💬.png",
-                                        label: "Explore Together",
+                                        label: "ai_feature_explore".tr,
                                       ),
                                     ),
                                     Expanded(
                                       child: _buildFeatureItem(
                                         imagePath: "assets/icons/📖.png",
-                                        label: "Verse Guidance",
+                                        label: "ai_feature_guidance".tr,
                                       ),
                                     ),
                                     Expanded(
                                       child: _buildFeatureItem(
-                                        label: "Reflection",
+                                        label: "ai_feature_reflection".tr,
                                         imagePath: "assets/icons/🌙.png",
                                       ),
                                     ),
@@ -310,7 +410,7 @@ class AskAIScreen extends StatelessWidget {
                                       elevation: 0,
                                     ),
                                     child: Text(
-                                      "Bismillah, Let's Start",
+                                      "ai_start_button".tr,
                                       style: TextStyle(
                                         fontSize: 16.sp,
                                         fontWeight: FontWeight.bold,
@@ -358,7 +458,7 @@ class AskAIScreen extends StatelessWidget {
                       SizedBox(width: 8.w),
                       Flexible(
                         child: Text(
-                          "Your Reflection Companion",
+                          "ai_chat_title".tr,
                           style: TextStyle(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.bold,
@@ -383,7 +483,7 @@ class AskAIScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 6.w),
                       Text(
-                        "Online",
+                        "ai_online_status".tr,
                         style: TextStyle(
                           fontSize: 12.sp,
                           color: const Color(0xFF4CAF50),
@@ -441,7 +541,7 @@ class AskAIScreen extends StatelessWidget {
                           child: TextField(
                             controller: controller.messageController,
                             decoration: InputDecoration(
-                              hintText: "Share your thoughts or ask...",
+                              hintText: "ai_input_hint".tr,
                               hintStyle: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 14.sp,
@@ -453,10 +553,19 @@ class AskAIScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Icon(
-                          Icons.mic_outlined,
-                          color: Colors.grey[600],
-                          size: 24.sp,
+                        Obx(
+                          () => GestureDetector(
+                            onTap: () => controller.toggleListening(),
+                            child: Icon(
+                              controller.isListening.value
+                                  ? Icons.mic
+                                  : Icons.mic_outlined,
+                              color: controller.isListening.value
+                                  ? Colors.redAccent
+                                  : Colors.grey[600],
+                              size: 24.sp,
+                            ),
+                          ),
                         ),
                         SizedBox(width: 12.w),
                         Obx(
@@ -508,22 +617,29 @@ class AskAIScreen extends StatelessWidget {
                     children: [
                       _buildBottomChip(
                         imagePath: "assets/icons/💬.png",
-                        label: "Explore Together",
-                        onTap: () =>
-                            _sendQuickAction(controller, "Explore Together"),
+                        label: "ai_feature_explore".tr,
+                        onTap: () => _sendQuickAction(
+                          controller,
+                          "ai_feature_explore".tr,
+                        ),
                       ),
                       SizedBox(width: 8.w),
                       _buildBottomChip(
                         imagePath: "assets/icons/📖.png",
-                        label: "Verse Guidance",
-                        onTap: () =>
-                            _sendQuickAction(controller, "Verse Guidance"),
+                        label: "ai_feature_guidance".tr,
+                        onTap: () => _sendQuickAction(
+                          controller,
+                          "ai_feature_guidance".tr,
+                        ),
                       ),
                       SizedBox(width: 8.w),
                       _buildBottomChip(
                         imagePath: "assets/icons/🌙.png",
-                        label: "Reflection",
-                        onTap: () => _sendQuickAction(controller, "Reflection"),
+                        label: "ai_feature_reflection".tr,
+                        onTap: () => _sendQuickAction(
+                          controller,
+                          "ai_feature_reflection".tr,
+                        ),
                       ),
                     ],
                   ),
@@ -555,15 +671,17 @@ class AskAIScreen extends StatelessWidget {
             children: [
               Image.asset(imagePath, width: 14.sp, height: 14.sp),
               SizedBox(width: 4.w),
-              Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -581,7 +699,7 @@ class AskAIScreen extends StatelessWidget {
           // How can I guide you
           Center(
             child: Text(
-              "How can I guide you today?",
+              "ai_guide_question".tr,
               style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
@@ -598,18 +716,18 @@ class AskAIScreen extends StatelessWidget {
               Expanded(
                 child: _buildQuickActionCard(
                   imagePath: "assets/icons/quick1.png",
-                  label: "Learn about this Surah",
+                  label: "ai_quick_surah".tr,
                   onTap: () =>
-                      _sendQuickAction(controller, "Tell me about this Surah"),
+                      _sendQuickAction(controller, "ai_quick_surah_cmd".tr),
                 ),
               ),
               SizedBox(width: 12.w),
               Expanded(
                 child: _buildQuickActionCard(
                   imagePath: "assets/icons/quick2.png",
-                  label: "Explain this verse",
+                  label: "ai_quick_verse".tr,
                   onTap: () =>
-                      _sendQuickAction(controller, "Explain this verse"),
+                      _sendQuickAction(controller, "ai_quick_verse_cmd".tr),
                 ),
               ),
             ],
@@ -622,10 +740,10 @@ class AskAIScreen extends StatelessWidget {
               Expanded(
                 child: _buildQuickActionCard(
                   imagePath: "assets/icons/quick3.png",
-                  label: "Share a reflection",
+                  label: "ai_quick_reflection".tr,
                   onTap: () => _sendQuickAction(
                     controller,
-                    "I want to share a reflection",
+                    "ai_quick_reflection_cmd".tr,
                   ),
                 ),
               ),
@@ -633,11 +751,9 @@ class AskAIScreen extends StatelessWidget {
               Expanded(
                 child: _buildQuickActionCard(
                   imagePath: "assets/icons/quick4.png",
-                  label: "Discover Background & history",
-                  onTap: () => _sendQuickAction(
-                    controller,
-                    "Tell me about the background and history",
-                  ),
+                  label: "ai_quick_history".tr,
+                  onTap: () =>
+                      _sendQuickAction(controller, "ai_quick_history_cmd".tr),
                 ),
               ),
             ],
@@ -662,7 +778,7 @@ class AskAIScreen extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          "Companion",
+                          "ai_companion_name".tr,
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
@@ -681,7 +797,7 @@ class AskAIScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      "Assalamu-alaikum, dear friend 🌙\nI'm your AI companion for Quranic guidance.\nHow can I help you today?",
+                      "ai_welcome_msg".tr,
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: Colors.black87,
@@ -779,7 +895,7 @@ class AskAIScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 8.w),
                       Text(
-                        "Companion",
+                        "ai_companion_name".tr,
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
@@ -812,16 +928,32 @@ class AskAIScreen extends StatelessWidget {
                   SizedBox(height: 12.h),
                   Row(
                     children: [
-                      Icon(
-                        Icons.copy_outlined,
-                        size: 18.sp,
-                        color: Colors.grey[600],
+                      GestureDetector(
+                        onTap: () => controller.speak(message['text']),
+                        child: Icon(
+                          Icons.volume_up_outlined,
+                          size: 18.sp,
+                          color: Colors.grey[600],
+                        ),
                       ),
                       SizedBox(width: 16.w),
-                      Icon(
-                        Icons.share_outlined,
-                        size: 18.sp,
-                        color: Colors.grey[600],
+                      GestureDetector(
+                        onTap: () =>
+                            controller.copyToClipboard(message['text']),
+                        child: Icon(
+                          Icons.copy_outlined,
+                          size: 18.sp,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      GestureDetector(
+                        onTap: () => controller.shareMessage(message['text']),
+                        child: Icon(
+                          Icons.share_outlined,
+                          size: 18.sp,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ],
                   ),

@@ -40,7 +40,7 @@ class ListenModeController extends GetxController {
 
   // Voice Command State
   RxBool isListening = false.obs;
-  RxString commandStatus = "Tap for Voice Command".obs;
+  RxString commandStatus = "tap_for_voice_command".tr.obs;
   RxBool isSpeechAvailable = false.obs;
 
   var verses = <VerseDetailModel>[].obs;
@@ -121,17 +121,17 @@ class ListenModeController extends GetxController {
         onStatus: (status) {
           if (status == 'listening') {
             isListening.value = true;
-            commandStatus.value = "Listening...";
+            commandStatus.value = "listening_dots".tr;
           } else if (status == 'notListening') {
             isListening.value = false;
-            if (commandStatus.value == "Listening...") {
-              commandStatus.value = "Tap for Voice Command";
+            if (commandStatus.value == "listening_dots".tr) {
+              commandStatus.value = "tap_for_voice_command".tr;
             }
           }
         },
         onError: (errorNotification) {
           isListening.value = false;
-          commandStatus.value = "Error: ${errorNotification.errorMsg}";
+          commandStatus.value = "${'error'.tr}: ${errorNotification.errorMsg}";
           print("Speech Error: ${errorNotification.errorMsg}");
         },
       );
@@ -144,7 +144,7 @@ class ListenModeController extends GetxController {
     if (!isSpeechAvailable.value) {
       await _initSpeech();
       if (!isSpeechAvailable.value) {
-        commandStatus.value = "Speech recognition not available";
+        commandStatus.value = "speech_not_available".tr;
         return;
       }
     }
@@ -152,7 +152,7 @@ class ListenModeController extends GetxController {
     if (isListening.value) {
       _speech.stop();
       isListening.value = false;
-      commandStatus.value = "Tap for Voice Command";
+      commandStatus.value = "tap_for_voice_command".tr;
     } else {
       await _speech.listen(
         onResult: (result) {
@@ -166,7 +166,7 @@ class ListenModeController extends GetxController {
 
   void _processCommand(String command) {
     String lowerCommand = command.toLowerCase();
-    commandStatus.value = "Command: $command";
+    commandStatus.value = "${'search'.tr}: $command";
 
     if (lowerCommand.contains("next") || lowerCommand.contains("skip")) {
       nextVerse();
@@ -187,7 +187,7 @@ class ListenModeController extends GetxController {
 
     // Reset status after a delay
     Future.delayed(const Duration(seconds: 2), () {
-      commandStatus.value = "Tap for Voice Command";
+      commandStatus.value = "tap_for_voice_command".tr;
     });
   }
 
@@ -401,7 +401,7 @@ class ListenModeController extends GetxController {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Available Commands:",
+                  "available_commands".tr,
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,
@@ -415,11 +415,11 @@ class ListenModeController extends GetxController {
               ],
             ),
             SizedBox(height: 16.h),
-            _buildCommandItem("Next", "Skip To Next Verse"),
-            _buildCommandItem("Previous", "To Go Back"),
-            _buildCommandItem("Pause", "To Stop Playback"),
-            _buildCommandItem("Play", "To Resume"),
-            _buildCommandItem("Repeat", "To Replay Current Verse"),
+            _buildCommandItem("command_next".tr, "command_next_desc".tr),
+            _buildCommandItem("command_previous".tr, "command_previous_desc".tr),
+            _buildCommandItem("command_pause".tr, "command_pause_desc".tr),
+            _buildCommandItem("command_play".tr, "command_play_desc".tr),
+            _buildCommandItem("command_repeat".tr, "command_repeat_desc".tr),
             SizedBox(height: 32.h),
           ],
         ),
@@ -432,7 +432,7 @@ class ListenModeController extends GetxController {
       padding: EdgeInsets.only(bottom: 8.h),
       child: RichText(
         text: TextSpan(
-          text: "- Say \"$command\" ",
+          text: "say_command_prefix".trParams({'command': command}),
           style: TextStyle(
             fontSize: 14.sp,
             fontWeight: FontWeight.w600,
@@ -520,7 +520,7 @@ class ListenModeScreen extends StatelessWidget {
               GestureDetector(
                 onTap: () => controller.showVoiceCommand(),
                 child: Text(
-                  "Show Voice Command",
+                  "show_voice_command".tr,
                   style: TextStyle(color: Colors.white70, fontSize: 12.sp),
                 ),
               ),
@@ -557,7 +557,7 @@ class ListenModeScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                'Commuter Mode',
+                'commuter_mode'.tr,
                 style: TextStyle(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w500,
@@ -593,7 +593,10 @@ class ListenModeScreen extends StatelessWidget {
           ),
           SizedBox(height: 8.h),
           Text(
-            '${controller.currentVerseIndex.value + 1}/${controller.totalVerses.value} Aya',
+            'aya_progress'.trParams({
+              'current': (controller.currentVerseIndex.value + 1).toString(),
+              'total': controller.totalVerses.value.toString(),
+            }),
             style: TextStyle(fontSize: 12.sp, color: Colors.white70),
           ),
         ],
@@ -611,8 +614,11 @@ class ListenModeScreen extends StatelessWidget {
 
       final verse = controller.currentVerseModel.value;
       if (verse == null) {
-        return const Center(
-          child: Text("No verses found", style: TextStyle(color: Colors.white)),
+        return Center(
+          child: Text(
+            "no_verses_found".tr,
+            style: const TextStyle(color: Colors.white),
+          ),
         );
       }
 

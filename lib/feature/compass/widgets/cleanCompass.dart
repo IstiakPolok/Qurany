@@ -17,110 +17,113 @@ class CleanCompass extends StatelessWidget {
     double rotationAngle = -heading * (math.pi / 180);
     final double compassSize = 220;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: 20),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            // 1. ROTATING DIAL
-            Transform.rotate(
-              angle: rotationAngle,
-              child: Container(
-                width: compassSize,
-                height: compassSize,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: CustomPaint(painter: _CleanCompassPainter()),
-              ),
-            ),
-
-            // 2. QIBLA INDICATOR (Kaaba Icon on the dial)
-            // We want the icon to stay at the Qibla angle relative to North.
-            // Since the dial rotates by -heading, a child of the rotation transform
-            // would be fixed to the dial.
-            // But here we are outside the rotation transform for the dial.
-            // Let's position it relative to the screen, calculating the angle:
-            // Angle on screen = (Qibla Angle - Heading)
-            Builder(
-              builder: (context) {
-                final double radius = compassSize / 2;
-                final double placeR = radius + 15; // Slightly inside
-                final double theta = (qiblaAngle - heading) * (math.pi / 180);
-                final double dx = placeR * math.sin(theta);
-                final double dy = -placeR * math.cos(theta);
-
-                return Transform.translate(
-                  offset: Offset(dx, dy),
-                  child: SizedBox(
-                    width: 30,
-                    height: 30,
-                    child: Center(
-                      child: Text('🕋', style: TextStyle(fontSize: 20)),
-                    ),
+    return FittedBox(
+      fit: BoxFit.contain,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              // 1. ROTATING DIAL
+              Transform.rotate(
+                angle: rotationAngle,
+                child: Container(
+                  width: compassSize,
+                  height: compassSize,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-
-            // 3. CENTER NEEDLE (User Heading)
-            // In a "North Up" dial (dial rotates), the top of the phone is the heading.
-            // Usually there's a fixed needle pointing UP.
-            // Or, if we want a needle that acts like a magnetic needle,
-            // the needle should point North (which is rotation 0 relative to dial).
-            // But the dial is already rotating.
-            // Let's look at the image: The needle is in the center.
-            // Standard behavior: Dial rotates. Fixed "Lubber Line" at top.
-            // OR Needle rotates.
-            // The user's image has "N" at the top 0 position.
-            // I will add a central needle that points North (so it rotates with the dial).
-            // Wait, if the dial rotates, and the needle points to N on the dial,
-            // the needle basically rotates with the dial.
-            // Let's just draw the needle pointing UP relative to the DIAL (fixed to dial),
-            // and the whole thing rotates.
-            // This emulates a physical compass where the needle and card might move together
-            // or the needle moves over a fixed card.
-            // If the card is moving (digital compass), the needle is usually fixed to the card?
-            // No, magnetic needle stays North. Card stays North. They move together.
-            // The PHONE rotates.
-            // So on screen, they both rotate opposite to heading.
-            Transform.rotate(
-              angle: rotationAngle,
-              child: CustomPaint(
-                size: Size(compassSize, compassSize),
-                painter: _CleanNeedlePainter(),
-              ),
-            ),
-
-            // Fixed Marker at Top (Lubber Line) to read heading?
-            // The image doesn't clearly show a top red line.
-            // But usually you read the heading at the top.
-            // I'll add a small fixed pointer at the top just in case,
-            // or rely on the "UP" orientation.
-            Positioned(
-              top: 0,
-              child: Container(
-                width: 4,
-                height: 15,
-                decoration: BoxDecoration(
-                  color: Color(0xFFFF5722), // Deep Orange/Red
-                  borderRadius: BorderRadius.circular(2),
+                  child: CustomPaint(painter: _CleanCompassPainter()),
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+    
+              // 2. QIBLA INDICATOR (Kaaba Icon on the dial)
+              // We want the icon to stay at the Qibla angle relative to North.
+              // Since the dial rotates by -heading, a child of the rotation transform
+              // would be fixed to the dial.
+              // But here we are outside the rotation transform for the dial.
+              // Let's position it relative to the screen, calculating the angle:
+              // Angle on screen = (Qibla Angle - Heading)
+              Builder(
+                builder: (context) {
+                  final double radius = compassSize / 2;
+                  final double placeR = radius + 15; // Slightly inside
+                  final double theta = (qiblaAngle - heading) * (math.pi / 180);
+                  final double dx = placeR * math.sin(theta);
+                  final double dy = -placeR * math.cos(theta);
+    
+                  return Transform.translate(
+                    offset: Offset(dx, dy),
+                    child: SizedBox(
+                      width: 30,
+                      height: 30,
+                      child: Center(
+                        child: Text('🕋', style: TextStyle(fontSize: 20)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+    
+              // 3. CENTER NEEDLE (User Heading)
+              // In a "North Up" dial (dial rotates), the top of the phone is the heading.
+              // Usually there's a fixed needle pointing UP.
+              // Or, if we want a needle that acts like a magnetic needle,
+              // the needle should point North (which is rotation 0 relative to dial).
+              // But the dial is already rotating.
+              // Let's look at the image: The needle is in the center.
+              // Standard behavior: Dial rotates. Fixed "Lubber Line" at top.
+              // OR Needle rotates.
+              // The user's image has "N" at the top 0 position.
+              // I will add a central needle that points North (so it rotates with the dial).
+              // Wait, if the dial rotates, and the needle points to N on the dial,
+              // the needle basically rotates with the dial.
+              // Let's just draw the needle pointing UP relative to the DIAL (fixed to dial),
+              // and the whole thing rotates.
+              // This emulates a physical compass where the needle and card might move together
+              // or the needle moves over a fixed card.
+              // If the card is moving (digital compass), the needle is usually fixed to the card?
+              // No, magnetic needle stays North. Card stays North. They move together.
+              // The PHONE rotates.
+              // So on screen, they both rotate opposite to heading.
+              Transform.rotate(
+                angle: rotationAngle,
+                child: CustomPaint(
+                  size: Size(compassSize, compassSize),
+                  painter: _CleanNeedlePainter(),
+                ),
+              ),
+    
+              // Fixed Marker at Top (Lubber Line) to read heading?
+              // The image doesn't clearly show a top red line.
+              // But usually you read the heading at the top.
+              // I'll add a small fixed pointer at the top just in case,
+              // or rely on the "UP" orientation.
+              Positioned(
+                top: 0,
+                child: Container(
+                  width: 4,
+                  height: 15,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFF5722), // Deep Orange/Red
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

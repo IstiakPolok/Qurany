@@ -208,7 +208,9 @@ class _PrayerNotificationSettingSheetState
             Navigator.push<String>(
               context,
               MaterialPageRoute(
-                builder: (context) => const NotificationSoundScreen(),
+                builder: (context) => NotificationSoundScreen(
+                  initialAdhan: notificationSound,
+                ),
               ),
             ).then((selected) {
               if (selected == null || selected.trim().isEmpty) return;

@@ -10,6 +10,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 
 import '../services/google_auth_service.dart';
 import '../services/apple_auth_service.dart';
+import '../services/guest_auth_service.dart';
 
 class LoginOptionsScreen extends StatelessWidget {
   const LoginOptionsScreen({super.key});
@@ -175,31 +176,51 @@ class LoginOptionsScreen extends StatelessWidget {
           // Guest Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: OutlinedButton(
-              onPressed: () {
-                Get.to(() => const PreparingSpaceScreen());
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: BorderSide(color: Colors.white),
-                padding: EdgeInsets.symmetric(vertical: 14.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.r),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.person_outline, size: 20.sp),
-                  SizedBox(width: 8.w),
-                  Text(
-                    "Continue as a guest",
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
+            child: Obx(
+              () => OutlinedButton(
+                onPressed: GuestAuthService.isLoading.value
+                    ? () {}
+                    : () async {
+                        EasyLoading.show(status: 'Entering as guest...');
+                        final success = await GuestAuthService.signInAsGuest();
+                        EasyLoading.dismiss();
+
+                        if (success) {
+                          Get.offAll(() => const PreparingSpaceScreen());
+                        }
+                      },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white),
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.r),
                   ),
-                ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GuestAuthService.isLoading.value
+                        ? SizedBox(
+                            width: 20.sp,
+                            height: 20.sp,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Icon(Icons.person_outline, size: 20.sp),
+                    SizedBox(width: 8.w),
+                    Text(
+                      "Continue as a guest",
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

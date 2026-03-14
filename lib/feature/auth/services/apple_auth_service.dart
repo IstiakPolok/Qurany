@@ -35,7 +35,7 @@ class AppleSignInService {
       final nonce = _sha256ofString(rawNonce);
 
       // Request credentials from Apple
-      final appleCredential = await SignInWithApple.getAppleIDCredential(
+      await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import '../../auth/views/login_options_screen.dart';
 import '../widgets/language_step.dart';
@@ -81,7 +82,7 @@ class _PreferencesFlowScreenState extends State<PreferencesFlowScreen> {
                       SizedBox(width: 10.w),
                       GestureDetector(
                         onTap: () {
-                          // Handle Skip
+                          Get.to(() => const LoginOptionsScreen());
                         },
                         child: Text(
                           "Skip",

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qurany/core/const/app_colors.dart';
+import 'package:get/get.dart';
 
 class WeeklyStreakRow extends StatelessWidget {
   const WeeklyStreakRow({super.key});
@@ -10,7 +11,15 @@ class WeeklyStreakRow extends StatelessWidget {
     // Dynamic day calculation
     final now = DateTime.now();
     final currentDayIndex = now.weekday - 1; // 0 = Monday, 6 = Sunday
-    final List<String> days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final List<String> days = [
+      'mon'.tr,
+      'tue'.tr,
+      'wed'.tr,
+      'thu'.tr,
+      'fri'.tr,
+      'sat'.tr,
+      'sun'.tr
+    ];
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),

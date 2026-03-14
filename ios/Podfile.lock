@@ -1312,6 +1312,8 @@ PODS:
     - Flutter
   - flutter_timezone (0.0.1):
     - Flutter
+  - flutter_tts (0.0.1):
+    - Flutter
   - fluttertoast (0.0.2):
     - Flutter
   - geocoding_ios (1.0.5):
@@ -1467,15 +1469,15 @@ PODS:
   - permission_handler_apple (9.3.0):
     - Flutter
   - PromisesObjC (2.4.0)
-  - purchases_flutter (9.12.0):
+  - purchases_flutter (9.13.1):
     - Flutter
-    - PurchasesHybridCommon (= 17.36.0)
-  - PurchasesHybridCommon (17.36.0):
-    - RevenueCat (= 5.58.0)
+    - PurchasesHybridCommon (= 17.42.0)
+  - PurchasesHybridCommon (17.42.0):
+    - RevenueCat (= 5.60.0)
   - RecaptchaInterop (101.0.0)
   - record_ios (1.2.0):
     - Flutter
-  - RevenueCat (5.58.0)
+  - RevenueCat (5.60.0)
   - SDWebImage (5.21.3):
     - SDWebImage/Core (= 5.21.3)
   - SDWebImage/Core (5.21.3)
@@ -1506,6 +1508,7 @@ DEPENDENCIES:
   - flutter_compass (from `.symlinks/plugins/flutter_compass/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_timezone (from `.symlinks/plugins/flutter_timezone/ios`)
+  - flutter_tts (from `.symlinks/plugins/flutter_tts/ios`)
   - fluttertoast (from `.symlinks/plugins/fluttertoast/ios`)
   - geocoding_ios (from `.symlinks/plugins/geocoding_ios/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
@@ -1577,6 +1580,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_timezone:
     :path: ".symlinks/plugins/flutter_timezone/ios"
+  flutter_tts:
+    :path: ".symlinks/plugins/flutter_tts/ios"
   fluttertoast:
     :path: ".symlinks/plugins/fluttertoast/ios"
   geocoding_ios:
@@ -1635,6 +1640,7 @@ SPEC CHECKSUMS:
   flutter_compass: b236ab69b61545cce89fd58527f401a7587d5cc1
   flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
   flutter_timezone: 7c838e17ffd4645d261e87037e5bebf6d38fe544
+  flutter_tts: 35ac3c7d42412733e795ea96ad2d7e05d0a75113
   fluttertoast: 2c67e14dce98bbdb200df9e1acf610d7a6264ea1
   geocoding_ios: 33776c9ebb98d037b5e025bb0e7537f6dd19646e
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
@@ -1651,11 +1657,11 @@ SPEC CHECKSUMS:
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
-  purchases_flutter: 9d559f16095fbcdb7b4def4cbc60e4a9fbd0ee1b
-  PurchasesHybridCommon: 4767776bf65153d7a43f284439e7560c42d0c80a
+  purchases_flutter: 0c05be8e6d5afbd2dc581ce7f823015ff1b5831a
+  PurchasesHybridCommon: c0a62a03bd15e40af1c3cd111f5f4f50cac751c7
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   record_ios: 412daca2350b228e698fffcd08f1f94ceb1e3844
-  RevenueCat: 88bb4229115b2badcce0e5a97f3dd8cc952b38c8
+  RevenueCat: 88010b2d5fc8fb7405d2e11dacd65ac74c9d21d1
   SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb

@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../core/const/app_colors.dart';
 import '../../../core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:get/get.dart';
 import 'package:qurany/feature/home/widgets/add_goal_bottom_sheet.dart';
 
 class DailyGoalsCard extends StatefulWidget {
@@ -20,35 +21,35 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
   // Full catalog — titles must match AddGoalBottomSheet exactly
   static const List<Map<String, dynamic>> _goalCatalog = [
     {
-      'title': 'Read Quran Daily',
+      'title': 'goal_read_quran',
       'progress': 0.25,
       'current': 22,
       'total': 30,
-      'unit': 'min reading Today',
+      'unit': 'min_reading_today',
       'icon': 'assets/icons/navquranIcons.png',
     },
     {
-      'title': 'Memorize New Verses',
+      'title': 'goal_memorize',
       'progress': 0.6,
       'current': 3,
       'total': 5,
-      'unit': 'verses memorized',
+      'unit': 'verses_memorized',
       'icon': 'assets/icons/123.png',
     },
     {
-      'title': 'Complete All 5 Prayers',
+      'title': 'goal_prayers',
       'progress': 0.8,
       'current': 4,
       'total': 5,
-      'unit': 'prayers completed',
+      'unit': 'prayers_completed',
       'icon': 'assets/icons/navquranIcons.png',
     },
     {
-      'title': 'Daily Dhikr',
+      'title': 'goal_dhikr',
       'progress': 0.5,
       'current': 50,
       'total': 100,
-      'unit': 'dhikr completed',
+      'unit': 'dhikr_completed',
       'icon': 'assets/icons/123.png',
     },
   ];
@@ -89,7 +90,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
     final matched = _goalCatalog
         .map((g) {
           switch (g['title']) {
-            case 'Read Quran Daily':
+            case 'goal_read_quran':
               final clamped = readingMinutes.clamp(0, readingGoalMinutes);
               return {
                 ...g,
@@ -97,7 +98,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                 'total': readingGoalMinutes,
                 'progress': (clamped / readingGoalMinutes).clamp(0.0, 1.0),
               };
-            case 'Memorize New Verses':
+            case 'goal_memorize':
               final clamped = memorizedCount.clamp(0, memorizeGoal);
               return {
                 ...g,
@@ -105,7 +106,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                 'total': memorizeGoal,
                 'progress': (clamped / memorizeGoal).clamp(0.0, 1.0),
               };
-            case 'Complete All 5 Prayers':
+            case 'goal_prayers':
               final clamped = prayersCompleted.clamp(0, prayerGoal);
               return {
                 ...g,
@@ -113,7 +114,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                 'total': prayerGoal,
                 'progress': (clamped / prayerGoal).clamp(0.0, 1.0),
               };
-            case 'Daily Dhikr':
+            case 'goal_dhikr':
               final clamped = dhikrCount.clamp(0, dhikrGoal);
               return {
                 ...g,
@@ -199,7 +200,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "My Goals",
+                "my_goals".tr,
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -215,7 +216,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                     borderRadius: BorderRadius.circular(20.r),
                   ),
                   child: Text(
-                    "+ Set Goal",
+                    "set_goal".tr,
                     style: TextStyle(fontSize: 12.sp, color: primaryColor),
                   ),
                 ),
@@ -224,7 +225,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
           ),
         ),
         SizedBox(
-          height: 95.h,
+          height: 100.h,
           child: _activeGoals.isEmpty
               ? const Center(child: CircularProgressIndicator())
               : PageView.builder(
@@ -271,7 +272,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  goal['title'],
+                                  goal['title'].toString().tr,
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
@@ -279,7 +280,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
-                                  "${goal['current']} / ${goal['total']} ${goal['unit']}",
+                                  "${goal['current']} / ${goal['total']} ${goal['unit'].toString().tr}",
                                   style: TextStyle(
                                     fontSize: 12.sp,
                                     color: subheading,

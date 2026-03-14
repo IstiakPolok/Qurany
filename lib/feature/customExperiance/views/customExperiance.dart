@@ -169,7 +169,11 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
         children: [
           Align(
             alignment: Alignment.centerRight,
-            child: OutlinedCloseButton(onPressed: () => Navigator.pop(context)),
+            child: OutlinedCloseButton(
+              onPressed: () {
+                Get.to(LocationPermissionScreen());
+              },
+            ),
           ),
           SizedBox(height: vPad * 0.5),
           Text(

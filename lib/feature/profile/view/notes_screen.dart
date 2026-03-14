@@ -355,144 +355,146 @@ class NotesScreen extends StatelessWidget {
     showDialog(
       context: context,
       barrierColor: Colors.black45,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) {
-          bool isSaving = false;
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2F7D33),
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const Spacer(),
-                      Column(
-                        children: [
-                          Text(
-                            'Surah ${note.surahId}, Aya ${note.verseId}',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12.sp,
-                            ),
-                          ),
-                          SizedBox(height: 2.h),
-                          Text(
-                            'Edit Note',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(ctx),
-                        child: Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 20.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16.h),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 14.w,
-                      vertical: 12.h,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(color: Colors.white54, width: 1.2),
-                    ),
-                    child: TextField(
-                      controller: textController,
-                      maxLines: 5,
-                      minLines: 5,
-                      style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                      decoration: InputDecoration(
-                        hintText: 'Edit your note...',
-                        hintStyle: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 14.sp,
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      cursorColor: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isSaving
-                          ? null
-                          : () async {
-                              final text = textController.text.trim();
-                              if (text.isEmpty) return;
-                              setState(() => isSaving = true);
-                              final ok = await controller.updateNote(
-                                noteId: note.id,
-                                description: text,
-                                surahId: note.surahId,
-                                verseId: note.verseId,
-                              );
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              Get.snackbar(
-                                ok ? 'Saved' : 'Error',
-                                ok ? 'Note updated' : 'Failed to update note',
-                                backgroundColor: ok
-                                    ? const Color(0xFF2E7D32)
-                                    : Colors.red,
-                                colorText: Colors.white,
-                                snackPosition: SnackPosition.BOTTOM,
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF2E7D32),
-                        disabledBackgroundColor: Colors.white60,
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.r),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: isSaving
-                          ? SizedBox(
-                              width: 18.w,
-                              height: 18.w,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF2E7D32),
-                              ),
-                            )
-                          : Text(
-                              'Save Note',
+      builder: (ctx) {
+        bool isSaving = false;
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Container(
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2F7D33),
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Spacer(),
+                        Column(
+                          children: [
+                            Text(
+                              'Surah ${note.surahId}, Aya ${note.verseId}',
                               style: TextStyle(
-                                fontSize: 14.sp,
+                                color: Colors.white70,
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              'Edit Note',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
+                          ],
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 20.sp,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    SizedBox(height: 16.h),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14.w,
+                        vertical: 12.h,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(color: Colors.white54, width: 1.2),
+                      ),
+                      child: TextField(
+                        controller: textController,
+                        maxLines: 5,
+                        minLines: 5,
+                        style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                        decoration: InputDecoration(
+                          hintText: 'Edit your note...',
+                          hintStyle: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 14.sp,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        cursorColor: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSaving
+                            ? null
+                            : () async {
+                                final text = textController.text.trim();
+                                if (text.isEmpty) return;
+                                setState(() => isSaving = true);
+                                final ok = await controller.updateNote(
+                                  noteId: note.id,
+                                  description: text,
+                                  surahId: note.surahId,
+                                  verseId: note.verseId,
+                                );
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                Get.snackbar(
+                                  ok ? 'Saved' : 'Error',
+                                  ok ? 'Note updated' : 'Failed to update note',
+                                  backgroundColor: ok
+                                      ? const Color(0xFF2E7D32)
+                                      : Colors.red,
+                                  colorText: Colors.white,
+                                  snackPosition: SnackPosition.BOTTOM,
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF2E7D32),
+                          disabledBackgroundColor: Colors.white60,
+                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.r),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: isSaving
+                            ? SizedBox(
+                                width: 18.w,
+                                height: 18.w,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              )
+                            : Text(
+                                'Save Note',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -503,125 +505,127 @@ class NotesScreen extends StatelessWidget {
   ) {
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) {
-          bool isDeleting = false;
-          return Dialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(24.w),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Icon(
-                        Icons.close,
-                        size: 24.sp,
-                        color: Colors.grey[600],
+      builder: (ctx) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(24.w),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Icon(
+                          Icons.close,
+                          size: 24.sp,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Container(
-                    padding: EdgeInsets.all(20.w),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(16.r),
-                    ),
-                    child: Icon(
-                      Icons.delete_outline,
-                      size: 32.sp,
-                      color: Colors.red[400],
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-                  Text(
-                    "Delete This Note?",
-                    style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    "This action can't be undone. Do you want to continue?",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                  ),
-                  SizedBox(height: 24.h),
-                  GestureDetector(
-                    onTap: isDeleting
-                        ? null
-                        : () async {
-                            setState(() => isDeleting = true);
-                            final ok = await controller.deleteNote(note.id);
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            Get.snackbar(
-                              ok ? 'Deleted' : 'Error',
-                              ok ? 'Note deleted' : 'Failed to delete note',
-                              backgroundColor: ok
-                                  ? Colors.grey[800]
-                                  : Colors.red,
-                              colorText: Colors.white,
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          },
-                    child: Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                    SizedBox(height: 8.h),
+                    Container(
+                      padding: EdgeInsets.all(20.w),
                       decoration: BoxDecoration(
-                        color: isDeleting ? Colors.red[300] : Colors.red,
-                        borderRadius: BorderRadius.circular(25.r),
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(16.r),
                       ),
-                      child: Center(
-                        child: isDeleting
-                            ? SizedBox(
-                                width: 18.w,
-                                height: 18.w,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                "Delete",
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 32.sp,
+                        color: Colors.red[400],
                       ),
                     ),
-                  ),
-                  SizedBox(height: 12.h),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(ctx),
-                    child: Text(
-                      "Cancel",
+                    SizedBox(height: 20.h),
+                    Text(
+                      "Delete This Note?",
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      "This action can't be undone. Do you want to continue?",
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF2196F3),
+                        color: Colors.grey[600],
+                        height: 1.4,
                       ),
                     ),
-                  ),
-                ],
+                    SizedBox(height: 24.h),
+                    GestureDetector(
+                      onTap: isDeleting
+                          ? null
+                          : () async {
+                              setState(() => isDeleting = true);
+                              final ok = await controller.deleteNote(note.id);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              Get.snackbar(
+                                ok ? 'Deleted' : 'Error',
+                                ok ? 'Note deleted' : 'Failed to delete note',
+                                backgroundColor: ok
+                                    ? Colors.grey[800]
+                                    : Colors.red,
+                                colorText: Colors.white,
+                                snackPosition: SnackPosition.BOTTOM,
+                              );
+                            },
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        decoration: BoxDecoration(
+                          color: isDeleting ? Colors.red[300] : Colors.red,
+                          borderRadius: BorderRadius.circular(25.r),
+                        ),
+                        child: Center(
+                          child: isDeleting
+                              ? SizedBox(
+                                  width: 18.w,
+                                  height: 18.w,
+                                  child: const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  "Delete",
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Text(
+                        "Cancel",
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF2196F3),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }

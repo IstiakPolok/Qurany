@@ -7,6 +7,7 @@ import 'package:qurany/feature/prayer/view/electronic_tasbih_screen.dart';
 import 'package:qurany/feature/compass/views/qibla_compass_screen.dart';
 import 'package:qurany/feature/profile/view/prayer_notification_setting_sheet.dart';
 import '../../../core/services/location_service.dart';
+import '../../home/view/notification_screen.dart';
 import '../controller/prayer_controller.dart';
 import 'islamic_calendar_screen.dart';
 
@@ -37,7 +38,7 @@ class PrayerScreen extends StatelessWidget {
                 Icon(Icons.error_outline, size: 64, color: Colors.grey[600]),
                 SizedBox(height: 16.h),
                 Text(
-                  'Prayer Times Unavailable',
+                  'prayer_times_unavailable'.tr,
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
@@ -57,7 +58,7 @@ class PrayerScreen extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: () => controller.refreshPrayerTimes(),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Try Again'),
+                  label: Text('try_again'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E7D32),
                     foregroundColor: Colors.white,
@@ -127,40 +128,42 @@ class PrayerScreen extends StatelessWidget {
               top: MediaQuery.of(context).padding.top + 10.h,
               bottom: 4.h,
             ),
-            child: Column(
-              children: [
-                // Location Header
-                _buildLocationHeader(locationService),
-
-                SizedBox(height: 16.h),
-
-                // Date Navigation
-                _buildDateNavigation(context, controller),
-
-                SizedBox(height: 16.h),
-
-                // Time
-                FittedBox(
-                  child: Text(
-                    DateFormat('HH:mm').format(controller.currentTime.value),
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 56.sp,
-                      fontWeight: FontWeight.bold,
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Location Header
+                  _buildLocationHeader(locationService),
+    
+                  SizedBox(height: 16.h),
+    
+                  // Date Navigation
+                  _buildDateNavigation(context, controller),
+    
+                  SizedBox(height: 16.h),
+    
+                  // Time
+                  FittedBox(
+                    child: Text(
+                      DateFormat('HH:mm').format(controller.currentTime.value),
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 56.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-
-                SizedBox(height: 8.h),
-
-                // Countdown Badge
-                _buildCountdownBadge(controller),
-
-                const Spacer(),
-
-                // Timeline Row
-                _buildTimeline(controller),
-              ],
+    
+                  SizedBox(height: 8.h),
+    
+                  // Countdown Badge
+                  _buildCountdownBadge(controller),
+    
+                  SizedBox(height: 20.h),
+    
+                  // Timeline Row
+                  _buildTimeline(controller),
+                ],
+              ),
             ),
           ),
         ],
@@ -224,29 +227,32 @@ class PrayerScreen extends StatelessWidget {
           ),
         ),
         SizedBox(width: 12.w),
-        Stack(
-          children: [
-            Icon(
-              Icons.notifications_outlined,
-              color: Colors.white,
-              size: 28.sp,
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                padding: EdgeInsets.all(4.w),
-                decoration: const BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  "2",
-                  style: TextStyle(color: Colors.white, fontSize: 8.sp),
+        GestureDetector(
+          onTap: () => Get.to(() => const NotificationScreen()),
+          child: Stack(
+            children: [
+              Icon(
+                Icons.notifications_outlined,
+                color: Colors.white,
+                size: 28.sp,
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    "2",
+                    style: TextStyle(color: Colors.white, fontSize: 8.sp),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -323,7 +329,9 @@ class PrayerScreen extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              "${controller.getNextPrayerName()} will begin in",
+              'next_prayer_begin'.trParams({
+                'prayer': controller.getNextPrayerName(),
+              }),
               style: TextStyle(color: Colors.white, fontSize: 12.sp),
               overflow: TextOverflow.ellipsis,
             ),
@@ -385,7 +393,7 @@ class PrayerScreen extends StatelessWidget {
     final nextPrayer = controller.getNextPrayerName();
 
     return SizedBox(
-      height: 110.h,
+      height: 120.h,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(timelineItems.length, (index) {
@@ -481,8 +489,8 @@ class PrayerScreen extends StatelessWidget {
               },
               child: _buildActionCard(
                 imagePath: "assets/icons/qibladirctioninprayerIcons.png",
-                title: "Locate",
-                subtitle: "Qibla",
+                title: "locate".tr,
+                subtitle: "qibla".tr,
                 color: const Color(0xFFE2E9D8),
               ),
             ),
@@ -502,8 +510,8 @@ class PrayerScreen extends StatelessWidget {
               },
               child: _buildActionCard(
                 imagePath: "assets/icons/electrictasbihinpracyericon.png",
-                title: "Electronic",
-                subtitle: "Tasbih",
+                title: "electronic".tr,
+                subtitle: "tasbih".tr,
                 color: const Color(0xFFE2E9D8),
               ),
             ),
@@ -534,44 +542,47 @@ class PrayerScreen extends StatelessWidget {
 
             final progress = checkedPrayers / 5.0;
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 70.w,
-                      height: 70.w,
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.white,
-                        color: const Color(0xFF2E7D32),
-                        strokeWidth: 10.w,
+            return FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 70.w,
+                        height: 70.w,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          backgroundColor: Colors.white,
+                          color: const Color(0xFF2E7D32),
+                          strokeWidth: 10.w,
+                        ),
                       ),
-                    ),
-                    Column(
-                      children: [
-                        Text(
-                          "$checkedPrayers/5",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18.sp,
+                      Column(
+                        children: [
+                          Text(
+                            "$checkedPrayers/5",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.sp,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "Prayed",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12.sp,
+                          Text(
+                            "prayed".tr,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.sp,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -593,28 +604,32 @@ class PrayerScreen extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(imagePath, width: 40.w, height: 40.w),
-          Text(
-            title,
-            style: TextStyle(color: Colors.grey[600], fontSize: 14.sp),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 14.sp,
-              fontWeight: FontWeight.bold,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(imagePath, width: 40.w, height: 40.w),
+            Text(
+              title,
+              style: TextStyle(color: Colors.grey[600], fontSize: 14.sp),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -623,16 +638,7 @@ class PrayerScreen extends StatelessWidget {
     BuildContext context,
     PrayerController controller,
   ) {
-    if (controller.prayerData.value == null) return const SizedBox();
-
-    final times = controller.prayerData.value!.times;
-    final prayerItems = [
-      {'name': 'Fajr', 'time': times['Fajr'] ?? '00:00'},
-      {'name': 'Dhuhr', 'time': times['Dhuhr'] ?? '00:00'},
-      {'name': 'Asr', 'time': times['Asr'] ?? '00:00'},
-      {'name': 'Maghrib', 'time': times['Maghrib'] ?? '00:00'},
-      {'name': 'Isha', 'time': times['Isha'] ?? '00:00'},
-    ];
+    final LocationService locationService = Get.find<LocationService>();
 
     return Container(
       padding: EdgeInsets.all(24.w),
@@ -644,18 +650,88 @@ class PrayerScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Today's Prayer Times",
+            "today_prayer_times".tr,
             style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: 16.h),
-          ...prayerItems.map(
-            (item) => _buildPrayerItem(context, item, controller),
-          ),
+          if (controller.prayerData.value == null)
+            _buildLocationErrorMessage(locationService, controller)
+          else
+            ...(() {
+              final times = controller.prayerData.value!.times;
+              final prayerItems = [
+                {'name': 'Fajr', 'time': times['Fajr'] ?? '00:00'},
+                {'name': 'Dhuhr', 'time': times['Dhuhr'] ?? '00:00'},
+                {'name': 'Asr', 'time': times['Asr'] ?? '00:00'},
+                {'name': 'Maghrib', 'time': times['Maghrib'] ?? '00:00'},
+                {'name': 'Isha', 'time': times['Isha'] ?? '00:00'},
+              ];
+              return prayerItems.map(
+                (item) => _buildPrayerItem(context, item, controller),
+              );
+            })(),
           SizedBox(height: 80.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationErrorMessage(
+    LocationService locationService,
+    PrayerController controller,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEA),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFF44336).withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.location_off_outlined,
+            color: const Color(0xFFD32F2F),
+            size: 48.sp,
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            "location_required_title".tr,
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFFD32F2F),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "location_required_msg".tr,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.sp, color: Colors.black87),
+          ),
+          SizedBox(height: 16.h),
+          ElevatedButton.icon(
+            onPressed: () => locationService.refreshLocation(),
+            icon: Icon(Icons.my_location, size: 18.sp),
+            label: Text("enable_location".tr),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD32F2F),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              elevation: 0,
+            ),
+          ),
         ],
       ),
     );
@@ -695,7 +771,6 @@ class PrayerScreen extends StatelessWidget {
           ),
           SizedBox(width: 12.w),
           Expanded(
-            flex: 3,
             child: Row(
               children: [
                 Flexible(
@@ -734,66 +809,58 @@ class PrayerScreen extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(
-            flex: 5,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (isNext)
-                  Flexible(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 4.h,
-                      ),
-                      margin: EdgeInsets.only(right: 8.w),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2E7D32).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                      child: Text(
-                        "Next",
-                        style: TextStyle(
-                          fontSize: 10.sp,
-                          color: const Color(0xFF2E7D32),
-                          fontWeight: FontWeight.bold,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+          SizedBox(width: 8.w),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isNext)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  margin: EdgeInsets.only(right: 8.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                  child: Text(
+                    "next".tr,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      color: const Color(0xFF2E7D32),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                Text(
-                  data['time']!,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: isChecked ? const Color(0xFF2E7D32) : Colors.black87,
-                  ),
                 ),
-                SizedBox(width: 12.w),
-                GestureDetector(
-                  onTap: () => controller.togglePrayerChecked(prayerName),
-                  child: Container(
-                    width: 24.w,
-                    height: 24.w,
-                    decoration: BoxDecoration(
+              Text(
+                data['time']!,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: isChecked ? const Color(0xFF2E7D32) : Colors.black87,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              GestureDetector(
+                onTap: () => controller.togglePrayerChecked(prayerName),
+                child: Container(
+                  width: 24.w,
+                  height: 24.w,
+                  decoration: BoxDecoration(
+                    color: isChecked
+                        ? const Color(0xFF2E7D32)
+                        : Colors.transparent,
+                    border: Border.all(
                       color: isChecked
                           ? const Color(0xFF2E7D32)
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: isChecked
-                            ? const Color(0xFF2E7D32)
-                            : Colors.grey[400]!,
-                      ),
-                      borderRadius: BorderRadius.circular(4.r),
+                          : Colors.grey[400]!,
                     ),
-                    child: isChecked
-                        ? Icon(Icons.check, color: Colors.white, size: 16.sp)
-                        : null,
+                    borderRadius: BorderRadius.circular(4.r),
                   ),
+                  child: isChecked
+                      ? Icon(Icons.check, color: Colors.white, size: 16.sp)
+                      : null,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

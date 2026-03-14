@@ -47,6 +47,9 @@ class LocationService extends GetxService {
       }
 
       if (permission == LocationPermission.deniedForever) {
+        if (requestPermission) {
+          await Geolocator.openAppSettings();
+        }
         currentLocation.value = 'Location permission denied';
         isLoading(false);
         return;

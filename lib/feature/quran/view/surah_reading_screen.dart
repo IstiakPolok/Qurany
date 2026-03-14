@@ -41,7 +41,9 @@ class SurahReadingController extends GetxController {
   RxInt selectedViewTab =
       0.obs; // 0 = Translation, 1 = Transliteration, 2 = Tafsir
   RxBool isPlaying = false.obs;
+  RxBool isAudioLoading = false.obs;
   RxInt currentPlayingVerse = (-1).obs;
+  RxInt loadingVerseId = (-1).obs;
   RxDouble playbackSpeed = 1.0.obs;
   RxBool isLoading = true.obs;
   RxBool isLoadingMore = false.obs;
@@ -58,6 +60,10 @@ class SurahReadingController extends GetxController {
   RxInt tafsirPage = 1.obs;
   RxBool hasMoreTafsir = true.obs;
   RxString selectedScriptName = 'Imlaei'.obs;
+  RxDouble fontSize = 22.0.obs;
+  RxString selectedLanguage = 'English'.obs;
+  RxString endOfSurahAction = 'play_next_surah'.obs;
+  RxString selectedReciterName = 'Mishary Rashid Alafasy'.obs;
 
   // Reading time tracking
   Timer? _readingTimer;
@@ -73,22 +79,24 @@ class SurahReadingController extends GetxController {
 
   @override
   void onInit() {
+    if (kDebugMode) {
+      print('SurahReadingController init: surahId=$surahId, name=$surahName');
+    }
     super.onInit();
 
     // Set initial playing verse if provided
     if (initialVerseId != null) {
       currentPlayingVerse.value = initialVerseId!;
     }
-
-    fetchSurahDetails();
-    fetchTafsir();
     _loadScriptPreference();
-
+    _loadFontSizePreference();
+    _loadReciterPreference();
+    _loadLanguage();
+    _startReadingTimer();
     _setupPlayerListeners(_player1);
     _setupPlayerListeners(_player2);
-
-    // Start reading time tracker
-    _startReadingTimer();
+    fetchSurahDetails();
+    fetchTafsir();
   }
 
   Future<void> _loadScriptPreference() async {
@@ -96,9 +104,73 @@ class SurahReadingController extends GetxController {
     selectedScriptName.value = script;
   }
 
+  Future<void> _loadFontSizePreference() async {
+    double size = await SharedPreferencesHelper.getFontSize();
+    fontSize.value = size;
+  }
+
+  Future<void> _loadReciterPreference() async {
+    String savedReciter = await SharedPreferencesHelper.getReciter();
+    selectedReciterName.value = savedReciter;
+  }
+
+  Future<void> saveReciter(String name) async {
+    selectedReciterName.value = name;
+    await SharedPreferencesHelper.saveReciter(name);
+    if (isPlaying.value) {
+      playVerse(currentPlayingVerse.value);
+    }
+  }
+
+  Future<void> _loadLanguage() async {
+    final lang = await SharedPreferencesHelper.getLanguage();
+    selectedLanguage.value = lang;
+    _updateLocale(lang);
+  }
+
+  void _updateLocale(String lang) {
+    Locale locale;
+    switch (lang) {
+      case 'English':
+        locale = const Locale('en');
+        break;
+      case 'العربية':
+        locale = const Locale('ar');
+        break;
+      case 'اردو':
+        locale = const Locale('ur');
+        break;
+      case 'Türkçe':
+        locale = const Locale('tr');
+        break;
+      case 'Bahasa':
+        locale = const Locale('id');
+        break;
+      case 'Français':
+        locale = const Locale('fr');
+        break;
+      default:
+        locale = const Locale('en');
+    }
+    Get.updateLocale(locale);
+  }
+
+  Future<void> saveFontSize(double value) async {
+    fontSize.value = value;
+    await SharedPreferencesHelper.saveFontSize(value);
+  }
+
+  Future<void> saveArabicScript(String script) async {
+    selectedScriptName.value = script;
+    await SharedPreferencesHelper.saveArabicScript(script);
+  }
+
   Future<void> _startReadingTimer() async {
     // Load already-accumulated seconds for today
     _sessionSeconds = await SharedPreferencesHelper.getDailyReadingSeconds();
+    if (kDebugMode) {
+      print('Reading timer started. Initial seconds: $_sessionSeconds');
+    }
     _readingTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       _sessionSeconds++;
       // Save every 30 seconds to avoid too many writes
@@ -112,11 +184,25 @@ class SurahReadingController extends GetxController {
     player.onPlayerStateChanged.listen((state) {
       if (player == _activePlayer) {
         isPlaying.value = state == PlayerState.playing;
+        if (state == PlayerState.playing) {
+          _clearAudioLoading();
+        }
         if (state == PlayerState.completed) {
+          _clearAudioLoading();
           _playNextVerse();
         }
       }
     });
+  }
+
+  void _setAudioLoading(int verseId) {
+    isAudioLoading.value = true;
+    loadingVerseId.value = verseId;
+  }
+
+  void _clearAudioLoading() {
+    isAudioLoading.value = false;
+    loadingVerseId.value = -1;
   }
 
   // Save reading progress whenever a verse is played
@@ -156,6 +242,9 @@ class SurahReadingController extends GetxController {
     if (currentIndex != -1 && currentIndex < verses.length - 1) {
       final nextVerse = verses[currentIndex + 1];
 
+      if (kDebugMode) {
+        print('Switching to next verse: ${nextVerse.verseId}');
+      }
       // The inactive player should already have preloaded the next verse
       _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
       currentPlayingVerse.value = nextVerse.verseId;
@@ -169,6 +258,10 @@ class SurahReadingController extends GetxController {
       // Preload the following verse
       _preloadNextVerse(currentIndex + 1);
     } else {
+      if (kDebugMode) {
+        print('Surah completed or no more verses to play');
+      }
+      _clearAudioLoading();
       isPlaying.value = false;
       currentPlayingVerse.value = -1;
     }
@@ -177,6 +270,9 @@ class SurahReadingController extends GetxController {
   Future<void> _preloadNextVerse(int currentIndex) async {
     if (currentIndex < verses.length - 1) {
       final followingVerse = verses[currentIndex + 1];
+      if (kDebugMode) {
+        print('Preloading verse: ${followingVerse.verseId}');
+      }
       String? nextUrl = await _getAudioUrlForVerse(followingVerse.verseId);
       if (nextUrl != null) {
         // Set source on the player that is NOT currently playing
@@ -188,7 +284,8 @@ class SurahReadingController extends GetxController {
   Future<String?> _getAudioUrlForVerse(int verseId) async {
     try {
       final verse = verses.firstWhere((v) => v.verseId == verseId);
-      String preferredReciterName = await SharedPreferencesHelper.getReciter();
+      // String preferredReciterName = await SharedPreferencesHelper.getReciter();
+      String preferredReciterName = selectedReciterName.value;
       String audioKey = _mapReciterNameToKey(preferredReciterName);
 
       if (verse.audio.containsKey(audioKey)) {
@@ -234,6 +331,9 @@ class SurahReadingController extends GetxController {
 
   @override
   void onClose() {
+    if (kDebugMode) {
+      print('SurahReadingController closing. Saving seconds: $_sessionSeconds');
+    }
     // Save final reading seconds before closing
     SharedPreferencesHelper.saveDailyReadingSeconds(_sessionSeconds);
     _readingTimer?.cancel();
@@ -250,15 +350,15 @@ class SurahReadingController extends GetxController {
       );
       if (result.success) {
         Get.snackbar(
-          "Success",
-          "Bookmark updated",
+          "success".tr,
+          "bookmark_updated".tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.black,
         );
       } else {
         Get.snackbar(
-          "Error",
+          "error".tr,
           result.message,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.1),
@@ -274,11 +374,17 @@ class SurahReadingController extends GetxController {
     try {
       isLoading(true);
       currentPage.value = 1;
+      if (kDebugMode) {
+        print('Fetching surah: $surahId, page: ${currentPage.value}');
+      }
       final response = await _quranService.fetchSurahById(
         surahId,
         page: currentPage.value,
         limit: 10,
       );
+      if (kDebugMode) {
+        print('Surah details fetched: ${response.verses.length} verses');
+      }
       verses.assignAll(response.verses);
       audio.value = response.audio;
       hasMoreVerses.value = response.verses.length >= 10;
@@ -299,11 +405,17 @@ class SurahReadingController extends GetxController {
     try {
       isLoadingTafsir(true);
       tafsirPage.value = 1;
+      if (kDebugMode) {
+        print('Fetching tafsir for surah: $surahId');
+      }
       final response = await _quranService.fetchTafsir(
         surahId,
         page: tafsirPage.value,
         limit: 10,
       );
+      if (kDebugMode) {
+        print('Tafsir fetched: ${response.tafsirs.length} items');
+      }
       tafsirs.assignAll(response.tafsirs);
       hasMoreTafsir.value = response.tafsirs.length >= 10;
     } catch (e) {
@@ -319,11 +431,17 @@ class SurahReadingController extends GetxController {
     try {
       isLoadingMore(true);
       tafsirPage.value++;
+      if (kDebugMode) {
+        print('Loading more tafsir: page ${tafsirPage.value}');
+      }
       final response = await _quranService.fetchTafsir(
         surahId,
         page: tafsirPage.value,
         limit: 10,
       );
+      if (kDebugMode) {
+        print('More tafsir loaded: ${response.tafsirs.length} items');
+      }
 
       if (response.tafsirs.isEmpty) {
         hasMoreTafsir.value = false;
@@ -345,11 +463,17 @@ class SurahReadingController extends GetxController {
     try {
       isLoadingMore(true);
       currentPage.value++;
+      if (kDebugMode) {
+        print('Loading more verses: page ${currentPage.value}');
+      }
       final response = await _quranService.fetchSurahById(
         surahId,
         page: currentPage.value,
         limit: 10,
       );
+      if (kDebugMode) {
+        print('More verses loaded: ${response.verses.length} items');
+      }
 
       if (response.verses.isEmpty) {
         hasMoreVerses.value = false;
@@ -370,13 +494,22 @@ class SurahReadingController extends GetxController {
   }
 
   void togglePlayPause() async {
+    if (isAudioLoading.value) return;
+
     if (isPlaying.value) {
       await _activePlayer.pause();
     } else {
       if (currentPlayingVerse.value != -1) {
         // Resume
-        await _activePlayer.setPlaybackRate(playbackSpeed.value);
-        await _activePlayer.resume();
+        _setAudioLoading(currentPlayingVerse.value);
+        try {
+          await _activePlayer.setPlaybackRate(playbackSpeed.value);
+          await _activePlayer.resume();
+        } catch (e) {
+          _clearAudioLoading();
+          print("Error resuming verse: $e");
+          Get.snackbar("error".tr, "failed_play_audio".tr);
+        }
       } else if (verses.isNotEmpty) {
         // Start from first verse if nothing is playing
         playVerse(verses.first.verseId);
@@ -385,6 +518,8 @@ class SurahReadingController extends GetxController {
   }
 
   Future<void> playVerse(int verseId) async {
+    if (isAudioLoading.value) return;
+
     // If tapping the same verse that is playing/paused
     if (currentPlayingVerse.value == verseId) {
       togglePlayPause();
@@ -392,6 +527,8 @@ class SurahReadingController extends GetxController {
     }
 
     try {
+      _setAudioLoading(verseId);
+
       // Stop all players before starting fresh
       await _player1.stop();
       await _player2.stop();
@@ -400,6 +537,9 @@ class SurahReadingController extends GetxController {
       String? audioUrl = await _getAudioUrlForVerse(verseId);
 
       if (audioUrl != null) {
+        if (kDebugMode) {
+          print('Playing verse $verseId with URL: $audioUrl');
+        }
         await _activePlayer.setSourceUrl(audioUrl);
         await _activePlayer.setPlaybackRate(playbackSpeed.value);
         await _activePlayer.resume();
@@ -411,11 +551,13 @@ class SurahReadingController extends GetxController {
         int index = verses.indexWhere((v) => v.verseId == verseId);
         _preloadNextVerse(index);
       } else {
-        Get.snackbar("Error", "Audio not available for this verse");
+        _clearAudioLoading();
+        Get.snackbar("error".tr, "audio_not_available".tr);
       }
     } catch (e) {
+      _clearAudioLoading();
       print("Error playing verse: $e");
-      Get.snackbar("Error", "Failed to play audio");
+      Get.snackbar("error".tr, "failed_play_audio".tr);
     }
   }
 
@@ -462,16 +604,17 @@ class SurahReadingScreen extends StatelessWidget {
   Future<void> _copyVerseInfo(VerseDetailModel verse) async {
     final String transliteration = verse.transliteration.trim();
     final String verseInfo = [
-      '$surahName - Aya ${verse.verseId}',
+      '$surahName - ${'aya'.tr} ${verse.verseId}',
       'Arabic: ${verse.text}',
-      if (transliteration.isNotEmpty) 'Transliteration: $transliteration',
-      'Translation: ${verse.translation}',
+      if (transliteration.isNotEmpty)
+        '${'transliteration'.tr}: $transliteration',
+      '${'translation'.tr}: ${verse.translation}',
     ].join('\n');
 
     await Clipboard.setData(ClipboardData(text: verseInfo));
     Get.snackbar(
-      'Copied',
-      'Verse info copied to clipboard',
+      'copied'.tr,
+      'verse_copied_msg'.tr,
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 2),
     );
@@ -497,7 +640,7 @@ class SurahReadingScreen extends StatelessWidget {
           Column(
             children: [
               // App Bar
-              _buildAppBar(context),
+              _buildAppBar(context, controller),
 
               // Content
               Expanded(
@@ -536,7 +679,7 @@ class SurahReadingScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, SurahReadingController controller) {
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 8.h,
@@ -566,7 +709,7 @@ class SurahReadingScreen extends StatelessWidget {
 
           // Surah name dropdown
           GestureDetector(
-            onTap: () => _showSurahSelector(context),
+            onTap: () => _showSurahSelector(context, controller),
             child: Row(
               children: [
                 Text(
@@ -583,20 +726,556 @@ class SurahReadingScreen extends StatelessWidget {
           ),
 
           // Info button
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey[300]!),
+          GestureDetector(
+            onTap: () => _showSettingsPanel(context, controller),
+            child: Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Icon(
+                Icons.info_outline,
+                size: 18.sp,
+                color: Colors.black87,
+              ),
             ),
-            child: Icon(Icons.info_outline, size: 18.sp, color: Colors.black87),
           ),
         ],
       ),
     );
   }
 
-  void _showSurahSelector(BuildContext context) {
+  Future<void> _showSettingsPanel(
+    BuildContext context,
+    SurahReadingController controller,
+  ) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _buildSettingsPanel(context, controller),
+    );
+    await controller.fetchSurahDetails();
+  }
+
+  Widget _buildSettingsPanel(
+    BuildContext context,
+    SurahReadingController controller,
+  ) {
+    return StatefulBuilder(
+      builder: (ctx, setSheetState) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF9F0),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Padding(
+                padding: EdgeInsets.only(top: 12.h, bottom: 4.h),
+                child: Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(width: 32.w),
+                    Text(
+                      'settings'.tr,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        width: 32.w,
+                        height: 32.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.grey[400]!),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16.sp,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[200]),
+              // Scrollable content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 16.h,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Text Size
+                      Text(
+                        'text_size'.tr,
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Obx(() {
+                        return Row(
+                          children: [
+                            Text(
+                              'A',
+                              style: TextStyle(
+                                fontSize: 13.sp,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            Expanded(
+                              child: SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  activeTrackColor: const Color(0xFF2E7D32),
+                                  inactiveTrackColor: Colors.grey[300],
+                                  thumbColor: const Color(0xFF2E7D32),
+                                  overlayColor: const Color(
+                                    0xFF2E7D32,
+                                  ).withOpacity(0.2),
+                                  trackHeight: 4,
+                                ),
+                                child: Slider(
+                                  value: controller.fontSize.value,
+                                  min: 14,
+                                  max: 40,
+                                  onChanged: (v) async {
+                                    await controller.saveFontSize(v);
+                                    setSheetState(() {});
+                                  },
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'A',
+                              style: TextStyle(
+                                fontSize: 20.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
+                      SizedBox(height: 20.h),
+                      // Select Your Reciter
+                      Text(
+                        'select_reciter'.tr,
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildReciterSelector(setSheetState, controller),
+                      SizedBox(height: 20.h),
+                      // Choose your language
+                      Text(
+                        'language'.tr,
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
+                      Obx(() {
+                        final languages = [
+                          'English',
+                          'العربية',
+                          'اردو',
+                          'Türkçe',
+                          'Bahasa',
+                          'Français',
+                        ];
+                        return Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16.w,
+                            vertical: 4.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              dropdownColor: const Color(0xFFFFF9F0),
+                              value: controller.selectedLanguage.value,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down),
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: Colors.black87,
+                              ),
+                              items: languages
+                                  .map(
+                                    (lang) => DropdownMenuItem(
+                                      value: lang,
+                                      child: Text(lang),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) async {
+                                if (v != null) {
+                                  controller.selectedLanguage.value = v;
+                                  setSheetState(() {});
+                                  await SharedPreferencesHelper.saveLanguage(v);
+                                  controller._updateLocale(v);
+                                }
+                              },
+                            ),
+                          ),
+                        );
+                      }),
+                      SizedBox(height: 20.h),
+                      // At the end of Surah
+                      Text(
+                        'at_end_of_surah'.tr,
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 10.h),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 16.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10.r),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            dropdownColor: const Color(0xFFFFF9F0),
+                            value: controller.endOfSurahAction.value,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down),
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.black87,
+                            ),
+                            items:
+                                [
+                                      {
+                                        'key': 'play_next_surah',
+                                        'label': 'play_next_surah'.tr,
+                                      },
+                                      {'key': 'stop', 'label': 'stop'.tr},
+                                      {'key': 'repeat', 'label': 'repeat'.tr},
+                                    ]
+                                    .map(
+                                      (opt) => DropdownMenuItem(
+                                        value: opt['key'] as String,
+                                        child: Text(opt['label'] as String),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged: (v) {
+                              if (v != null) {
+                                controller.endOfSurahAction.value = v;
+                                setSheetState(() {});
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20.h),
+                      // Select your Arabic script
+                      Text(
+                        'select_arabic_script'.tr,
+                        style: TextStyle(
+                          fontSize: 15.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      _buildArabicScriptSelector(setSheetState, controller),
+                      SizedBox(height: 32.h),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildReciterSelector(
+    StateSetter setSheetState,
+    SurahReadingController controller,
+  ) {
+    // We can adapt the reciter selector from QuranReadModeScreen
+    // For now, let's just use a simplified version or reuse the existing logic if possible.
+    final reciters = [
+      {
+        'name': 'Mishary Rashid Alafasy',
+        'image': 'assets/image/MisharyRashidAIAlfasy.jpg',
+      },
+      {
+        'name': 'Abu Bakr al-Shatri',
+        'image': 'assets/image/abu_bakr_shatri.jpg',
+      },
+      {
+        'name': 'Nasser Al-Qatami',
+        'image': 'assets/image/NasserAlQatami.jpg',
+      },
+      {
+        'name': 'Yasser Al-Dossary',
+        'image': 'assets/image/YasserAlDosari.jpg',
+      },
+    ];
+
+    return SizedBox(
+      height: 120.h,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: reciters.length,
+        itemBuilder: (context, index) {
+          return Obx(() {
+            final isSelected =
+                controller.selectedReciterName.value == reciters[index]['name'];
+            return GestureDetector(
+              onTap: () async {
+                await controller.saveReciter(reciters[index]['name']!);
+                setSheetState(() {});
+              },
+              child: Container(
+                width: 100.w,
+                margin: EdgeInsets.only(right: 12.w),
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        Container(
+                          width: 80.w,
+                          height: 80.w,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: isSelected
+                                ? Border.all(
+                                    color: const Color(0xFF2E7D32),
+                                    width: 2,
+                                  )
+                                : null,
+                            image: DecorationImage(
+                              image: AssetImage(reciters[index]['image']!),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        if (isSelected)
+                          Positioned(
+                            top: 4.w,
+                            right: 4.w,
+                            child: Container(
+                              padding: EdgeInsets.all(2.w),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF2E7D32),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.check,
+                                size: 12.sp,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      reciters[index]['name']!,
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildArabicScriptSelector(
+    StateSetter setSheetState,
+    SurahReadingController controller,
+  ) {
+    final arabicScripts = [
+      {'name': 'IndoPak', 'sample': 'بِسْمِ اللّٰهِ'},
+      {'name': 'Uthmani', 'sample': 'بِسْمِ اللّٰهِ'},
+      {'name': 'No symbol', 'sample': 'بِسْمِ اللّٰهِ'},
+      {'name': 'Compatible', 'sample': 'بِسْمِ اللّٰهِ'},
+    ];
+
+    return Obx(() {
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(24.w),
+        decoration: BoxDecoration(
+          color: const Color(0xFFDAE2D0),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Image.asset(
+                  'assets/icons/Layer_1.png',
+                  width: 32.w,
+                  height: 32.h,
+                ),
+                Text(
+                  "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ",
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: controller.selectedScriptName.value == 'IndoPak'
+                        ? 'IndoPak'
+                        : 'Arial',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  'arabic'.tr,
+                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
+                  textAlign: TextAlign.left,
+                ),
+              ],
+            ),
+            SizedBox(height: 24.h),
+            Row(
+              children: List.generate(arabicScripts.length, (index) {
+                final isSelected =
+                    controller.selectedScriptName.value ==
+                    arabicScripts[index]['name'];
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      await controller.saveArabicScript(
+                        arabicScripts[index]['name']!,
+                      );
+                      setSheetState(() {});
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(right: index < 3 ? 8.w : 0),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF2E7D32)
+                              : Colors.grey[200]!,
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          if (isSelected)
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: Padding(
+                                padding: EdgeInsets.only(right: 4.w),
+                                child: Container(
+                                  padding: EdgeInsets.all(2.w),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF2E7D32),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.check,
+                                    size: 10.sp,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Text(
+                            arabicScripts[index]['sample']!,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontFamily:
+                                  arabicScripts[index]['name'] == 'IndoPak'
+                                  ? 'IndoPak'
+                                  : 'Arial',
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            arabicScripts[index]['name']!,
+                            style: TextStyle(
+                              fontSize: 10.sp,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  void _showSurahSelector(
+    BuildContext context,
+    SurahReadingController controller,
+  ) {
     final List<Map<String, dynamic>> surahs = StaticSurahData.getAllSurahs()
         .map(
           (s) => {
@@ -681,7 +1360,7 @@ class SurahReadingScreen extends StatelessWidget {
                               });
                             },
                             decoration: InputDecoration(
-                              hintText: 'Search surah',
+                              hintText: 'search_surah'.tr,
                               hintStyle: TextStyle(
                                 color: Colors.grey[500],
                                 fontSize: 14.sp,
@@ -702,7 +1381,7 @@ class SurahReadingScreen extends StatelessWidget {
                   child: filteredSurahs.isEmpty
                       ? Center(
                           child: Text(
-                            'No surah found',
+                            'no_surahs_found'.tr,
                             style: TextStyle(
                               color: Colors.grey[600],
                               fontSize: 14.sp,
@@ -816,213 +1495,203 @@ class SurahReadingScreen extends StatelessWidget {
         maxChildSize: 0.95,
         minChildSize: 0.5,
         expand: false,
-        builder: (context, scrollController) =>
-            FutureBuilder<Map<String, dynamic>?>(
-              future: _fetchSurahDetails(surahNumber),
-              builder: (context, snapshot) {
-                final details = snapshot.data;
-                final isLoading =
-                    snapshot.connectionState == ConnectionState.waiting;
+        builder: (context, scrollController) => FutureBuilder<Map<String, dynamic>?>(
+          future: _fetchSurahDetails(surahNumber),
+          builder: (context, snapshot) {
+            final details = snapshot.data;
+            final isLoading =
+                snapshot.connectionState == ConnectionState.waiting;
 
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Align(
-                        alignment: Alignment.topRight,
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            padding: EdgeInsets.all(4.w),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.close,
-                              size: 16.sp,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          size: 16.sp,
+                          color: Colors.grey[600],
                         ),
                       ),
                     ),
-                    if (isLoading)
-                      const Expanded(
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: scrollController,
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                ),
+                if (isLoading)
+                  const Expanded(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Surah name and Arabic name
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              // Surah name and Arabic name
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      (details?['name'] ?? surah['name'])
-                                          .toString()
-                                          .toUpperCase(),
-                                      style: TextStyle(
-                                        fontSize: 20.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  FutureBuilder<String>(
-                                    future:
-                                        SharedPreferencesHelper.getArabicScript(),
-                                    builder: (context, fontSnap) {
-                                      final scriptFont =
-                                          fontSnap.data ?? 'Imlaei';
-                                      return Text(
-                                        arabicName,
-                                        style: TextStyle(
-                                          fontSize: 24.sp,
-                                          fontFamily: scriptFont == 'IndoPak'
-                                              ? 'IndoPak'
-                                              : 'Arial',
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-
-                              SizedBox(height: 16.h),
-
-                              // Info row
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildInfoColumn(
-                                    'Meaning',
-                                    details?['meaning'] ??
-                                        surah['translation'] ??
-                                        '-',
-                                  ),
-                                  SizedBox(width: 24.w),
-                                  _buildInfoColumn(
-                                    'Revelation',
-                                    details?['revelation'] ??
-                                        surah['origin'] ??
-                                        '-',
-                                  ),
-                                  SizedBox(width: 24.w),
-                                  _buildInfoColumn(
-                                    'Ayahs',
-                                    '${details?['totalVerses'] ?? ayaCount} Aya',
-                                  ),
-                                ],
-                              ),
-
-                              SizedBox(height: 24.h),
-                              Divider(color: Colors.grey[200]),
-                              SizedBox(height: 16.h),
-
-                              // Short Description
-                              if ((details?['shortDescription'] ?? '')
-                                  .isNotEmpty)
-                                Text(
-                                  details!['shortDescription'],
+                              Expanded(
+                                child: Text(
+                                  (details?['name'] ?? surah['name'])
+                                      .toString()
+                                      .toUpperCase(),
                                   style: TextStyle(
-                                    fontSize: 14.sp,
+                                    fontSize: 20.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              FutureBuilder<String>(
+                                future:
+                                    SharedPreferencesHelper.getArabicScript(),
+                                builder: (context, fontSnap) {
+                                  final scriptFont = fontSnap.data ?? 'Imlaei';
+                                  return Text(
+                                    arabicName,
+                                    style: TextStyle(
+                                      fontSize: 24.sp,
+                                      fontFamily: scriptFont == 'IndoPak'
+                                          ? 'IndoPak'
+                                          : 'Arial',
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 16.h),
+
+                          // Info row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildInfoColumn(
+                                'meaning'.tr,
+                                details?['meaning'] ??
+                                    surah['translation'] ??
+                                    '-',
+                              ),
+                              SizedBox(width: 24.w),
+                              _buildInfoColumn(
+                                'revelation'.tr,
+                                details?['revelation'] ??
+                                    surah['origin'] ??
+                                    '-',
+                              ),
+                              SizedBox(width: 24.w),
+                              _buildInfoColumn(
+                                'aya'.tr,
+                                '${details?['totalVerses'] ?? ayaCount} ${'aya'.tr}',
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 24.h),
+                          Divider(color: Colors.grey[200]),
+                          SizedBox(height: 16.h),
+
+                          // Short Description
+                          if ((details?['shortDescription'] ?? '').isNotEmpty)
+                            Text(
+                              details!['shortDescription'],
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: Colors.grey[700],
+                                height: 1.6,
+                              ),
+                            ),
+
+                          if ((details?['shortDescription'] ?? '').isNotEmpty)
+                            SizedBox(height: 24.h),
+
+                          // Period of Revelation
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(16.w),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12.r),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'period_of_revelation'.tr,
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 12.h),
+                                Text(
+                                  details?['periodOfRevelation'] ?? '-',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
                                     color: Colors.grey[700],
                                     height: 1.6,
                                   ),
                                 ),
-
-                              if ((details?['shortDescription'] ?? '')
-                                  .isNotEmpty)
-                                SizedBox(height: 24.h),
-
-                              // Period of Revelation
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.all(16.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(12.r),
-                                  border: Border.all(color: Colors.grey[200]!),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Period of Revelation',
-                                      style: TextStyle(
-                                        fontSize: 16.sp,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    SizedBox(height: 12.h),
-                                    Text(
-                                      details?['periodOfRevelation'] ?? '-',
-                                      style: TextStyle(
-                                        fontSize: 13.sp,
-                                        color: Colors.grey[700],
-                                        height: 1.6,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              SizedBox(height: 16.h),
-
-                              // Long Description / Theme
-                              if ((details?['longDescription'] ?? '')
-                                  .isNotEmpty)
-                                Container(
-                                  width: double.infinity,
-                                  padding: EdgeInsets.all(16.w),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(12.r),
-                                    border: Border.all(
-                                      color: Colors.grey[200]!,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Theme',
-                                        style: TextStyle(
-                                          fontSize: 16.sp,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(height: 12.h),
-                                      Text(
-                                        details!['longDescription'],
-                                        style: TextStyle(
-                                          fontSize: 13.sp,
-                                          color: Colors.grey[700],
-                                          height: 1.6,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                              SizedBox(height: 32.h),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+
+                          SizedBox(height: 16.h),
+
+                          // Long Description / Theme
+                          if ((details?['longDescription'] ?? '').isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(16.w),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'theme'.tr,
+                                    style: TextStyle(
+                                      fontSize: 16.sp,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 12.h),
+                                  Text(
+                                    details!['longDescription'],
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.grey[700],
+                                      height: 1.6,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          SizedBox(height: 32.h),
+                        ],
                       ),
-                  ],
-                );
-              },
-            ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -1087,7 +1756,7 @@ class SurahReadingScreen extends StatelessWidget {
               ),
               _buildDot(),
               Text(
-                "$ayaCount Aya",
+                "$ayaCount ${'aya'.tr}",
                 style: TextStyle(fontSize: 11.sp, color: Colors.black),
               ),
             ],
@@ -1128,11 +1797,11 @@ class SurahReadingScreen extends StatelessWidget {
           () => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildViewTab("Translation", 0, controller),
+              _buildViewTab("translation".tr, 0, controller),
               SizedBox(width: 12.w),
-              _buildViewTab("Transliteration", 1, controller),
+              _buildViewTab("transliteration".tr, 1, controller),
               SizedBox(width: 12.w),
-              _buildViewTab("Tafsir", 2, controller),
+              _buildViewTab("tafsir".tr, 2, controller),
             ],
           ),
         ),
@@ -1194,10 +1863,10 @@ class SurahReadingScreen extends StatelessWidget {
         );
       }
       if (controller.verses.isEmpty) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Text("No verses found"),
+            padding: const EdgeInsets.all(32.0),
+            child: Text("no_verses_found".tr),
           ),
         );
       }
@@ -1229,10 +1898,10 @@ class SurahReadingScreen extends StatelessWidget {
         );
       }
       if (controller.verses.isEmpty) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Text("No verses found"),
+            padding: const EdgeInsets.all(32.0),
+            child: Text("no_verses_found".tr),
           ),
         );
       }
@@ -1264,10 +1933,10 @@ class SurahReadingScreen extends StatelessWidget {
         );
       }
       if (controller.tafsirs.isEmpty) {
-        return const Center(
+        return Center(
           child: Padding(
-            padding: EdgeInsets.all(32.0),
-            child: Text("No tafsir found"),
+            padding: const EdgeInsets.all(32.0),
+            child: Text("no_tafsir_found".tr),
           ),
         );
       }
@@ -1301,7 +1970,7 @@ class SurahReadingScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: 16.h),
           child: Center(
             child: Text(
-              "No more tafsir",
+              "no_more_tafsir".tr,
               style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
             ),
           ),
@@ -1328,7 +1997,7 @@ class SurahReadingScreen extends StatelessWidget {
               ),
             ),
             child: Text(
-              "Load More Tafsir",
+              "load_more_tafsir".tr,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14.sp,
@@ -1348,7 +2017,7 @@ class SurahReadingScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(vertical: 16.h),
           child: Center(
             child: Text(
-              "No more verses",
+              "no_more_verses".tr,
               style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
             ),
           ),
@@ -1375,7 +2044,7 @@ class SurahReadingScreen extends StatelessWidget {
               ),
             ),
             child: Text(
-              "Load More Verses",
+              "load_more_verses".tr,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14.sp,
@@ -1423,7 +2092,7 @@ class SurahReadingScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          "Tafsir",
+                          "tafsir".tr,
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
@@ -1439,7 +2108,7 @@ class SurahReadingScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 12.h),
                     Text(
-                      "INTRODUCTION TO ${name.toUpperCase()}",
+                      "${'intro_to'.tr} ${name.toUpperCase()}",
                       style: TextStyle(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.bold,
@@ -1449,7 +2118,7 @@ class SurahReadingScreen extends StatelessWidget {
                     if (revelation.isNotEmpty) ...[
                       SizedBox(height: 8.h),
                       Text(
-                        "Which was revealed in $revelation",
+                        "${'revealed_in'.tr} $revelation",
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
@@ -1471,7 +2140,7 @@ class SurahReadingScreen extends StatelessWidget {
                     if (periodOfRevelation.isNotEmpty) ...[
                       SizedBox(height: 8.h),
                       Text(
-                        "Period of Revelation: $periodOfRevelation",
+                        "${'period_of_revelation'.tr}: $periodOfRevelation",
                         style: TextStyle(
                           fontSize: 13.sp,
                           color: Colors.grey[700],
@@ -1528,19 +2197,37 @@ class SurahReadingScreen extends StatelessWidget {
                 final isCurrent =
                     controller.currentPlayingVerse.value == verse.verseId;
                 final isPlaying = controller.isPlaying.value;
+                final isLoading =
+                    controller.isAudioLoading.value &&
+                    controller.loadingVerseId.value == verse.verseId;
                 return GestureDetector(
-                  onTap: () => controller.playVerse(verse.verseId),
+                  onTap: isLoading
+                      ? null
+                      : () => controller.playVerse(verse.verseId),
                   child: Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8F5E9),
                       borderRadius: BorderRadius.circular(20.r),
                     ),
-                    child: Icon(
-                      isCurrent && isPlaying ? Icons.pause : Icons.play_arrow,
-                      color: const Color(0xFF2E7D32),
-                      size: 20.sp,
-                    ),
+                    child: isLoading
+                        ? SizedBox(
+                            width: 20.sp,
+                            height: 20.sp,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF2E7D32),
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            isCurrent && isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
+                            color: const Color(0xFF2E7D32),
+                            size: 20.sp,
+                          ),
                   ),
                 );
               }),
@@ -1589,20 +2276,22 @@ class SurahReadingScreen extends StatelessWidget {
                           ),
 
                           Expanded(
-                            child: Text(
-                              verse.text,
-                              style: TextStyle(
-                                fontSize: 22.sp,
-                                fontFamily:
-                                    controller.selectedScriptName.value ==
-                                        'IndoPak'
-                                    ? 'IndoPak'
-                                    : 'Arial',
-                                height: 1.8,
-                              ),
-                              textDirection: TextDirection.rtl,
-                              textAlign: TextAlign.right,
-                            ),
+                            child: Obx(() {
+                              return Text(
+                                verse.text,
+                                style: TextStyle(
+                                  fontSize: controller.fontSize.value.sp,
+                                  fontFamily:
+                                      controller.selectedScriptName.value ==
+                                          'IndoPak'
+                                      ? 'IndoPak'
+                                      : 'Arial',
+                                  height: 1.8,
+                                ),
+                                textDirection: TextDirection.rtl,
+                                textAlign: TextAlign.right,
+                              );
+                            }),
                           ),
                         ],
                       ),
@@ -1709,7 +2398,8 @@ class SurahReadingScreen extends StatelessWidget {
         Get.delete<AskAIController>();
       }
       final aiController = Get.put(AskAIController());
-      final contextMessage = 'About $surahName, Verse ${verse.verseId}: $query';
+      final contextMessage =
+          'About $surahName, ${'aya'.tr} ${verse.verseId}: $query';
       aiController.messageController.text = contextMessage;
       aiController.showChat.value = true;
       Get.to(() => const AskAIScreen());
@@ -1760,7 +2450,7 @@ class SurahReadingScreen extends StatelessWidget {
                         style: TextStyle(color: Colors.white, fontSize: 13.sp),
                         onSubmitted: (_) => sendToAI(),
                         decoration: InputDecoration(
-                          hintText: 'Ask about this aya',
+                          hintText: 'ask_about_aya'.tr,
                           hintStyle: TextStyle(
                             color: Colors.white70,
                             fontSize: 13.sp,
@@ -1804,7 +2494,7 @@ class SurahReadingScreen extends StatelessWidget {
                       color: Colors.white,
                       size: 26.sp,
                     ),
-                    label: 'Share',
+                    label: 'share'.tr,
                     onTap: () {
                       Navigator.pop(ctx);
                       // Share verse text
@@ -1818,7 +2508,7 @@ class SurahReadingScreen extends StatelessWidget {
                       height: 26.sp,
                       color: Colors.white,
                     ),
-                    label: 'Memorise',
+                    label: 'memorize'.tr,
                     onTap: () {
                       Navigator.pop(ctx);
                       if (Get.isRegistered<MemorizationController>()) {
@@ -1835,7 +2525,7 @@ class SurahReadingScreen extends StatelessWidget {
                   _buildVerseOptionButton(
                     ctx,
                     icon: Icon(Icons.repeat, color: Colors.white, size: 26.sp),
-                    label: 'Repeat Verse',
+                    label: 'repeat_verse'.tr,
                     onTap: () {
                       Navigator.pop(ctx);
                       controller.playVerse(verse.verseId);
@@ -1916,7 +2606,10 @@ class SurahReadingScreen extends StatelessWidget {
                     Column(
                       children: [
                         Text(
-                          '$surahName, Aya $verseId',
+                          'surah_aya'.trParams({
+                            'surah': surahName,
+                            'aya': verseId.toString(),
+                          }),
                           style: TextStyle(
                             color: Colors.white70,
                             fontSize: 12.sp,
@@ -1924,7 +2617,7 @@ class SurahReadingScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 2.h),
                         Text(
-                          hasNote ? 'View / Edit Note' : 'Add a note',
+                          hasNote ? 'view_edit_note'.tr : 'add_note'.tr,
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16.sp,
@@ -1962,7 +2655,7 @@ class SurahReadingScreen extends StatelessWidget {
                     minLines: 5,
                     style: TextStyle(color: Colors.white, fontSize: 14.sp),
                     decoration: InputDecoration(
-                      hintText: 'Type here',
+                      hintText: 'type_here'.tr,
                       hintStyle: TextStyle(
                         color: Colors.white54,
                         fontSize: 14.sp,
@@ -1997,7 +2690,10 @@ class SurahReadingScreen extends StatelessWidget {
                               // Update verse notes in-memory so the UI refreshes
                               final updatedNote = NoteModel(
                                 id: existingNote?.id ?? '',
-                                title: '$surahName, Aya $verseId',
+                                title: 'surah_aya'.trParams({
+                                  'surah': surahName,
+                                  'aya': verseId.toString(),
+                                }),
                                 description: text,
                                 surahId: surahId,
                                 verseId: verseId,
@@ -2006,7 +2702,7 @@ class SurahReadingScreen extends StatelessWidget {
                                 updatedNote,
                               ]);
                               Get.snackbar(
-                                'Note Saved',
+                                'note_saved'.tr,
                                 msg,
                                 backgroundColor: const Color(0xFF2E7D32),
                                 colorText: Colors.white,
@@ -2014,8 +2710,8 @@ class SurahReadingScreen extends StatelessWidget {
                               );
                             } else {
                               Get.snackbar(
-                                'Error',
-                                'Failed to save note',
+                                'error'.tr,
+                                'failed_save_note'.tr,
                                 backgroundColor: Colors.red,
                                 colorText: Colors.white,
                                 snackPosition: SnackPosition.BOTTOM,
@@ -2042,7 +2738,7 @@ class SurahReadingScreen extends StatelessWidget {
                             ),
                           )
                         : Text(
-                            'Save Note',
+                            'save_note'.tr,
                             style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.bold,
@@ -2068,16 +2764,16 @@ class SurahReadingScreen extends StatelessWidget {
                               if (ok) {
                                 controller.updateVerseNotes(verseId, []);
                                 Get.snackbar(
-                                  'Note Deleted',
-                                  'Note removed successfully',
+                                  'note_deleted'.tr,
+                                  'note_removed_msg'.tr,
                                   backgroundColor: Colors.grey[800],
                                   colorText: Colors.white,
                                   snackPosition: SnackPosition.BOTTOM,
                                 );
                               } else {
                                 Get.snackbar(
-                                  'Error',
-                                  'Failed to delete note',
+                                  'error'.tr,
+                                  'failed_delete_note'.tr,
                                   backgroundColor: Colors.red,
                                   colorText: Colors.white,
                                   snackPosition: SnackPosition.BOTTOM,
@@ -2104,7 +2800,7 @@ class SurahReadingScreen extends StatelessWidget {
                               ),
                             )
                           : Text(
-                              'Delete Note',
+                              'delete_note'.tr,
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold,
@@ -2151,8 +2847,13 @@ class SurahReadingScreen extends StatelessWidget {
                 final isCurrent =
                     controller.currentPlayingVerse.value == verse.verseId;
                 final isPlaying = controller.isPlaying.value;
+                final isLoading =
+                    controller.isAudioLoading.value &&
+                    controller.loadingVerseId.value == verse.verseId;
                 return GestureDetector(
-                  onTap: () => controller.playVerse(verse.verseId),
+                  onTap: isLoading
+                      ? null
+                      : () => controller.playVerse(verse.verseId),
                   child: Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
@@ -2160,13 +2861,24 @@ class SurahReadingScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(50.r),
                       border: Border.all(color: Colors.grey[100]!),
                     ),
-                    child: Icon(
-                      isCurrent && isPlaying
-                          ? Icons.pause
-                          : Icons.play_arrow_rounded,
-                      color: Colors.black87,
-                      size: 24.sp,
-                    ),
+                    child: isLoading
+                        ? SizedBox(
+                            width: 24.sp,
+                            height: 24.sp,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.black87,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            isCurrent && isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow_rounded,
+                            color: Colors.black87,
+                            size: 24.sp,
+                          ),
                   ),
                 );
               }),
@@ -2177,19 +2889,21 @@ class SurahReadingScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        verse.text,
-                        style: TextStyle(
-                          fontSize: 22.sp,
-                          fontFamily:
-                              controller.selectedScriptName.value == 'IndoPak'
-                              ? 'IndoPak'
-                              : 'Arial',
-                          height: 1.8,
-                        ),
-                        textDirection: TextDirection.rtl,
-                        textAlign: TextAlign.right,
-                      ),
+                      child: Obx(() {
+                        return Text(
+                          verse.text,
+                          style: TextStyle(
+                            fontSize: controller.fontSize.value.sp,
+                            fontFamily:
+                                controller.selectedScriptName.value == 'IndoPak'
+                                ? 'IndoPak'
+                                : 'Arial',
+                            height: 1.8,
+                          ),
+                          textDirection: TextDirection.rtl,
+                          textAlign: TextAlign.right,
+                        );
+                      }),
                     ),
                     SizedBox(width: 8.w),
                     // Verse number in image
@@ -2321,18 +3035,21 @@ class SurahReadingScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Expanded(
-                child: Text(
-                  tafsir.verse,
-                  style: TextStyle(
-                    fontSize: 20.sp,
-                    fontFamily: controller.selectedScriptName.value == 'IndoPak'
-                        ? 'IndoPak'
-                        : 'Arial',
-                    height: 1.8,
-                  ),
-                  textDirection: TextDirection.rtl,
-                  textAlign: TextAlign.right,
-                ),
+                child: Obx(() {
+                  return Text(
+                    tafsir.verse,
+                    style: TextStyle(
+                      fontSize: controller.fontSize.value.sp,
+                      fontFamily:
+                          controller.selectedScriptName.value == 'IndoPak'
+                          ? 'IndoPak'
+                          : 'Arial',
+                      height: 1.8,
+                    ),
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
+                  );
+                }),
               ),
               SizedBox(width: 8.w),
               Stack(
@@ -2362,7 +3079,7 @@ class SurahReadingScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Tafsir - Verse ${tafsir.verseId}",
+                "${'tafsir'.tr} - ${'aya'.tr} ${tafsir.verseId}",
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.bold,
@@ -2433,20 +3150,33 @@ class SurahReadingScreen extends StatelessWidget {
                 SizedBox(width: 16.w),
                 Obx(
                   () => GestureDetector(
-                    onTap: () => controller.togglePlayPause(),
+                    onTap: controller.isAudioLoading.value
+                        ? null
+                        : () => controller.togglePlayPause(),
                     child: Container(
                       padding: EdgeInsets.all(12.w),
                       decoration: const BoxDecoration(
                         color: Color(0xFF2E7D32),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        controller.isPlaying.value
-                            ? Icons.pause
-                            : Icons.play_arrow,
-                        color: Colors.white,
-                        size: 24.sp,
-                      ),
+                      child: controller.isAudioLoading.value
+                          ? SizedBox(
+                              width: 24.sp,
+                              height: 24.sp,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              controller.isPlaying.value
+                                  ? Icons.pause
+                                  : Icons.play_arrow,
+                              color: Colors.white,
+                              size: 24.sp,
+                            ),
                     ),
                   ),
                 ),

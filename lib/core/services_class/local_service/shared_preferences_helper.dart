@@ -12,6 +12,7 @@ class SharedPreferencesHelper {
       'daily_practice_reminder_time';
   static const String _prayerNotificationSettingsPrefix =
       'prayer_notification_settings_';
+  static const String _globalAdhanSettingsKey = 'global_adhan_settings';
 
   // Save categories (id and name only)
   static Future<void> saveCategories(
@@ -180,6 +181,17 @@ class SharedPreferencesHelper {
   static Future<String> getArabicScript() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('arabic_script') ?? 'Imlaei';
+  }
+
+  // Font Size
+  static Future<void> saveFontSize(double size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('quran_font_size', size);
+  }
+
+  static Future<double> getFontSize() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('quran_font_size') ?? 22.0;
   }
 
   // Reciter
@@ -420,5 +432,29 @@ class SharedPreferencesHelper {
     } catch (_) {}
 
     return null;
+  }
+
+  static Future<void> saveGlobalAdhanSettings({
+    required String alertType,
+    required String adhanSound,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final payload = {'alertType': alertType, 'adhanSound': adhanSound};
+    await prefs.setString(_globalAdhanSettingsKey, jsonEncode(payload));
+  }
+
+  static Future<Map<String, String>> getGlobalAdhanSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_globalAdhanSettingsKey);
+    if (raw == null || raw.trim().isEmpty) {
+      return {'alertType': 'silent', 'adhanSound': 'madinah'};
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        return decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+      }
+    } catch (_) {}
+    return {'alertType': 'silent', 'adhanSound': 'madinah'};
   }
 }

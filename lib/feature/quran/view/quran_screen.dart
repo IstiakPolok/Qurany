@@ -11,6 +11,7 @@ import '../../../core/services_class/local_service/shared_preferences_helper.dar
 import '../../bottom_nav_bar/screen/bottom_nav_bar.dart';
 import '../../home/model/surah_model.dart';
 import '../../home/services/quran_service.dart';
+import '../../home/view/notification_screen.dart';
 import '../model/bookmarked_verse_model.dart';
 import 'surah_reading_screen.dart';
 import 'listen_mode_screen.dart';
@@ -223,16 +224,16 @@ class QuranController extends GetxController {
       if (success) {
         await fetchFavoriteSurahs(forceRefresh: true);
         Get.snackbar(
-          "Success",
-          "Surah removed from favorites",
+          "success".tr,
+          "surah_removed_msg".tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.black,
         );
       } else {
         Get.snackbar(
-          "Error",
-          "Failed to remove surah from favorites",
+          "error".tr,
+          "surah_remove_failed_msg".tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.black,
@@ -249,16 +250,16 @@ class QuranController extends GetxController {
       if (success) {
         await fetchFavoriteSurahs(forceRefresh: true);
         Get.snackbar(
-          "Success",
-          "Favorite list updated",
+          "success".tr,
+          "fav_list_updated_msg".tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green.withOpacity(0.1),
           colorText: Colors.black,
         );
       } else {
         Get.snackbar(
-          "Error",
-          "Failed to update favorite",
+          "error".tr,
+          "fav_update_failed_msg".tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.withOpacity(0.1),
           colorText: Colors.black,
@@ -284,11 +285,11 @@ class QuranController extends GetxController {
     );
 
     if (selected == today) {
-      return "Today, ${DateFormat('d MMMM').format(selectedDate.value)}";
+      return "${"today_comma".tr}${DateFormat('d MMMM').format(selectedDate.value)}";
     } else if (selected == today.add(const Duration(days: 1))) {
-      return "Tomorrow, ${DateFormat('d MMMM').format(selectedDate.value)}";
+      return "${"tomorrow_comma".tr}${DateFormat('d MMMM').format(selectedDate.value)}";
     } else if (selected == today.subtract(const Duration(days: 1))) {
-      return "Yesterday, ${DateFormat('d MMMM').format(selectedDate.value)}";
+      return "${"yesterday_comma".tr}${DateFormat('d MMMM').format(selectedDate.value)}";
     } else {
       return DateFormat('EEEE, d MMMM').format(selectedDate.value);
     }
@@ -325,14 +326,17 @@ class QuranController extends GetxController {
     try {
       Get.dialog(
         AlertDialog(
-          title: const Text("Remove Favorite"),
+          title: Text("remove_favorite".tr),
           content: Text(
-            "Are you sure you want to remove verse $verseId of $verseName from your favorites?",
+            "remove_verse_confirm".trParams({
+              'verse': verseId.toString(),
+              'surah': verseName,
+            }),
           ),
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child: const Text("Cancel", style: TextStyle(color: Colors.grey)),
+              child: Text("cancel".tr, style: const TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () async {
@@ -344,23 +348,23 @@ class QuranController extends GetxController {
                 if (success) {
                   await fetchBookmarkedVerses(forceRefresh: true);
                   Get.snackbar(
-                    "Success",
-                    "Verse removed from favorites",
+                    "success".tr,
+                    "verse_removed_msg".tr,
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: Colors.green.withOpacity(0.1),
                     colorText: Colors.black,
                   );
                 } else {
                   Get.snackbar(
-                    "Error",
-                    "Failed to remove verse from favorites",
+                    "error".tr,
+                    "verse_remove_failed_msg".tr,
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: Colors.red.withOpacity(0.1),
                     colorText: Colors.black,
                   );
                 }
               },
-              child: const Text("Remove", style: TextStyle(color: Colors.red)),
+              child: Text("remove".tr, style: const TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -401,20 +405,26 @@ class QuranController extends GetxController {
       final difference = now.difference(date);
 
       if (difference.inDays == 0) {
-        return "Saved today";
+        return "saved_today".tr;
       } else if (difference.inDays == 1) {
-        return "Saved yesterday";
+        return "saved_yesterday".tr;
       } else if (difference.inDays < 7) {
-        return "Saved ${difference.inDays} days ago";
+        return "saved_days_ago".trParams({'days': difference.inDays.toString()});
       } else if (difference.inDays < 30) {
         final weeks = (difference.inDays / 7).floor();
-        return "Saved $weeks ${weeks == 1 ? 'week' : 'weeks'} ago";
+        return "saved_weeks_ago".trParams({
+          'count': weeks.toString(),
+          'unit': weeks == 1 ? 'week'.tr : 'weeks'.tr,
+        });
       } else {
         final months = (difference.inDays / 30).floor();
-        return "Saved $months ${months == 1 ? 'month' : 'months'} ago";
+        return "saved_months_ago".trParams({
+          'count': months.toString(),
+          'unit': months == 1 ? 'month'.tr : 'months'.tr,
+        });
       }
     } catch (e) {
-      return "Saved recently";
+      return "saved_recently".tr;
     }
   }
 }
@@ -465,7 +475,7 @@ class QuranScreen extends StatelessWidget {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Text(
-                    "Quran",
+                    "quran".tr,
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
@@ -555,7 +565,7 @@ class QuranScreen extends StatelessWidget {
                           );
                         } catch (e) {
                           return Text(
-                            "Location unavailable",
+                            "location_unavailable".tr,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 12.sp,
@@ -573,33 +583,38 @@ class QuranScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              Stack(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8.w),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white,
-                      size: 20.sp,
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      width: 8.w,
-                      height: 8.w,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
+              GestureDetector(
+                onTap: () {
+                  Get.to(() => const NotificationScreen());
+                },
+                child: Stack(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
                         shape: BoxShape.circle,
                       ),
+                      child: Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                        size: 20.sp,
+                      ),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 8.w,
+                        height: 8.w,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -715,7 +730,7 @@ class QuranScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Last Read",
+                    "last_read".tr,
                     style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
                   ),
                   SizedBox(height: 4.h),
@@ -793,7 +808,7 @@ class QuranScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20.r),
                       ),
                       child: Text(
-                        "Continue",
+                        "continue".tr,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 12.sp,
@@ -843,7 +858,7 @@ class QuranScreen extends StatelessWidget {
             Expanded(
               child: _buildModeButton(
                 Icons.menu_book_outlined,
-                "Read Mode",
+                "read_mode".tr,
                 0,
                 controller,
               ),
@@ -852,7 +867,7 @@ class QuranScreen extends StatelessWidget {
             Expanded(
               child: _buildModeButton(
                 Icons.headphones_outlined,
-                "Commuter",
+                "commuter".tr,
                 1,
                 controller,
               ),
@@ -861,7 +876,7 @@ class QuranScreen extends StatelessWidget {
             Expanded(
               child: _buildModeButton(
                 Icons.psychology_outlined,
-                "Memorization",
+                "memorization".tr,
                 2,
                 controller,
               ),
@@ -946,7 +961,7 @@ class QuranScreen extends StatelessWidget {
         child: TextField(
           controller: controller.searchTextController,
           decoration: InputDecoration(
-            hintText: "Search",
+            hintText: "search".tr,
             hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
             prefixIcon: Icon(
               Icons.search,
@@ -982,11 +997,11 @@ class QuranScreen extends StatelessWidget {
       child: Obx(
         () => Row(
           children: [
-            _buildTabButton("Surah", 0, controller),
+            _buildTabButton("surah".tr, 0, controller),
             SizedBox(width: 8.w),
-            _buildTabButton("Juz", 1, controller),
+            _buildTabButton("juz".tr, 1, controller),
             SizedBox(width: 8.w),
-            _buildTabButton("Favorites", 2, controller),
+            _buildTabButton("favorites".tr, 2, controller),
           ],
         ),
       ),
@@ -1024,7 +1039,7 @@ class QuranScreen extends StatelessWidget {
         return const Center(child: CircularProgressIndicator());
       }
       if (controller.filteredSurahs.isEmpty) {
-        return const Center(child: Text("No surahs found"));
+        return Center(child: Text("no_surahs_found".tr));
       }
       return ListView.builder(
         shrinkWrap: true,
@@ -1161,7 +1176,7 @@ class QuranScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 2.w),
                       Text(
-                        "${surah.revealedVerses} / ${surah.totalVerses} Aya",
+                        "${surah.revealedVerses} / ${surah.totalVerses} ${"aya".tr}",
                         style: TextStyle(
                           fontSize: 11.sp,
                           color: const Color(0xFF2E7D32),
@@ -1185,7 +1200,7 @@ class QuranScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "${surah.totalVerses} VERSES",
+                  "${surah.totalVerses} ${"verses".tr}",
                   style: TextStyle(fontSize: 10.sp, color: Colors.grey[500]),
                 ),
               ],
@@ -1228,7 +1243,7 @@ class QuranScreen extends StatelessWidget {
                   isFav ? Icons.bookmark : Icons.bookmark_border,
                   color: const Color(0xFF2E7D32),
                 ),
-                title: Text(isFav ? "Unfavorite" : "Favorite"),
+                title: Text(isFav ? "unfavorite".tr : "favorite".tr),
                 onTap: () {
                   Navigator.pop(context);
                   controller.toggleFavorite(surah);
@@ -1237,12 +1252,12 @@ class QuranScreen extends StatelessWidget {
             }),
             ListTile(
               leading: Icon(Icons.share_outlined, color: Colors.grey[600]),
-              title: const Text("Share"),
+              title: Text("share".tr),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
               leading: Icon(Icons.info_outline, color: Colors.grey[600]),
-              title: const Text("Info"),
+              title: Text("info".tr),
               onTap: () => Navigator.pop(context),
             ),
           ],
@@ -1261,7 +1276,7 @@ class QuranScreen extends StatelessWidget {
         return Center(
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: 20.0.h),
-            child: Text("No Juz found"),
+            child: Text("no_juz_found".tr),
           ),
         );
       }
@@ -1301,7 +1316,7 @@ class QuranScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
               Text(
-                "Read Juz",
+                "read_juz".tr,
                 style: TextStyle(
                   fontSize: 12.sp,
                   color: const Color(0xFF2E7D32),
@@ -1419,7 +1434,7 @@ class QuranScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 2.w),
                       Text(
-                        "Progress", // Placeholder or just Text
+                        "progress".tr, // Placeholder or just Text
                         style: TextStyle(
                           fontSize: 10.sp,
                           color: const Color(0xFF2E7D32),
@@ -1466,7 +1481,7 @@ class QuranScreen extends StatelessWidget {
           children: [
             if (favVerses.isNotEmpty || isLoadingVerses) ...[
               Text(
-                "Favorite Ayah",
+                "favorite_ayah".tr,
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 12.h),
@@ -1481,13 +1496,13 @@ class QuranScreen extends StatelessWidget {
                 Center(
                   child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 20.h),
-                    child: Text("No favorite verses found"),
+                    child: Text("no_favorite_verses_found".tr),
                   ),
                 ),
               SizedBox(height: 24.h),
             ],
             Text(
-              "Favorite Surah",
+              "favorite_surah".tr,
               style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 12.h),
@@ -1501,7 +1516,7 @@ class QuranScreen extends StatelessWidget {
               Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 20.h),
-                  child: Text("No favorite surahs found"),
+                  child: Text("no_favorite_surahs_found".tr),
                 ),
               ),
           ],
@@ -1532,7 +1547,7 @@ class QuranScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "${verse.name} • Verse ${verse.verseId}",
+                      "${verse.name} • ${"aya".tr} ${verse.verseId}",
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
@@ -1693,7 +1708,7 @@ class QuranScreen extends StatelessWidget {
                       ),
                       SizedBox(width: 2.w),
                       Text(
-                        "${surah.revealedVerses} / ${surah.totalVerses} Aya",
+                        "${surah.revealedVerses} / ${surah.totalVerses} ${"aya".tr}",
                         style: TextStyle(
                           fontSize: 10.sp,
                           color: const Color(0xFF2E7D32),
@@ -1715,7 +1730,7 @@ class QuranScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "${surah.totalVerses} VERSES",
+                  "${surah.totalVerses} ${"verses".tr}",
                   style: TextStyle(fontSize: 10.sp, color: Colors.grey[500]),
                 ),
               ],
@@ -1725,16 +1740,18 @@ class QuranScreen extends StatelessWidget {
               onTap: () {
                 Get.dialog(
                   AlertDialog(
-                    title: const Text("Remove Favorite"),
+                    title: Text("remove_favorite".tr),
                     content: Text(
-                      "Are you sure you want to remove ${surah.englishName} from your favorites?",
+                      "remove_surah_confirm".trParams({
+                        'surah': surah.englishName,
+                      }),
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Get.back(),
-                        child: const Text(
-                          "Cancel",
-                          style: TextStyle(color: Colors.grey),
+                        child: Text(
+                          "cancel".tr,
+                          style: const TextStyle(color: Colors.grey),
                         ),
                       ),
                       TextButton(
@@ -1742,9 +1759,9 @@ class QuranScreen extends StatelessWidget {
                           Get.back();
                           controller.removeFavoriteSurah(surah.number);
                         },
-                        child: const Text(
-                          "Remove",
-                          style: TextStyle(color: Colors.red),
+                        child: Text(
+                          "remove".tr,
+                          style: const TextStyle(color: Colors.red),
                         ),
                       ),
                     ],

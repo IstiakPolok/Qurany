@@ -39,7 +39,8 @@ class LocationPermissionScreen extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerRight,
                     child: OutlinedCloseButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () =>
+                          Get.to(() => const NotificationPermissionScreen()),
                     ),
                   ),
 
@@ -71,7 +72,7 @@ class LocationPermissionScreen extends StatelessWidget {
 
                   // Description
                   Text(
-                    "We need your location to show accurate prayer xtimes and help you stay connected to your faith.",
+                    "We need your location to show accurate prayer times and help you stay connected to your faith.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
