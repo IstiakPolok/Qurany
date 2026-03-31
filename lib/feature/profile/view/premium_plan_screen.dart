@@ -215,13 +215,11 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                   SizedBox(height: 12.h),
 
                   // Auto-renew text
-                  _buildAutoRenewText(),
-
+                  //_buildAutoRenewText(),
                   SizedBox(height: 12.h),
 
                   // Restore Purchases
-                  _buildRestoreButton(),
-
+                  //  _buildRestoreButton(),
                   SizedBox(height: 12.h),
 
                   // Links
@@ -390,11 +388,12 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
               ),
               child: Container(
                 width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 20.h),
+                padding: EdgeInsets.symmetric(vertical: 14.h),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
@@ -407,7 +406,7 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                             : FontWeight.w400,
                       ),
                     ),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: 6.h),
                     Text(
                       price,
                       style: TextStyle(
@@ -424,7 +423,7 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                       ),
                     ),
                     if (isSelected) ...[
-                      SizedBox(height: 8.h),
+                      SizedBox(height: 6.h),
                       Icon(
                         Icons.check_circle,
                         color: Colors.white,
