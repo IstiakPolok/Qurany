@@ -110,7 +110,8 @@ class PurchaseApi {
       final seenKeys = <String>{};
       for (final offering in offerings.all.values) {
         for (final package in offering.availablePackages) {
-          final key = '${package.identifier}|${package.storeProduct.identifier}';
+          final key =
+              '${package.identifier}|${package.storeProduct.identifier}';
           if (seenKeys.add(key)) {
             mergedPackages.add(package);
           }
@@ -151,9 +152,7 @@ class PurchaseApi {
       if (e is PlatformException) {
         final details = e.details;
         // Log full details map for diagnosis
-        _log(
-          'Purchase PlatformException code=${e.code}, message=${e.message}',
-        );
+        _log('Purchase PlatformException code=${e.code}, message=${e.message}');
         if (details is Map) {
           details.forEach((key, value) {
             _log('  detail[$key] = $value');
@@ -182,7 +181,10 @@ class PurchaseApi {
           );
         }
         // Return a user-friendly message with the error code
-        return (false, 'Purchase failed (code: ${code ?? e.code}). Please try again.');
+        return (
+          false,
+          'Purchase failed (code: ${code ?? e.code}). Please try again.',
+        );
       }
       if (e is UnsupportedError) {
         _log('Purchase failed: unsupported platform');
