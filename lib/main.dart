@@ -10,6 +10,8 @@ import 'package:qurany/core/services/location_service.dart';
 import 'package:qurany/core/services/purchase_api.dart';
 import 'package:qurany/core/services/notification_service.dart';
 
+import 'package:qurany/feature/auth/controllers/auth_controller.dart';
+
 import 'route/app_routes.dart';
 import 'core/localization/app_translations.dart';
 import 'core/services_class/local_service/shared_preferences_helper.dart';
@@ -28,6 +30,9 @@ void main() async {
 
   // Initialize RevenueCat
   await PurchaseApi.init();
+
+  // Initialize AuthController to sync user ID with RevenueCat
+  Get.put(AuthController(), permanent: true);
 
   print("------------------------------------------------");
   print("✅ Connected to Firebase Project: ${Firebase.app().options.projectId}");

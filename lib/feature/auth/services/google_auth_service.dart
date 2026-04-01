@@ -51,7 +51,7 @@ class GoogleSignInService {
         try {
           final response = await http.post(
             Uri.parse(
-              '$baseUrl/api/user/auth/google',
+              googleAuthEndpoint,
             ), // Use your backend endpoint here
             headers: {"Content-Type": "application/json"},
             body: jsonEncode({"token": idToken}),

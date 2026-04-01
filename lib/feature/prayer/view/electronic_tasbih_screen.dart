@@ -9,6 +9,8 @@ import 'package:qurany/core/services_class/local_service/shared_preferences_help
 import 'dart:ui' as ui;
 import 'package:get/get.dart';
 
+import '../../profile/services/profile_service.dart';
+
 class ElectronicTasbihScreen extends StatefulWidget {
   const ElectronicTasbihScreen({super.key});
 
@@ -28,12 +30,16 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   final AudioPlayer _audioPlayer = AudioPlayer();
   PlayerState _playerState = PlayerState.stopped;
   int? _currentlyPlayingIndex;
+  bool _isPremium = false;
 
   // Bead style: maps style name to ball image asset
   static const Map<String, String> _beadStyles = {
     'Green': 'assets/image/greenball.png',
     'Orange': 'assets/image/ornageball.png',
     'Parrot': 'assets/image/parrotball.png',
+    'Red': 'assets/image/redball.png',
+    'Purple': 'assets/image/purpleball.png',
+    'Gray': 'assets/image/grayball.png',
   };
   String _selectedBeadStyle = 'Green';
 
@@ -123,8 +129,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
+    // Check subscription status from API
+    final isSubscribed = await ProfileService().checkSubscriptionStatus();
     if (mounted) {
       setState(() {
+        _isPremium = isSubscribed;
         _counter = prefs.getInt('electronic_tasbih_counter') ?? 0;
         _round = prefs.getInt('electronic_tasbih_round') ?? 1;
         _targetCount = prefs.getInt('electronic_tasbih_target') ?? 100;
@@ -1083,22 +1092,22 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                   _selectedBeadStyle == 'Parrot',
                 ),
                 _buildStyleItem(
-                  "Galaxy",
+                  "Red",
                   'assets/image/4.png',
-                  false,
-                  isLocked: true,
+                  _selectedBeadStyle == 'Red',
+                  isLocked: !_isPremium,
                 ),
                 _buildStyleItem(
-                  "Galaxy",
+                  "Purple",
                   'assets/image/5.png',
-                  false,
-                  isLocked: true,
+                  _selectedBeadStyle == 'Purple',
+                  isLocked: !_isPremium,
                 ),
                 _buildStyleItem(
-                  "Galaxy",
+                  "Gray",
                   'assets/image/6.png',
-                  false,
-                  isLocked: true,
+                  _selectedBeadStyle == 'Gray',
+                  isLocked: !_isPremium,
                 ),
               ],
             ),
@@ -1249,13 +1258,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                           ),
                         ],
                 ),
-                child: isCenterBead
-                    ? null
-                    : Image.asset(
-                        _beadStyles[_selectedBeadStyle] ??
-                            'assets/image/greenball.png',
-                        fit: BoxFit.cover,
-                      ),
+                child: Image.asset(
+                  _beadStyles[_selectedBeadStyle] ??
+                      'assets/image/greenball.png',
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           );

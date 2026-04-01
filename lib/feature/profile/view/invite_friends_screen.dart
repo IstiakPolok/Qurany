@@ -48,7 +48,7 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/referral/add-code/$code'),
+        Uri.parse('$referralAddCodeEndpoint$code'),
         headers: {
           'Authorization': 'Bearer $token',
           'ngrok-skip-browser-warning': 'true',
@@ -77,7 +77,7 @@ class _InviteFriendsScreenState extends State<InviteFriendsScreen> {
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.get(
-        Uri.parse('$baseUrl/api/auth/referral/my-ref-code'),
+        Uri.parse(myReferralCodeEndpoint),
         headers: {
           'Authorization': 'Bearer $token',
           'ngrok-skip-browser-warning': 'true',

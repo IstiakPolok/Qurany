@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../model/hijri_special_day_model.dart';
 import 'dart:developer' as developer;
+import '../../../core/network_caller/endpoints.dart';
 
 class IslamicMiscService {
-  static const String _baseUrl = 'https://api.ayahlight.co.uk/api/v1/misc';
 
   Future<List<HijriSpecialDayModel>> getHijriSpecialDays(int hijriYear) async {
     try {
-      final uri = Uri.parse('$_baseUrl/all-hijri-special-days/').replace(
+      final uri = Uri.parse(hijriSpecialDaysEndpoint).replace(
         queryParameters: {'hijri_year': hijriYear.toString()},
       );
 

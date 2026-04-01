@@ -5,11 +5,11 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 class PurchaseApi {
   // Replace these with your actual API keys from the RevenueCat dashboard
-  static const String _appleApiKey = 'appl_tyNGhoTvHRJisxWuEbXuODzxzqW';
+  static const String _appleApiKey = 'appl_eylFxbOmIgnrdgxPJtySWuGEDrZ';
   static const String _googleApiKey = 'goog_YOUR_GOOGLE_API_KEY';
 
   // This must exactly match the entitlement identifier in RevenueCat dashboard.
-  static const String premiumEntitlementId = 'com.fortbuffum.qurany.inapp';
+  static const String premiumEntitlementId = 'Qurany Premium Pro';
 
   static bool _isPremium = false;
 
@@ -55,7 +55,7 @@ class PurchaseApi {
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;
       _isPremium = active;
-      _log('Customer info updated. premium=$active');
+      _log('Customer info updated. premium=$active customerInfo=$customerInfo');
     });
 
     // Initial check for premium status
@@ -66,10 +66,29 @@ class PurchaseApi {
   static Future<void> updatePremiumStatus() async {
     try {
       CustomerInfo customerInfo = await Purchases.getCustomerInfo();
+      // Print backend UID for debugging
+      _log('Current UID in RevenueCat: ${customerInfo.originalAppUserId}');
+
+      // Log all entitlements to help debug if the ID is wrong
+      if (kDebugMode) {
+        final availableEntitlements = customerInfo.entitlements.all.keys.join(
+          ', ',
+        );
+        _log('Available entitlements in RevenueCat: [$availableEntitlements]');
+
+        for (var entitlement in customerInfo.entitlements.all.values) {
+          _log(
+            'Entitlement "${entitlement.identifier}" is active: ${entitlement.isActive}',
+          );
+        }
+      }
+
       _isPremium =
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;
-      _log('Premium status updated: $_isPremium');
+      _log(
+        'Premium status updated: $_isPremium (checked for: $premiumEntitlementId)',
+      );
     } catch (e) {
       _log('Error updating premium status: $e');
     }
@@ -143,6 +162,8 @@ class PurchaseApi {
       _log('Starting purchase for package=${package.identifier}');
       PurchaseResult purchaseResult = await Purchases.purchasePackage(package);
       CustomerInfo customerInfo = purchaseResult.customerInfo;
+      // Print backend UID for debugging
+      _log('Purchase for UID in RevenueCat: ${customerInfo.originalAppUserId}');
       _isPremium =
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;

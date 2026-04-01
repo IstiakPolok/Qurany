@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
+import '../../../core/services/purchase_api.dart';
 import '../../../core/network_caller/endpoints.dart';
 import '../../../core/services_class/local_service/shared_preferences_helper.dart';
 
@@ -35,8 +36,15 @@ class GuestAuthService {
           await SharedPreferencesHelper.saveAccessToken(accessToken);
           await SharedPreferencesHelper.saveRefreshToken(refreshToken);
           await SharedPreferencesHelper.saveEmail(email);
+
+          // Sync with RevenueCat for webhook identification
+          // Use UID if available, otherwise use email as a unique fallback
+          final uid = userData['uid'] ?? userData['id'] ?? userData['_id'] ?? email;
+          if (uid != null) {
+            await PurchaseApi.logIn(uid.toString());
+          }
           
-          print('✅ Guest Login Success and Tokens Saved');
+          print('✅ Guest Login Success and Tokens Saved (Synced with RevenueCat)');
           isLoading.value = false;
           return true;
         } else {

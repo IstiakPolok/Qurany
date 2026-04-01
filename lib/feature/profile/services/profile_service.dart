@@ -137,4 +137,30 @@ class ProfileService {
       client.close();
     }
   }
+
+  Future<bool> checkSubscriptionStatus() async {
+    final url = Uri.parse(subscriptionStatusEndpoint);
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('[Subscription] Status Code: ${response.statusCode}');
+      print('[Subscription] Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('Error checking subscription status: $e');
+      return false;
+    }
+  }
 }

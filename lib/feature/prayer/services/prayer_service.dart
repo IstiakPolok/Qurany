@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../model/prayer_time_model.dart';
+import '../../../core/network_caller/endpoints.dart';
 
 class PrayerService {
-  static const String _baseUrl = 'https://islamicapi.com/api/v1';
   // Islamic API is free to use, so we don't need an API key for basic usage
 
   // Default prayer calculation method (Muslim World League)
@@ -35,7 +35,7 @@ class PrayerService {
       }
 
       final uri = Uri.parse(
-        '$_baseUrl/prayer-time/',
+        prayerTimeEndpoint,
       ).replace(queryParameters: queryParams);
 
       print('Fetching prayer times from: $uri');

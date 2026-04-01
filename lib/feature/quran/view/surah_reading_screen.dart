@@ -91,11 +91,10 @@ class SurahReadingController extends GetxController {
     _loadScriptPreference();
     _loadFontSizePreference();
     _loadReciterPreference();
-    _loadLanguage();
+    _loadLanguageAndFetch();
     _startReadingTimer();
     _setupPlayerListeners(_player1);
     _setupPlayerListeners(_player2);
-    fetchSurahDetails();
     fetchTafsir();
   }
 
@@ -122,11 +121,38 @@ class SurahReadingController extends GetxController {
     }
   }
 
-  Future<void> _loadLanguage() async {
+  /// Maps the display language name saved in SharedPreferences to the
+  /// lang code expected by the API.
+  static String langCodeFromName(String name) {
+    switch (name) {
+      case 'English':
+        return 'en';
+      case 'العربية':
+        return 'ar';
+      case 'اردو':
+        return 'ur';
+      case 'Türkçe':
+        return 'tr';
+      case 'Bahasa':
+        return 'in';
+      case 'Français':
+      case 'François': // handle typo variant stored by language_step
+        return 'fr';
+      default:
+        return 'en';
+    }
+  }
+
+  /// Loads the saved language, updates locale, then fetches surah data
+  /// using the correct lang code.
+  Future<void> _loadLanguageAndFetch() async {
     final lang = await SharedPreferencesHelper.getLanguage();
     selectedLanguage.value = lang;
     _updateLocale(lang);
+    await fetchSurahDetails();
   }
+
+
 
   void _updateLocale(String lang) {
     Locale locale;
@@ -147,6 +173,7 @@ class SurahReadingController extends GetxController {
         locale = const Locale('id');
         break;
       case 'Français':
+      case 'François':
         locale = const Locale('fr');
         break;
       default:
@@ -374,13 +401,15 @@ class SurahReadingController extends GetxController {
     try {
       isLoading(true);
       currentPage.value = 1;
+      final langCode = langCodeFromName(selectedLanguage.value);
       if (kDebugMode) {
-        print('Fetching surah: $surahId, page: ${currentPage.value}');
+        print('Fetching surah: $surahId, page: ${currentPage.value}, lang: $langCode');
       }
       final response = await _quranService.fetchSurahById(
         surahId,
         page: currentPage.value,
         limit: 10,
+        lang: langCode,
       );
       if (kDebugMode) {
         print('Surah details fetched: ${response.verses.length} verses');
@@ -463,13 +492,15 @@ class SurahReadingController extends GetxController {
     try {
       isLoadingMore(true);
       currentPage.value++;
+      final langCode = langCodeFromName(selectedLanguage.value);
       if (kDebugMode) {
-        print('Loading more verses: page ${currentPage.value}');
+        print('Loading more verses: page ${currentPage.value}, lang: $langCode');
       }
       final response = await _quranService.fetchSurahById(
         surahId,
         page: currentPage.value,
         limit: 10,
+        lang: langCode,
       );
       if (kDebugMode) {
         print('More verses loaded: ${response.verses.length} items');
@@ -1457,7 +1488,7 @@ class SurahReadingScreen extends StatelessWidget {
   Future<Map<String, dynamic>?> _fetchSurahDetails(int surahId) async {
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
-      final url = Uri.parse('${Urls.baseUrl}/api/quran/surah-details/$surahId');
+      final url = Uri.parse('${Urls.quranSurahInfoEndpoint}$surahId');
       final response = await http.get(
         url,
         headers: {

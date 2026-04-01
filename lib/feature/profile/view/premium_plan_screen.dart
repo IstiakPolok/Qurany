@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:glassmorphism/glassmorphism.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:get/get.dart';
+import 'package:purchases_flutter/models/package_wrapper.dart';
 import '../../../core/services/purchase_api.dart';
+import '../controller/profile_controller.dart';
 
 class PremiumPlanScreen extends StatefulWidget {
   const PremiumPlanScreen({super.key});
@@ -50,6 +52,19 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
   }
 
   Future<void> _handlePurchase(Package package) async {
+    // Force sync backend UID before purchase to prevent anonymous purchase
+    final profileController = Get.find<ProfileController>();
+    if (profileController.user.value != null) {
+      debugPrint(
+        '[Purchase] Ensuring RevenueCat is logged in with backend ID: ${profileController.user.value!.id}',
+      );
+      await PurchaseApi.logIn(profileController.user.value!.id);
+    } else {
+      debugPrint(
+        '[Purchase] WARNING: Profile user is null, might be purchasing anonymously',
+      );
+    }
+
     setState(() {
       isPurchasing = true;
       errorMessage = null;
@@ -62,12 +77,33 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
 
     if (success) {
       _showSuccessDialog();
-    } else if (error != null) {
-      setState(() => errorMessage = error);
+    } else {
+      setState(
+        () => errorMessage =
+            error ?? 'Purchase was cancelled or could not be completed.',
+      );
+      // If it's a silent cancellation (no error message but success=false),
+      // it might be a simulator or non-configured product.
+      if (error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Payment cancelled. Please use a real device with a Sandbox account.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _handleRestore() async {
+    // Force sync backend UID before restore
+    final profileController = Get.find<ProfileController>();
+    if (profileController.user.value != null) {
+      await PurchaseApi.logIn(profileController.user.value!.id);
+    }
+
     setState(() {
       isRestoring = true;
       errorMessage = null;

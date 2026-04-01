@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import '../../../core/services/purchase_api.dart';
 import '../model/user_model.dart';
 import '../services/profile_service.dart';
 import 'package:file_picker/file_picker.dart';
@@ -24,6 +25,8 @@ class ProfileController extends GetxController {
       final result = await _profileService.getProfile();
       if (result != null) {
         user.value = result;
+        // Sync RevenueCat with backend UID for webhooks and purchase tracking
+        await PurchaseApi.logIn(result.id);
       } else {
         error('Failed to load profile');
       }

@@ -52,7 +52,7 @@ class ApiActionResult {
 class QuranService {
   Future<SurahResponse> fetchSurahs({int page = 1, int limit = 10}) async {
     final url = Uri.parse(
-      '$baseUrl/api/auth/quran/surah?page=$page&limit=$limit',
+      '$quranSurahEndpoint?page=$page&limit=$limit',
     );
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
@@ -97,9 +97,10 @@ class QuranService {
     int surahId, {
     int page = 1,
     int limit = 6,
+    String lang = 'en',
   }) async {
     final url = Uri.parse(
-      '$baseUrl/api/auth/quran/surah/$surahId?page=$page&limit=$limit',
+      '$quranSurahDetailEndpoint$surahId?page=$page&limit=$limit&lang=$lang',
     );
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
@@ -135,7 +136,7 @@ class QuranService {
   }
 
   Future<RandomVerseResponse> fetchRandomVerse() async {
-    final url = Uri.parse('$baseUrl/api/auth/quran/random/verse');
+    final url = Uri.parse(randomVerseEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -201,7 +202,7 @@ class QuranService {
     required int verseId,
   }) async {
     final url = Uri.parse(
-      '$baseUrl/api/auth/quran/random/verse/ai/$surahId/$verseId',
+      '$aiVerseReflectionEndpoint$surahId/$verseId',
     );
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
@@ -254,7 +255,7 @@ class QuranService {
     int limit = 6,
   }) async {
     final url = Uri.parse(
-      '$baseUrl/api/quran/tafsir/$surahId?page=$page&limit=$limit',
+      '$tafsirEndpoint$surahId?page=$page&limit=$limit',
     );
     try {
       if (kDebugMode) {
@@ -288,7 +289,7 @@ class QuranService {
   }
 
   Future<List<JuzModel>> fetchJuz() async {
-    final url = Uri.parse('$baseUrl/api/auth/quran/juz');
+    final url = Uri.parse(juzEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -326,7 +327,7 @@ class QuranService {
   }
 
   Future<List<SurahModel>> fetchBookmarkedSurahs() async {
-    final url = Uri.parse('$baseUrl/api/auth/bookmark/surah/');
+    final url = Uri.parse(bookmarkSurahEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -387,7 +388,7 @@ class QuranService {
   }
 
   Future<bool> toggleBookmarkSurah(int surahId) async {
-    final url = Uri.parse('$baseUrl/api/auth/bookmark/surah/$surahId');
+    final url = Uri.parse('$bookmarkSurahEndpoint$surahId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -421,7 +422,7 @@ class QuranService {
   }
 
   Future<List<BookmarkedVerseModel>> fetchBookmarkedVerses() async {
-    final url = Uri.parse('$baseUrl/api/auth/bookmark/verse');
+    final url = Uri.parse(bookmarkVerseEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -525,7 +526,7 @@ class QuranService {
     int surahId,
     int verseId,
   ) async {
-    final url = Uri.parse('$baseUrl/api/auth/bookmark/verse/$surahId/$verseId');
+    final url = Uri.parse('$bookmarkVerseEndpoint/$surahId/$verseId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -637,7 +638,7 @@ class QuranService {
   }
 
   Future<ApiActionResult> bookmarkAzkarGroup(String azkarGroupId) async {
-    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark/$azkarGroupId');
+    final url = Uri.parse('$azkarBookmarkEndpoint/$azkarGroupId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.post(
@@ -733,7 +734,7 @@ class QuranService {
   }
 
   Future<Map<String, String>> fetchAzkarBookmarkedGroupIdToBookmarkId() async {
-    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark');
+    final url = Uri.parse(azkarBookmarkEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.get(
@@ -785,7 +786,7 @@ class QuranService {
   }
 
   Future<ApiActionResult> deleteAzkarBookmark(String bookmarkId) async {
-    final url = Uri.parse('$baseUrl/api/auth/azkar/bookmark/$bookmarkId');
+    final url = Uri.parse('$azkarBookmarkEndpoint/$bookmarkId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.delete(
@@ -862,7 +863,7 @@ class QuranService {
   }
 
   Future<List<BookmarkedHistoryModel>> fetchBookmarkedHistory() async {
-    final url = Uri.parse('$baseUrl/api/auth/history/bookmark/');
+    final url = Uri.parse(historyBookmarkEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.get(
@@ -917,7 +918,7 @@ class QuranService {
 
   Future<ApiActionResult> deleteHistoryBookmarkAction(String bookmarkId) async {
     final url = Uri.parse(
-      '$baseUrl/api/auth/history/bookmark/delete/$bookmarkId',
+      '$deleteHistoryBookmarkEndpoint$bookmarkId',
     );
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
@@ -962,7 +963,7 @@ class QuranService {
   }
 
   Future<ApiActionResult> bookmarkHistoryAction(String historyId) async {
-    final url = Uri.parse('$baseUrl/api/auth/history/bookmark/$historyId');
+    final url = Uri.parse('$historyBookmarkEndpoint$historyId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final response = await http.post(
@@ -1144,7 +1145,7 @@ class QuranService {
   }
 
   Future<bool> deleteNote(String noteId) async {
-    final url = Uri.parse('$baseUrl/api/auth/note/$noteId');
+    final url = Uri.parse('$noteEndpoint/$noteId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       if (kDebugMode) {
@@ -1177,7 +1178,7 @@ class QuranService {
     required int verseId,
     required int id,
   }) async {
-    final url = Uri.parse('$baseUrl/api/auth/note');
+    final url = Uri.parse(noteEndpoint);
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final requestBody = {
@@ -1248,7 +1249,7 @@ class QuranService {
     required int surahId,
     required int verseId,
   }) async {
-    final url = Uri.parse('$baseUrl/api/auth/note/$noteId');
+    final url = Uri.parse('$noteEndpoint/$noteId');
     try {
       final token = await SharedPreferencesHelper.getAccessToken();
       final requestBody = {
