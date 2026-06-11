@@ -457,4 +457,20 @@ class SharedPreferencesHelper {
     } catch (_) {}
     return {'alertType': 'silent', 'adhanSound': 'madinah'};
   }
+
+  // --- Login Streak Tracking ---
+  static String _loginStatusKey(DateTime date) {
+    final dateKey = '${date.year}_${date.month}_${date.day}';
+    return 'login_status_$dateKey';
+  }
+
+  static Future<void> recordLoginForToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_loginStatusKey(DateTime.now()), true);
+  }
+
+  static Future<bool> isLoggedAt(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_loginStatusKey(date)) ?? false;
+  }
 }

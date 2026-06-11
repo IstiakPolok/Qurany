@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:qurany/feature/auth/views/login_options_screen.dart';
+import '../../../core/services/review_service.dart';
+import '../../../core/services/purchase_api.dart';
 import '../../../core/services_class/local_service/shared_preferences_helper.dart';
 import '../../auth/services/google_auth_service.dart';
 import 'appearance_settings_screen.dart';
@@ -24,6 +26,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   String _selectedLanguage = 'English';
+  bool _isRevenueCatPremium = false;
+  bool _isPremiumLoading = true;
   final List<String> languages = [
     'English',
     'العربية',
@@ -37,6 +41,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadLanguage();
+    _loadPremiumStatus();
+  }
+
+  Future<void> _loadPremiumStatus() async {
+    await PurchaseApi.updatePremiumStatus();
+    if (mounted) {
+      setState(() {
+        _isRevenueCatPremium = PurchaseApi.isUserPremium();
+        _isPremiumLoading = false;
+      });
+    }
   }
 
   Future<void> _loadLanguage() async {
@@ -182,14 +197,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(70.r),
-                        image: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                        image:
+                            (user?.avatarUrl != null &&
+                                user!.avatarUrl!.isNotEmpty)
                             ? DecorationImage(
                                 image: NetworkImage(user.avatarUrl!),
                                 fit: BoxFit.cover,
                               )
                             : null,
                       ),
-                      child: (user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
+                      child:
+                          (user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
                           ? Center(
                               child: Text(
                                 user?.initials ?? "U",
@@ -269,7 +287,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: _buildFreePlanCard(context, user?.type ?? 'free'),
+                child: _buildFreePlanCard(
+                  context,
+                  _isRevenueCatPremium,
+                  _isPremiumLoading,
+                ),
               ),
             ],
           ),
@@ -278,11 +300,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFreePlanCard(BuildContext context, String planType) {
+  Widget _buildFreePlanCard(
+    BuildContext context,
+    bool isPremium,
+    bool isLoading,
+  ) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E9D8),
+        color: isPremium ? const Color(0xFFDCEDC8) : const Color(0xFFE2E9D8),
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
@@ -292,7 +318,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Image.asset(
                 'assets/image/crown.png',
                 width: 50.w,
-
                 fit: BoxFit.contain,
               ),
               SizedBox(width: 12.w),
@@ -300,54 +325,111 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      planType == 'free' ? "free_plan".tr : "premium_plan".tr,
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
+                    if (isLoading)
+                      Container(
+                        width: 100.w,
+                        height: 14.h,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(6.r),
+                        ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          Text(
+                            isPremium ? "premium_plan".tr : "free_plan".tr,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (isPremium) ...[
+                            SizedBox(width: 8.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8.w,
+                                vertical: 2.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2F7D33),
+                                borderRadius: BorderRadius.circular(20.r),
+                              ),
+                              child: Text(
+                                "Active",
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ),
                     SizedBox(height: 2.h),
-                    Text(
-                      planType == 'free' ? "upgrade_msg".tr : "unlocked_msg".tr,
-                      style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
-                    ),
+                    if (!isLoading)
+                      Text(
+                        isPremium ? "unlocked_msg".tr : "upgrade_msg".tr,
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                   ],
                 ),
               ),
             ],
           ),
-          //  if (planType == 'free') ...[
-          SizedBox(height: 16.h),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PremiumPlanScreen(),
+          if (!isLoading && !isPremium) ...[
+            SizedBox(height: 16.h),
+            GestureDetector(
+              onTap: () async {
+                await PurchaseApi.presentPaywallIfNeededForPlacement('settings_upgrade');
+                _loadPremiumStatus();
+              },
+              child: Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 14.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2F7D33),
+                  borderRadius: BorderRadius.circular(25.r),
                 ),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 14.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2F7D33),
-                borderRadius: BorderRadius.circular(25.r),
-              ),
-              child: Center(
-                child: Text(
-                  "go_premium".tr,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                child: Center(
+                  child: Text(
+                    "go_premium".tr,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          // ],
+          ],
+          if (!isLoading && isPremium) ...[
+            SizedBox(height: 12.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.verified,
+                  color: const Color(0xFF2F7D33),
+                  size: 16.sp,
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  "You have access to all premium features",
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: const Color(0xFF2F7D33),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -623,9 +705,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               "privacy_policy".tr,
               null,
               onTap: () {
-                Get.to(() => LegalDocumentScreen(
-                      title: "privacy_policy".tr,
-                      markdownContent: """
+                Get.to(
+                  () => LegalDocumentScreen(
+                    title: "privacy_policy".tr,
+                    markdownContent: """
 # Privacy Policy
 
 **Effective Date: March 14, 2026**
@@ -647,7 +730,8 @@ We may use third-party services (like Firebase or RevenueCat) that collect infor
 ## 5. Contact Us
 If you have any questions regarding this Privacy Policy, you can contact us at support@quranyapp.com.
 """,
-                    ));
+                  ),
+                );
               },
             ),
             _buildDivider(),
@@ -656,9 +740,10 @@ If you have any questions regarding this Privacy Policy, you can contact us at s
               "terms_conditions".tr,
               null,
               onTap: () {
-                Get.to(() => LegalDocumentScreen(
-                      title: "terms_conditions".tr,
-                      markdownContent: """
+                Get.to(
+                  () => LegalDocumentScreen(
+                    title: "terms_conditions".tr,
+                    markdownContent: """
 # Terms and Conditions
 
 **Last Updated: March 14, 2026**
@@ -683,7 +768,8 @@ Qurany shall not be liable for any indirect, incidental, or consequential damage
 ## 6. Changes to Terms
 We reserve the right to modify these terms at any time. Continued use of the app constitutes acceptance of the new terms.
 """,
-                    ));
+                  ),
+                );
               },
             ),
             _buildDivider(),
@@ -865,148 +951,6 @@ We reserve the right to modify these terms at any time. Continued use of the app
   }
 
   void _showRateUsDialog(BuildContext context) {
-    int selectedRating = 0;
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.r),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(24.w),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Close button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(
-                      Icons.close,
-                      size: 24.sp,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 8.h),
-
-                // Title
-                Text(
-                  "enjoying_app".tr,
-                  style: TextStyle(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                SizedBox(height: 12.h),
-
-                // Subtitle
-                Text(
-                  "work_harder".tr,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Colors.grey[600],
-                    height: 1.4,
-                  ),
-                ),
-
-                SizedBox(height: 24.h),
-
-                // Star Rating
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(5, (index) {
-                    final isSelected = index < selectedRating;
-                    final isLast = index == 4;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedRating = index + 1;
-                        });
-                      },
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4.w),
-                        child: isLast && !isSelected
-                            ? Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.star_outline,
-                                    size: 40.sp,
-                                    color: const Color(0xFFFFD700),
-                                  ),
-                                  Positioned(
-                                    bottom: 8.h,
-                                    child: Text(
-                                      "😊",
-                                      style: TextStyle(fontSize: 12.sp),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Icon(
-                                isSelected ? Icons.star : Icons.star_outline,
-                                size: 40.sp,
-                                color: const Color(0xFFFFD700),
-                              ),
-                      ),
-                    );
-                  }),
-                ),
-
-                SizedBox(height: 28.h),
-
-                // Submit button
-                GestureDetector(
-                  onTap: () {
-                    // Handle submit
-                    Navigator.pop(context);
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 14.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32),
-                      borderRadius: BorderRadius.circular(25.r),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "Submit",
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 16.h),
-
-                // Remind me later
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Text(
-                    "Remind me later",
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF2196F3),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    ReviewService.showReviewDialog(context);
   }
 }

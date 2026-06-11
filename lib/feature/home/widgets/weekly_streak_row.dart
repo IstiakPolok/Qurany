@@ -2,12 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:qurany/core/const/app_colors.dart';
 import 'package:get/get.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
-class WeeklyStreakRow extends StatelessWidget {
+class WeeklyStreakRow extends StatefulWidget {
   const WeeklyStreakRow({super.key});
 
   @override
+  State<WeeklyStreakRow> createState() => _WeeklyStreakRowState();
+}
+
+class _WeeklyStreakRowState extends State<WeeklyStreakRow> {
+  final List<bool> _completedDays = List.filled(7, false);
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStreakData();
+  }
+
+  Future<void> _loadStreakData() async {
+    final now = DateTime.now();
+    // Monday is 1, Sunday is 7 in DateTime.weekday
+    // We want to find the start of the current week (Monday)
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+
+    for (int i = 0; i < 7; i++) {
+      final date = monday.add(Duration(days: i));
+      _completedDays[i] = await SharedPreferencesHelper.isLoggedAt(date);
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox.shrink(); // Or a loader
+    }
+
     // Dynamic day calculation
     final now = DateTime.now();
     final currentDayIndex = now.weekday - 1; // 0 = Monday, 6 = Sunday
@@ -18,7 +55,7 @@ class WeeklyStreakRow extends StatelessWidget {
       'thu'.tr,
       'fri'.tr,
       'sat'.tr,
-      'sun'.tr
+      'sun'.tr,
     ];
 
     return Padding(
@@ -26,8 +63,7 @@ class WeeklyStreakRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: List.generate(days.length, (index) {
-          // For now, assume days before today are completed for the UI visualization
-          final isCompleted = index < currentDayIndex;
+          final isCompleted = _completedDays[index];
           final isCurrent = index == currentDayIndex;
 
           return Column(

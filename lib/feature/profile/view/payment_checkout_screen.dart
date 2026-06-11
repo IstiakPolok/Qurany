@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'payment_success_screen.dart';
+import 'package:pay/pay.dart';
+import '../../../core/services/payment_service.dart';
 
 class PaymentCheckoutScreen extends StatefulWidget {
   final String planType;
@@ -534,45 +536,26 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   }
 
   Widget _buildGooglePayButton() {
-    return GestureDetector(
-      onTap: () {
+    return GooglePayButton(
+      paymentConfiguration: PaymentConfiguration.fromJsonString(
+        PaymentService.googlePayConfig,
+      ),
+      paymentItems: PaymentService.getPaymentItems(
+        label: '${widget.planType} Subscription',
+        amount: widget.price.replaceAll(' PKR', '').split(' ').first,
+      ),
+      type: GooglePayButtonType.pay,
+      margin: EdgeInsets.only(top: 15.h),
+      onPaymentResult: (result) {
+        PaymentService.onGooglePayResult(result);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const PaymentSuccessScreen()),
         );
       },
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 16.h),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30.r),
-          border: Border.all(color: Colors.grey[400]!),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Google "G" logo
-            Text(
-              "G",
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF4285F4),
-              ),
-            ),
-            SizedBox(width: 8.w),
-            Text(
-              "PAY",
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
-      ),
+      loadingIndicator: const Center(child: CircularProgressIndicator()),
+      width: double.infinity,
+      theme: GooglePayButtonTheme.light,
     );
   }
 }

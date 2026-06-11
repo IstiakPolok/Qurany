@@ -1,4 +1,3 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -113,43 +112,41 @@ class LoginOptionsScreen extends StatelessWidget {
             ),
           ),
 
-          if (Platform.isIOS) ...[
-            SizedBox(height: 16.h),
+          SizedBox(height: 16.h),
 
-            // Apple Button (iOS only)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Obx(
-                () => _buildSocialButton(
-                  onPressed: AppleSignInService.isLoading.value
-                      ? () {}
-                      : () async {
-                          EasyLoading.show(status: 'Signing in with Apple...');
-                          final success =
-                              await AppleSignInService.signInWithApple();
-                          EasyLoading.dismiss();
+          // Apple Button (All platforms)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Obx(
+              () => _buildSocialButton(
+                onPressed: AppleSignInService.isLoading.value
+                    ? () {}
+                    : () async {
+                        EasyLoading.show(status: 'Signing in with Apple...');
+                        final success =
+                            await AppleSignInService.signInWithApple();
+                        EasyLoading.dismiss();
 
-                          if (success) {
-                            Get.offAll(() => const PreparingSpaceScreen());
-                          }
-                        },
-                  icon: AppleSignInService.isLoading.value
-                      ? SizedBox(
-                          width: 28.sp,
-                          height: 28.sp,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.black,
-                            ),
+                        if (success) {
+                          Get.offAll(() => const PreparingSpaceScreen());
+                        }
+                      },
+                icon: AppleSignInService.isLoading.value
+                    ? SizedBox(
+                        width: 28.sp,
+                        height: 28.sp,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.black,
                           ),
-                        )
-                      : Icon(Icons.apple, color: Colors.black, size: 28.sp),
-                  label: "Continue with Apple",
-                ),
+                        ),
+                      )
+                    : Icon(Icons.apple, color: Colors.black, size: 28.sp),
+                label: "Continue with Apple",
               ),
             ),
-          ],
+          ),
 
           SizedBox(height: 24.h),
 

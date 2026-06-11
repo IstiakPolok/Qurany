@@ -11,7 +11,9 @@ class RecitersScreen extends StatelessWidget {
     final VerseOfDayController controller = Get.find<VerseOfDayController>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF9F0), // Cream background
+      backgroundColor: const Color(
+        0xFFFFFAF3,
+      ), // Match overall cream background
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -42,158 +44,197 @@ class RecitersScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Obx(() {
-        if (controller.isLoading.value ||
-            controller.randomVerse.value == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final audioData = controller.randomVerse.value!.data.verse.verse.audio;
-        if (audioData == null || audioData.isEmpty) {
-          return const Center(child: Text("No audio available"));
-        }
-
-        final List<Map<String, String>> reciters = audioData.values.map((
-          audioInfo,
-        ) {
-          String placeholderImg =
-              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
-
-          if (audioInfo.reciter.contains("Sudais")) {
-            placeholderImg =
-                "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1";
-          } else if (audioInfo.reciter.contains("Yasser") ||
-              audioInfo.reciter.contains("Dussary")) {
-            placeholderImg =
-                "https://i.scdn.co/image/ab67616100005174e4bd7040657e8e61dc4667be";
-          } else if (audioInfo.reciter.contains("Nasser") ||
-              audioInfo.reciter.contains("Qatami")) {
-            placeholderImg =
-                "https://scontent.fdac207-1.fna.fbcdn.net/v/t39.30808-6/470019064_1119048786249564_9159029543174380749_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=O9kA8gkeLGMQ7kNvwGNr5oH&_nc_oc=AdnT-OiSE9RjU0v0kTD07qPFSudAeHeqDozhECy78a0zZ8DxGG4kud8d2Wg7InObuBY&_nc_zt=23&_nc_ht=scontent.fdac207-1.fna&_nc_gid=7xGR-giX8dhXhYZ-X3B0xg&_nc_ss=8&oh=00_AfwTIfRlr9uHLOvZeNeCuTaXLMyn9KiQObXJwr7oy-Ctmg&oe=69B44A59";
-          } else if (audioInfo.reciter.contains("Mishary") ||
-              audioInfo.reciter.contains("Alafasy")) {
-            placeholderImg =
-                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
-          } else if (audioInfo.reciter.contains("Abu Bakr") ||
-              audioInfo.reciter.contains("Shatri")) {
-            placeholderImg =
-                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUmPkcySF56YidTERKU54hBnQ0lf734dwb4w&s";
-          }
-
-          return {
-            'name': audioInfo.reciter,
-            'description': "Qurany Reciter",
-            'image': placeholderImg,
-            'audio': audioInfo.url,
-          };
-        }).toList();
-
-        return GridView.builder(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12.w,
-            mainAxisSpacing: 12.h,
-            childAspectRatio: 0.8,
-          ),
-          itemCount: reciters.length,
-          itemBuilder: (context, index) {
-            final item = reciters[index];
-            return Container(
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16.r),
-                image: DecorationImage(
-                  image: NetworkImage(item['image']!),
-                  fit: BoxFit.cover,
-                ),
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(24.r),
+                border: Border.all(color: Colors.grey.shade300),
               ),
-              child: Stack(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Row(
                 children: [
-                  // Gradient Overlay
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16.r),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.9),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.5],
-                      ),
-                    ),
-                  ),
-
-                  // Play Button (Top Left)
-                  Positioned(
-                    top: 12.h,
-                    left: 12.w,
-                    child: Obx(() {
-                      final bool isPlaying =
-                          controller.currentlyPlayingUrl.value == item['audio'];
-                      return GestureDetector(
-                        onTap: () {
-                          if (item['audio'] != null) {
-                            controller.toggleAudio(item['audio']!);
-                          }
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(6.w),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                          ),
-                          child: Icon(
-                            isPlaying ? Icons.pause : Icons.play_arrow,
-                            size: 20.sp,
-                            color: const Color(0xFF2E7D32),
-                          ),
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: "Search",
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 14.sp,
                         ),
-                      );
-                    }),
-                  ),
-
-                  // Text (Bottom Left)
-                  Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Padding(
-                      padding: EdgeInsets.all(12.w),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['name']!,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            item['description']!,
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                   ),
+                  Icon(Icons.search, color: Colors.grey.shade400, size: 20.sp),
                 ],
               ),
-            );
-          },
-        );
-      }),
+            ),
+          ),
+
+          // Reciters List
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value ||
+                  controller.randomVerse.value == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final audioData =
+                  controller.randomVerse.value!.data.verse.verse.audio;
+              if (audioData == null || audioData.isEmpty) {
+                return const Center(child: Text("No audio available"));
+              }
+
+              final List<Map<String, String>> reciters = audioData.values.map((
+                audioInfo,
+              ) {
+                String placeholderImg =
+                    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+
+                String description = "Qurany Reciter";
+
+                if (audioInfo.reciter.contains("Sudais")) {
+                  placeholderImg =
+                      "https://i0.wp.com/www.middleeastmonitor.com/wp-content/uploads/2020/09/Abdul-Rahman-Al-Sudais.jpg?fit=920%2C613&ssl=1";
+                  description = "Imam of Masjid al-Haram";
+                } else if (audioInfo.reciter.contains("Yasser") ||
+                    audioInfo.reciter.contains("Dussary")) {
+                  placeholderImg =
+                      "https://i.scdn.co/image/ab67616100005174e4bd7040657e8e61dc4667be";
+                  description = "Saudi Islamic scholar";
+                } else if (audioInfo.reciter.contains("Nasser") ||
+                    audioInfo.reciter.contains("Qatami")) {
+                  placeholderImg =
+                      "https://i1.sndcdn.com/artworks-IUNBxRxsvNOlQ55w-xPQ9Yw-t500x500.jpg";
+                  description = "The voice of Saudi Arabia";
+                } else if (audioInfo.reciter.contains("Mishary") ||
+                    audioInfo.reciter.contains("Alafasy")) {
+                  placeholderImg =
+                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4ITFPD413vKjV0PespKY0StV0CJBePAZrXdxqtb2zj6SMIPQVaYf6vNcXb7kLDoMgwHQW55fFAlYn4sJe9-A5cEh3Obm2gbOpmlKrgjg&s=10";
+                  description = "The Voice of Devotion";
+                } else if (audioInfo.reciter.contains("Abu Bakr") ||
+                    audioInfo.reciter.contains("Shatri")) {
+                  placeholderImg =
+                      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUmPkcySF56YidTERKU54hBnQ0lf734dwb4w&s";
+                  description = "The Golden Voice of Egypt";
+                }
+
+                return {
+                  'name': audioInfo.reciter,
+                  'description': description,
+                  'image': placeholderImg,
+                  'audio': audioInfo.url,
+                };
+              }).toList();
+
+              return ListView.separated(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                itemCount: reciters.length,
+                separatorBuilder: (context, index) => Divider(
+                  color: Colors.grey.shade200,
+                  height: 32.h,
+                  thickness: 1,
+                ),
+                itemBuilder: (context, index) {
+                  final item = reciters[index];
+
+                  return Row(
+                    children: [
+                      // Reciter Image
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Image.network(
+                          item['image']!,
+                          width: 56.w,
+                          height: 56.w,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                                width: 56.w,
+                                height: 56.w,
+                                color: Colors.grey.shade300,
+                                child: Icon(Icons.person, color: Colors.grey),
+                              ),
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      // Reciter Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['name']!,
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              item['description']!,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.grey.shade600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Play Button only (No download button per user request)
+                      SizedBox(width: 12.w),
+                      Obx(() {
+                        final bool isPlaying =
+                            controller.currentlyPlayingUrl.value ==
+                            item['audio'];
+                        return GestureDetector(
+                          onTap: () {
+                            if (item['audio'] != null) {
+                              controller.toggleAudio(item['audio']!);
+                            }
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(8.w),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isPlaying
+                                    ? const Color(0xFF2E7D32)
+                                    : Colors.grey.shade300,
+                                width: 1.5,
+                              ),
+                              color: Colors.transparent,
+                            ),
+                            child: Icon(
+                              isPlaying ? Icons.pause : Icons.play_arrow,
+                              size: 20.sp,
+                              color: isPlaying
+                                  ? const Color(0xFF2E7D32)
+                                  : Colors.grey.shade600,
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  );
+                },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:qurany/core/network_caller/network_error_handler.dart';
 import 'package:qurany/core/services/notification_service.dart';
 import 'package:qurany/feature/home/model/random_verse_model.dart';
@@ -20,13 +20,35 @@ class VerseOfDayController extends GetxController {
 
   final RxnString currentlyPlayingUrl = RxnString();
 
+  // List of random background images
+  final List<String> _bgImages = [
+    'assets/image/Verse of the Day 2.png',
+    'assets/image/Verse of the Day 3.png',
+    'assets/image/Verse of the Day 4.png',
+    'assets/image/Verse of the Day 5.png',
+    'assets/image/Verse of the Day 6.png',
+    'assets/image/Verse of the Day 7.png',
+    'assets/image/VerseOfDayCard.png',
+  ];
+
+  // Selected background image
+  final RxString backgroundImage = ''.obs;
+
+  void _setRandomBackgroundImage() {
+    final List<String> shuffled = List.from(_bgImages)..shuffle();
+    backgroundImage.value = shuffled.first;
+  }
+
   @override
   void onInit() {
     super.onInit();
+    _setRandomBackgroundImage();
     fetchRandomVerse();
 
-    audioPlayer.onPlayerComplete.listen((event) {
+    audioPlayer.playerStateStream.listen((state) {
+      if (state.processingState == ProcessingState.completed) {
       currentlyPlayingUrl.value = null;
+    }
     });
   }
 
@@ -42,7 +64,8 @@ class VerseOfDayController extends GetxController {
       currentlyPlayingUrl.value = null;
     } else {
       await audioPlayer.stop(); // Stop any previous audio
-      await audioPlayer.play(UrlSource(url));
+      await audioPlayer.setUrl(url);
+          await audioPlayer.play();
       currentlyPlayingUrl.value = url;
     }
   }
@@ -120,6 +143,7 @@ class VerseOfDayController extends GetxController {
 
   // Refresh verse
   Future<void> refreshVerse() async {
+    _setRandomBackgroundImage();
     await fetchRandomVerse();
   }
 }

@@ -2,18 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location to display Qibla direction and prayer times.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app needs access to location to provide accurate prayer times and Qibla direction.</string>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>This app needs access to notifications to remind you for prayer times and Quran verses.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to your photo library to allow you to select a profile picture.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>We need access to the microphone for voice commands.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>We need to recognize your speech for voice commands.</string>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -32,9 +22,55 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.917319441883-tacu733s73qabpft6qnlhlvrpi71h2t6</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to location to provide accurate prayer times and Qibla direction.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location to display Qibla direction and prayer times.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need access to the microphone for voice commands.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to allow you to select a profile picture.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>We need to recognize your speech for voice commands.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>This app needs access to notifications to remind you for prayer times and Quran verses.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>FlutterSceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -52,21 +88,6 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
-	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.917319441883-tacu733s73qabpft6qnlhlvrpi71h2t6</string>
-			</array>
-		</dict>
 	</array>
 </dict>
 </plist>

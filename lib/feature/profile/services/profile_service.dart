@@ -155,12 +155,52 @@ class ProfileService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        return data['success'] == true;
+        if (data['success'] == true) {
+          return data['data'] ?? false;
+        }
+        return false;
       }
       return false;
     } catch (e) {
       print('Error checking subscription status: $e');
       return false;
+    }
+  }
+
+  Future<UserModel?> updateProfile({
+    required String firstName,
+    required String lastName,
+    required String email,
+  }) async {
+    final url = Uri.parse('$baseUrl/api/user/me');
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      final response = await http.patch(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'firstName': firstName,
+          'lastName': lastName,
+          'email': email,
+        }),
+      );
+
+      print('[DEBUG] updateProfile status: ${response.statusCode}');
+      print('[DEBUG] updateProfile body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['success'] == true) {
+          return UserModel.fromJson(data['data']);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error updating profile: $e');
+      return null;
     }
   }
 }

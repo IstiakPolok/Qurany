@@ -1,4 +1,4 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -26,6 +26,12 @@ class ListenModeController extends GetxController {
       _activePlayerIndex.value == 1 ? _player1 : _player2;
   AudioPlayer get _inactivePlayer =>
       _activePlayerIndex.value == 1 ? _player2 : _player1;
+
+  String? _preloadedUrl;
+
+  void _swapPlayers() {
+    _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
+  }
 
   final stt.SpeechToText _speech = stt.SpeechToText();
 
@@ -63,15 +69,19 @@ class ListenModeController extends GetxController {
   }
 
   void _setupPlayerListeners(AudioPlayer player) {
-    player.onPlayerStateChanged.listen((state) {
+    player.playerStateStream.listen((state) {
       if (player == _activePlayer) {
-        isPlaying.value = state == PlayerState.playing;
-        if (state == PlayerState.completed) {
+        isPlaying.value = state.playing;
+
+        // Auto-play next verse when finished
+        if (state.processingState == ProcessingState.completed) {
           nextVerse();
         }
       }
     });
   }
+
+  bool _isChangingVerse = false;
 
   void _setTotalVerses() {
     try {
@@ -85,44 +95,55 @@ class ListenModeController extends GetxController {
     }
   }
 
-  Future<void> _configureAudioSession() async {
-    final AudioContext audioContext = AudioContext(
-      iOS: AudioContextIOS(
-        category: AVAudioSessionCategory.playAndRecord,
-        options: const {
-          AVAudioSessionOptions.defaultToSpeaker,
-          AVAudioSessionOptions.mixWithOthers,
-          AVAudioSessionOptions.allowBluetooth,
-          AVAudioSessionOptions.allowBluetoothA2DP,
-          AVAudioSessionOptions.allowAirPlay,
-        },
-      ),
-      android: AudioContextAndroid(
-        isSpeakerphoneOn: true,
-        stayAwake: true,
-        contentType: AndroidContentType.music,
-        usageType: AndroidUsageType.media,
-        audioFocus: AndroidAudioFocus.none,
-      ),
-    );
-    await _player1.setAudioContext(audioContext);
-    await _player2.setAudioContext(audioContext);
-  }
+  Future<void> _configureAudioSession() async {}
 
   Future<void> _initSpeech() async {
     try {
-      // Check microphone permission first
+      if (kDebugMode) print('[DEBUG] _initSpeech started');
+
+      // Check microphone permission first and request if needed
       var status = await Permission.microphone.status;
+      if (kDebugMode) print('[DEBUG] Microphone permission status: $status');
+
       if (!status.isGranted) {
-        await Permission.microphone.request();
+        if (kDebugMode) print('[DEBUG] Requesting microphone permission...');
+        final result = await Permission.microphone.request();
+        if (kDebugMode) print('[DEBUG] Microphone request result: $result');
+
+        if (!result.isGranted) {
+          if (kDebugMode)
+            print(
+              '[DEBUG] Microphone permission denied (isPermanentlyDenied=${result.isPermanentlyDenied})',
+            );
+          isSpeechAvailable.value = false;
+          commandStatus.value = 'microphone_permission_required'.tr;
+          if (result.isPermanentlyDenied) {
+            // Guide user to settings if permanently denied
+            Future.delayed(const Duration(milliseconds: 300), () {
+              Get.snackbar(
+                'permission_required'.tr,
+                'please_enable_microphone_in_settings'.tr,
+                snackPosition: SnackPosition.BOTTOM,
+                mainButton: TextButton(
+                  onPressed: () => openAppSettings(),
+                  child: Text('Settings'.tr),
+                ),
+              );
+            });
+          }
+          return;
+        }
       }
 
-      isSpeechAvailable.value = await _speech.initialize(
+      if (kDebugMode) print('[DEBUG] Initializing speech recognition...');
+      final available = await _speech.initialize(
         onStatus: (status) {
+          if (kDebugMode) print('[DEBUG] Speech onStatus: $status');
+          // status values may vary by platform; treat 'listening' as active
           if (status == 'listening') {
             isListening.value = true;
             commandStatus.value = "listening_dots".tr;
-          } else if (status == 'notListening') {
+          } else {
             isListening.value = false;
             if (commandStatus.value == "listening_dots".tr) {
               commandStatus.value = "tap_for_voice_command".tr;
@@ -130,37 +151,77 @@ class ListenModeController extends GetxController {
           }
         },
         onError: (errorNotification) {
+          if (kDebugMode)
+            print('[DEBUG] Speech onError: ${errorNotification.errorMsg}');
           isListening.value = false;
-          commandStatus.value = "${'error'.tr}: ${errorNotification.errorMsg}";
-          print("Speech Error: ${errorNotification.errorMsg}");
+          final msg = errorNotification.errorMsg;
+          commandStatus.value = "${'error'.tr}: $msg";
+          // Provide more user friendly messages for common errors
+          if (msg.contains('error_no_match')) {
+            commandStatus.value = 'no_speech_recognized'.tr;
+          } else if (msg.contains('error_listen_failed')) {
+            commandStatus.value = 'listen_failed_try_again'.tr;
+          }
+          if (kDebugMode) print("Speech Error: $msg");
         },
+        debugLogging: kDebugMode,
       );
+
+      if (kDebugMode) print('[DEBUG] Speech initialization result: $available');
+      isSpeechAvailable.value = available;
+      if (!available) commandStatus.value = 'speech_not_available'.tr;
     } catch (e) {
+      if (kDebugMode) print("[DEBUG] Speech initialization error: $e");
       print("Speech initialization error: $e");
     }
   }
 
   void listenForCommand() async {
+    if (kDebugMode)
+      print(
+        '[DEBUG] listenForCommand called. isSpeechAvailable=$isSpeechAvailable.value, isListening=$isListening.value',
+      );
+
     if (!isSpeechAvailable.value) {
+      if (kDebugMode) print('[DEBUG] Speech not available, initializing...');
       await _initSpeech();
       if (!isSpeechAvailable.value) {
+        if (kDebugMode) print('[DEBUG] Speech init failed after retry');
         commandStatus.value = "speech_not_available".tr;
         return;
       }
     }
 
     if (isListening.value) {
+      if (kDebugMode) print('[DEBUG] Already listening, stopping...');
       _speech.stop();
       isListening.value = false;
       commandStatus.value = "tap_for_voice_command".tr;
     } else {
-      await _speech.listen(
-        onResult: (result) {
-          if (result.finalResult) {
-            _processCommand(result.recognizedWords);
-          }
-        },
-      );
+      try {
+        if (kDebugMode) print('[DEBUG] Starting listen for 2 seconds...');
+        await _speech.listen(
+          onResult: (result) {
+            if (kDebugMode)
+              print(
+                '[DEBUG] onResult called: finalResult=${result.finalResult}, words=${result.recognizedWords}',
+              );
+            if (result.finalResult) {
+              if (kDebugMode)
+                print('[DEBUG] Final result received, processing command');
+              _processCommand(result.recognizedWords);
+            }
+          },
+          // Auto-stop after 2 seconds
+          listenFor: const Duration(seconds: 2),
+          partialResults: false,
+        );
+        if (kDebugMode) print('[DEBUG] Listen completed');
+      } catch (e) {
+        if (kDebugMode) print('[DEBUG] Listen caught exception: $e');
+        isListening.value = false;
+        commandStatus.value = 'listen_failed_try_again'.tr;
+      }
     }
   }
 
@@ -183,6 +244,12 @@ class ListenModeController extends GetxController {
     } else if (lowerCommand.contains("repeat") ||
         lowerCommand.contains("again")) {
       _playCurrentVerse();
+    }
+
+    // Stop listening after processing a single command
+    if (isListening.value) {
+      _speech.stop();
+      isListening.value = false;
     }
 
     // Reset status after a delay
@@ -281,79 +348,111 @@ class ListenModeController extends GetxController {
   }
 
   Future<void> nextVerse() async {
-    if (currentVerseIndex.value < verses.length - 1) {
-      currentVerseIndex.value++;
-      // Pre-fetch if we're near the end of current list
-      if (currentVerseIndex.value >= verses.length - 5) {
-        loadMoreVerses();
-      }
+    if (_isChangingVerse) return;
+    _isChangingVerse = true;
 
-      final currentVerse = verses[currentVerseIndex.value];
-
-      // If the inactive player has preloaded the next verse, switch and play
-      _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
-      await _activePlayer.resume();
-
-      // Mark verse as read and toggle progress
-      _markVerseRead(currentVerse.verseId);
-      await _toggleVerseProgress(currentVerse.verseId);
-
-      // Preload the following one
-      _preloadNextVerse(currentVerseIndex.value);
-    } else if (hasMoreVerses.value) {
-      // Reached the end but more are available, load and then play
-      await loadMoreVerses();
+    try {
       if (currentVerseIndex.value < verses.length - 1) {
         currentVerseIndex.value++;
+        // Pre-fetch if we're near the end of current list
+        if (currentVerseIndex.value >= verses.length - 5) {
+          loadMoreVerses();
+        }
+
         await _playCurrentVerse();
+      } else if (hasMoreVerses.value) {
+        // Reached the end but more are available, load and then play
+        await loadMoreVerses();
+        if (currentVerseIndex.value < verses.length - 1) {
+          currentVerseIndex.value++;
+          await _playCurrentVerse();
+        }
+      } else {
+        // Loop or stop? Stop for now.
+        isPlaying.value = false;
       }
-    } else {
-      // Loop or stop? Stop for now.
-      isPlaying.value = false;
+    } finally {
+      // Add a small delay before allowing another verse change
+      // to let the player state settle and prevent double triggers
+      await Future.delayed(const Duration(milliseconds: 500));
+      _isChangingVerse = false;
     }
   }
 
   Future<void> previousVerse() async {
+    if (_isChangingVerse) return;
     if (currentVerseIndex.value > 0) {
-      currentVerseIndex.value--;
-      await _playCurrentVerse();
+      _isChangingVerse = true;
+      try {
+        currentVerseIndex.value--;
+        await _playCurrentVerse();
+      } finally {
+        await Future.delayed(const Duration(milliseconds: 500));
+        _isChangingVerse = false;
+      }
     }
   }
 
   Future<void> _playCurrentVerse() async {
     if (verses.isEmpty) return;
+    final int indexAtStart = currentVerseIndex.value;
 
     try {
-      // Stop all players before starting fresh point
-      await _player1.stop();
-      await _player2.stop();
+      String? audioUrl = await _getAudioUrlForVerse(indexAtStart);
 
-      String? audioUrl = await _getAudioUrlForVerse(currentVerseIndex.value);
+      // Check if user has navigated away during the async URL fetch
+      if (indexAtStart != currentVerseIndex.value) return;
+      if (audioUrl == null) return;
 
-      if (audioUrl != null) {
-        final currentVerse = verses[currentVerseIndex.value];
+      // Logic for swapping players if preloaded
+      if (audioUrl == _preloadedUrl && _inactivePlayer.duration != null) {
+        // Stop the old player to release resources
+        _activePlayer.stop();
 
-        await _activePlayer.setSourceUrl(audioUrl);
-        await _activePlayer.resume();
+        // Swap to the player that already has the audio loaded
+        _swapPlayers();
 
-        // Mark verse as read and toggle progress
-        _markVerseRead(currentVerse.verseId);
-        await _toggleVerseProgress(currentVerse.verseId);
-
-        // Preload next
-        _preloadNextVerse(currentVerseIndex.value);
+        // Start playing the new active player immediately
+        _activePlayer.play();
+        isPlaying.value = true;
+      } else {
+        // Not preloaded or preload not ready
+        await _activePlayer.stop();
+        await _activePlayer.setUrl(audioUrl);
+        _activePlayer.play();
+        isPlaying.value = true;
       }
+
+      // Mark as read locally immediately
+      final currentVerse = verses[indexAtStart];
+      _markVerseRead(currentVerse.verseId);
+
+      // Run network/heavy tasks without blocking
+      _toggleVerseProgress(currentVerse.verseId);
+
+      // Load Next Two logic
+      _preloadNextTwoVerses(indexAtStart);
     } catch (e) {
+      final errorStr = e.toString();
+      if (errorStr.contains("Loading interrupted") ||
+          errorStr.contains("PlayerInterruptedException")) {
+        return;
+      }
       print("Error playing verse in listen mode: $e");
     }
   }
 
-  Future<void> _preloadNextVerse(int index) async {
-    if (index < verses.length - 1) {
-      String? nextUrl = await _getAudioUrlForVerse(index + 1);
-      if (nextUrl != null) {
-        await _inactivePlayer.setSourceUrl(nextUrl);
+  Future<void> _preloadNextTwoVerses(int index) async {
+    try {
+      // 1. Load Next (N+1) into the inactive player
+      if (index < verses.length - 1) {
+        _preloadedUrl = await _getAudioUrlForVerse(index + 1);
+        if (_preloadedUrl != null && index == currentVerseIndex.value) {
+          await _inactivePlayer.setUrl(_preloadedUrl!);
+        }
       }
+    } catch (e) {
+      // Silently ignore preloading errors
     }
   }
 
@@ -416,7 +515,10 @@ class ListenModeController extends GetxController {
             ),
             SizedBox(height: 16.h),
             _buildCommandItem("command_next".tr, "command_next_desc".tr),
-            _buildCommandItem("command_previous".tr, "command_previous_desc".tr),
+            _buildCommandItem(
+              "command_previous".tr,
+              "command_previous_desc".tr,
+            ),
             _buildCommandItem("command_pause".tr, "command_pause_desc".tr),
             _buildCommandItem("command_play".tr, "command_play_desc".tr),
             _buildCommandItem("command_repeat".tr, "command_repeat_desc".tr),
@@ -771,7 +873,13 @@ class ListenModeScreen extends StatelessWidget {
   Widget _buildVoiceCommandButton(ListenModeController controller) {
     return Obx(
       () => GestureDetector(
-        onTap: () => controller.listenForCommand(),
+        onTap: () {
+          if (kDebugMode)
+            print(
+              '[DEBUG] Voice button tapped. isListening=${controller.isListening.value}, isSpeechAvailable=${controller.isSpeechAvailable.value}',
+            );
+          controller.listenForCommand();
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: EdgeInsets.symmetric(horizontal: 40.w),

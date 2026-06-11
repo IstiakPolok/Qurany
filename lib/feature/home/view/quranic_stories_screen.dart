@@ -44,145 +44,212 @@ class QuranicStoriesScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (controller.historyList.isEmpty) {
-          return const Center(child: Text("No stories found"));
-        }
-
-        return GridView.builder(
-          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12.w,
-            mainAxisSpacing: 12.h,
-            childAspectRatio: 0.8,
-          ),
-          itemCount: controller.historyList.length,
-          itemBuilder: (context, index) {
-            final item = controller.historyList[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DetailScreen(
-                      data: {
-                        'title': item.name,
-                        'image': item.image,
-                        'description': item.description,
-                      },
+      body: Column(
+        children: [
+          // Search bar
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(24.r),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: "Search",
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 14.sp,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                );
-              },
-              child: Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                child: Stack(
-                  children: [
-                    Image.network(
-                      item.image,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey.shade300,
-                          child: Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: Colors.grey,
-                              size: 30.sp,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    // Gradient Overlay
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.black.withOpacity(0.8),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.0, 0.6],
-                        ),
-                      ),
-                    ),
-                    // Text
-                    Align(
-                      alignment: Alignment.bottomLeft,
-                      child: Padding(
-                        padding: EdgeInsets.all(12.w),
-                        child: Text(
-                          item.name,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
-                          ),
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                    // Bookmark Icon
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Obx(() {
-                        final isBookmarked = controller.bookmarkedIds.contains(
-                          item.id,
-                        );
-                        final isBookmarking = controller.bookmarkingIds
-                            .contains(item.id);
-                        return GestureDetector(
-                          onTap: () => controller.toggleBookmark(item.id),
-                          child: Container(
-                            margin: EdgeInsets.all(10.w),
-                            padding: EdgeInsets.all(6.w),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: isBookmarking
-                                ? SizedBox(
-                                    width: 18.sp,
-                                    height: 18.sp,
-                                    child: const CircularProgressIndicator(
-                                      strokeWidth: 1.5,
-                                      color: Color(0xFF2E7D32),
-                                    ),
-                                  )
-                                : Icon(
-                                    isBookmarked
-                                        ? Icons.bookmark
-                                        : Icons.bookmark_border,
-                                    size: 18.sp,
-                                    color: isBookmarked
-                                        ? const Color(0xFF2E7D32)
-                                        : Colors.black54,
-                                  ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
+                  Icon(Icons.search, color: Colors.grey.shade400, size: 20.sp),
+                ],
               ),
-            );
-          },
-        );
-      }),
+            ),
+          ),
+
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.historyList.isEmpty) {
+                return const Center(child: Text("No stories found"));
+              }
+
+              return ListView.separated(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                itemCount: controller.historyList.length,
+                separatorBuilder: (context, index) => SizedBox(height: 16.h),
+                itemBuilder: (context, index) {
+                  final item = controller.historyList[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailScreen(
+                            data: {
+                              'title': item.name,
+                              'image': item.image,
+                              'description': item.description,
+                            },
+                            historyData: item,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          // Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.horizontal(
+                              left: Radius.circular(16.r),
+                            ),
+                            child: Image.network(
+                              item.image,
+                              width: 100.w,
+                              height: 100.w,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 100.w,
+                                  height: 100.w,
+                                  color: Colors.grey.shade300,
+                                  child: Icon(
+                                    Icons.image_not_supported_outlined,
+                                    color: Colors.grey,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 16.w),
+                          // Content
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: 12.h,
+                                horizontal: 8.w,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.name,
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8.w),
+                                      Obx(() {
+                                        final isBookmarked = controller
+                                            .bookmarkedIds
+                                            .contains(item.id);
+                                        final isBookmarking = controller
+                                            .bookmarkingIds
+                                            .contains(item.id);
+                                        return GestureDetector(
+                                          onTap: () => controller
+                                              .toggleBookmark(item.id),
+                                          child: Container(
+                                            padding: EdgeInsets.all(6.w),
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.grey.shade300,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                            child: isBookmarking
+                                                ? SizedBox(
+                                                    width: 14.sp,
+                                                    height: 14.sp,
+                                                    child:
+                                                        const CircularProgressIndicator(
+                                                          strokeWidth: 1.5,
+                                                          color: Color(
+                                                            0xFF2E7D32,
+                                                          ),
+                                                        ),
+                                                  )
+                                                : Icon(
+                                                    isBookmarked
+                                                        ? Icons.bookmark
+                                                        : Icons.bookmark_border,
+                                                    size: 14.sp,
+                                                    color: isBookmarked
+                                                        ? const Color(
+                                                            0xFF2E7D32,
+                                                          )
+                                                        : Colors.grey.shade600,
+                                                  ),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8.h),
+                                  Text(
+                                    item.description,
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      color: Colors.grey.shade600,
+                                      height: 1.3,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:qurany/feature/home/view/notification_screen.dart';
 import 'package:qurany/feature/profile/view/profile_screen.dart';
+import 'package:qurany/core/services/purchase_api.dart';
 
 import 'dayProgressWidgets.dart';
 
@@ -71,6 +73,29 @@ class HomeHeader extends StatelessWidget {
                       ],
                     ),
                   ),
+
+                  // Crown (Go Premium) Icon
+                  Obx(() {
+                    final isPremium = PurchaseApi.isUserPremium();
+                    if (isPremium) return const SizedBox.shrink();
+                    return GestureDetector(
+                      onTap: () async {
+                        await PurchaseApi.presentPaywallIfNeededForPlacement('settings_upgrade');
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(8.w),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                        child: Icon(
+                          Icons.workspace_premium,
+                          size: 24.sp,
+                          color: Colors.amber[800],
+                        ),
+                      ),
+                    );
+                  }),
 
                   // Profile Icon
                   GestureDetector(

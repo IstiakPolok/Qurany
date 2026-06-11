@@ -240,7 +240,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                   itemBuilder: (context, index) {
                     final goal = _activeGoals[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3.0),
+                      padding: const EdgeInsets.symmetric(vertical: 10.0),
                       child: Container(
                         margin: EdgeInsets.symmetric(horizontal: 24.w),
                         padding: EdgeInsets.all(16.w),
@@ -253,6 +253,7 @@ class _DailyGoalsCardState extends State<DailyGoalsCard> {
                           ),
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
                               padding: EdgeInsets.all(8.w),

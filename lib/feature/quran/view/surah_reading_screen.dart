@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +19,7 @@ import 'package:qurany/core/services_class/local_service/shared_preferences_help
 
 import '../../../core/const/static_surah_data.dart';
 import '../../../core/network_caller/endpoints.dart' as Urls;
+import 'package:qurany/core/services/purchase_api.dart';
 
 // Controller
 class SurahReadingController extends GetxController {
@@ -37,6 +38,15 @@ class SurahReadingController extends GetxController {
       _activePlayerIndex.value == 1 ? _player1 : _player2;
   AudioPlayer get _inactivePlayer =>
       _activePlayerIndex.value == 1 ? _player2 : _player1;
+
+  String? _preloadedUrl;
+  String? _nextNextUrl;
+
+  void _swapPlayers() {
+    _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
+  }
+
+  bool _isChangingVerse = false;
 
   RxInt selectedViewTab =
       0.obs; // 0 = Translation, 1 = Transliteration, 2 = Tafsir
@@ -152,8 +162,6 @@ class SurahReadingController extends GetxController {
     await fetchSurahDetails();
   }
 
-
-
   void _updateLocale(String lang) {
     Locale locale;
     switch (lang) {
@@ -208,13 +216,13 @@ class SurahReadingController extends GetxController {
   }
 
   void _setupPlayerListeners(AudioPlayer player) {
-    player.onPlayerStateChanged.listen((state) {
+    player.playerStateStream.listen((state) {
       if (player == _activePlayer) {
-        isPlaying.value = state == PlayerState.playing;
-        if (state == PlayerState.playing) {
+        isPlaying.value = state.playing;
+        if (state.playing) {
           _clearAudioLoading();
         }
-        if (state == PlayerState.completed) {
+        if (state.processingState == ProcessingState.completed && !_isChangingVerse) {
           _clearAudioLoading();
           _playNextVerse();
         }
@@ -261,50 +269,123 @@ class SurahReadingController extends GetxController {
   }
 
   void _playNextVerse() async {
-    if (currentPlayingVerse.value == -1) return;
+    if (currentPlayingVerse.value == -1 || _isChangingVerse) return;
+    _isChangingVerse = true;
 
-    int currentIndex = verses.indexWhere(
-      (v) => v.verseId == currentPlayingVerse.value,
-    );
-    if (currentIndex != -1 && currentIndex < verses.length - 1) {
-      final nextVerse = verses[currentIndex + 1];
+    try {
+      int currentIndex = verses.indexWhere(
+        (v) => v.verseId == currentPlayingVerse.value,
+      );
 
-      if (kDebugMode) {
-        print('Switching to next verse: ${nextVerse.verseId}');
+      if (currentIndex != -1) {
+        if (currentIndex >= verses.length - 3 && hasMoreVerses.value) {
+          // Pre-fetch if getting close to end
+          loadMoreVerses();
+        }
+
+        if (currentIndex < verses.length - 1) {
+          final nextVerse = verses[currentIndex + 1];
+          await playVerse(nextVerse.verseId);
+        } else if (hasMoreVerses.value) {
+          await loadMoreVerses();
+          if (currentIndex < verses.length - 1) {
+            final nextVerse = verses[currentIndex + 1];
+            await playVerse(nextVerse.verseId);
+          } else {
+            _handleSurahCompletion();
+          }
+        } else {
+          _handleSurahCompletion();
+        }
       }
-      // The inactive player should already have preloaded the next verse
-      _activePlayerIndex.value = _activePlayerIndex.value == 1 ? 2 : 1;
-      currentPlayingVerse.value = nextVerse.verseId;
-
-      await _activePlayer.setPlaybackRate(playbackSpeed.value);
-      await _activePlayer.resume();
-
-      _markVerseRead(nextVerse.verseId);
-      await _toggleVerseProgress(nextVerse.verseId);
-
-      // Preload the following verse
-      _preloadNextVerse(currentIndex + 1);
-    } else {
-      if (kDebugMode) {
-        print('Surah completed or no more verses to play');
-      }
-      _clearAudioLoading();
-      isPlaying.value = false;
-      currentPlayingVerse.value = -1;
+    } finally {
+      await Future.delayed(const Duration(milliseconds: 500));
+      _isChangingVerse = false;
     }
   }
 
-  Future<void> _preloadNextVerse(int currentIndex) async {
-    if (currentIndex < verses.length - 1) {
-      final followingVerse = verses[currentIndex + 1];
-      if (kDebugMode) {
-        print('Preloading verse: ${followingVerse.verseId}');
+  void _handleSurahCompletion() {
+    if (kDebugMode) {
+      print('Surah completed or no more verses to play');
+    }
+    _clearAudioLoading();
+    isPlaying.value = false;
+    currentPlayingVerse.value = -1;
+    _showSurahCompleteCelebration();
+  }
+
+  void _showSurahCompleteCelebration() async {
+    // Stop audio player if playing
+    _player1.stop();
+    _player2.stop();
+    isPlaying.value = false;
+
+    // Show celebration dialog
+    showDialog(
+      context: Get.context!,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        title: const Text(
+          "Alhamdulillah! 🎉",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF2E7D32),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          "You have completed listening/reading to Surah $surahName.",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14.sp),
+        ),
+        actions: [
+          Center(
+            child: ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                // Trigger soft promo paywall
+                await PurchaseApi.presentPaywallIfNeededForPlacement('surah_complete');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+              ),
+              child: const Text(
+                "Continue",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Future<void> _preloadNextTwoVerses(int verseId) async {
+    try {
+      int currentIndex = verses.indexWhere((v) => v.verseId == verseId);
+      if (currentIndex == -1) return;
+
+      // 1. Preload Next (N+1)
+      if (currentIndex < verses.length - 1) {
+        _preloadedUrl = await _getAudioUrlForVerse(verses[currentIndex + 1].verseId);
+        if (_preloadedUrl != null && currentPlayingVerse.value == verseId) {
+          await _inactivePlayer.setUrl(_preloadedUrl!);
+        }
       }
-      String? nextUrl = await _getAudioUrlForVerse(followingVerse.verseId);
-      if (nextUrl != null) {
-        // Set source on the player that is NOT currently playing
-        await _inactivePlayer.setSourceUrl(nextUrl);
+
+      // 2. Fetch Next-Next (N+2)
+      if (currentIndex < verses.length - 2) {
+        _nextNextUrl = await _getAudioUrlForVerse(verses[currentIndex + 2].verseId);
       }
+    } catch (e) {
+      // Ignore preloading errors
     }
   }
 
@@ -329,13 +410,19 @@ class SurahReadingController extends GetxController {
   void playNextVerse() => _playNextVerse();
 
   void playPreviousVerse() async {
-    if (currentPlayingVerse.value == -1) return;
+    if (currentPlayingVerse.value == -1 || _isChangingVerse) return;
 
     int currentIndex = verses.indexWhere(
       (v) => v.verseId == currentPlayingVerse.value,
     );
     if (currentIndex != -1 && currentIndex > 0) {
-      playVerse(verses[currentIndex - 1].verseId);
+      _isChangingVerse = true;
+      try {
+        await playVerse(verses[currentIndex - 1].verseId);
+      } finally {
+        await Future.delayed(const Duration(milliseconds: 500));
+        _isChangingVerse = false;
+      }
     }
   }
 
@@ -349,7 +436,7 @@ class SurahReadingController extends GetxController {
     // Apply speed immediately to active player
     if (currentPlayingVerse.value != -1) {
       try {
-        await _activePlayer.setPlaybackRate(nextSpeed);
+        await _activePlayer.setSpeed(nextSpeed);
       } catch (e) {
         print("Error setting playback speed: $e");
       }
@@ -403,7 +490,9 @@ class SurahReadingController extends GetxController {
       currentPage.value = 1;
       final langCode = langCodeFromName(selectedLanguage.value);
       if (kDebugMode) {
-        print('Fetching surah: $surahId, page: ${currentPage.value}, lang: $langCode');
+        print(
+          'Fetching surah: $surahId, page: ${currentPage.value}, lang: $langCode',
+        );
       }
       final response = await _quranService.fetchSurahById(
         surahId,
@@ -494,7 +583,9 @@ class SurahReadingController extends GetxController {
       currentPage.value++;
       final langCode = langCodeFromName(selectedLanguage.value);
       if (kDebugMode) {
-        print('Loading more verses: page ${currentPage.value}, lang: $langCode');
+        print(
+          'Loading more verses: page ${currentPage.value}, lang: $langCode',
+        );
       }
       final response = await _quranService.fetchSurahById(
         surahId,
@@ -534,8 +625,8 @@ class SurahReadingController extends GetxController {
         // Resume
         _setAudioLoading(currentPlayingVerse.value);
         try {
-          await _activePlayer.setPlaybackRate(playbackSpeed.value);
-          await _activePlayer.resume();
+          await _activePlayer.setSpeed(playbackSpeed.value);
+          await _activePlayer.play();
         } catch (e) {
           _clearAudioLoading();
           print("Error resuming verse: $e");
@@ -552,41 +643,55 @@ class SurahReadingController extends GetxController {
     if (isAudioLoading.value) return;
 
     // If tapping the same verse that is playing/paused
-    if (currentPlayingVerse.value == verseId) {
-      togglePlayPause();
+    if (currentPlayingVerse.value == verseId && isPlaying.value) {
+      await _activePlayer.pause();
       return;
+    } else if (currentPlayingVerse.value == verseId && !isPlaying.value) {
+      _setAudioLoading(verseId);
+      try {
+        await _activePlayer.play();
+        return;
+      } catch (e) {
+        _clearAudioLoading();
+      }
     }
 
     try {
       _setAudioLoading(verseId);
-
-      // Stop all players before starting fresh
-      await _player1.stop();
-      await _player2.stop();
-
       currentPlayingVerse.value = verseId;
       String? audioUrl = await _getAudioUrlForVerse(verseId);
 
+      // Check if user moved on
+      if (currentPlayingVerse.value != verseId) return;
+
       if (audioUrl != null) {
-        if (kDebugMode) {
-          print('Playing verse $verseId with URL: $audioUrl');
+        if (audioUrl == _preloadedUrl && _inactivePlayer.duration != null) {
+          _activePlayer.stop();
+          _swapPlayers();
+          _activePlayer.play();
+          isPlaying.value = true;
+        } else {
+          await _activePlayer.stop();
+          await _activePlayer.setUrl(audioUrl);
+          await _activePlayer.setSpeed(playbackSpeed.value);
+          _activePlayer.play();
+          isPlaying.value = true;
         }
-        await _activePlayer.setSourceUrl(audioUrl);
-        await _activePlayer.setPlaybackRate(playbackSpeed.value);
-        await _activePlayer.resume();
 
         _markVerseRead(verseId);
-        await _toggleVerseProgress(verseId);
-
-        // Find index and preload next
-        int index = verses.indexWhere((v) => v.verseId == verseId);
-        _preloadNextVerse(index);
+        _toggleVerseProgress(verseId);
+        _preloadNextTwoVerses(verseId);
       } else {
         _clearAudioLoading();
         Get.snackbar("error".tr, "audio_not_available".tr);
       }
     } catch (e) {
       _clearAudioLoading();
+      final errorStr = e.toString();
+      if (errorStr.contains("Loading interrupted") ||
+          errorStr.contains("PlayerInterruptedException")) {
+        return;
+      }
       print("Error playing verse: $e");
       Get.snackbar("error".tr, "failed_play_audio".tr);
     }
@@ -1081,14 +1186,8 @@ class SurahReadingScreen extends StatelessWidget {
         'name': 'Abu Bakr al-Shatri',
         'image': 'assets/image/abu_bakr_shatri.jpg',
       },
-      {
-        'name': 'Nasser Al-Qatami',
-        'image': 'assets/image/NasserAlQatami.jpg',
-      },
-      {
-        'name': 'Yasser Al-Dossary',
-        'image': 'assets/image/YasserAlDosari.jpg',
-      },
+      {'name': 'Nasser Al-Qatami', 'image': 'assets/image/NasserAlQatami.jpg'},
+      {'name': 'Yasser Al-Dossary', 'image': 'assets/image/YasserAlDosari.jpg'},
     ];
 
     return SizedBox(
@@ -2045,12 +2144,39 @@ class SurahReadingScreen extends StatelessWidget {
     return Obx(() {
       if (!controller.hasMoreVerses.value) {
         return Padding(
-          padding: EdgeInsets.symmetric(vertical: 16.h),
-          child: Center(
-            child: Text(
-              "no_more_verses".tr,
-              style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
-            ),
+          padding: EdgeInsets.symmetric(vertical: 24.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton(
+                onPressed: () => controller._showSurahCompleteCelebration(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.r),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Colors.white),
+                    SizedBox(width: 8.w),
+                    const Text(
+                      "Finish Surah",
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Center(
+                child: Text(
+                  "no_more_verses".tr,
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+                ),
+              ),
+            ],
           ),
         );
       }

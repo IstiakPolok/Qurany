@@ -54,7 +54,7 @@ class HorizontalReciterList extends StatelessWidget {
           } else if (audioInfo.reciter.contains("Nasser") ||
               audioInfo.reciter.contains("Qatami")) {
             placeholderImg =
-                "https://scontent.fdac207-1.fna.fbcdn.net/v/t39.30808-6/470019064_1119048786249564_9159029543174380749_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=O9kA8gkeLGMQ7kNvwGNr5oH&_nc_oc=AdnT-OiSE9RjU0v0kTD07qPFSudAeHeqDozhECy78a0zZ8DxGG4kud8d2Wg7InObuBY&_nc_zt=23&_nc_ht=scontent.fdac207-1.fna&_nc_gid=7xGR-giX8dhXhYZ-X3B0xg&_nc_ss=8&oh=00_AfwTIfRlr9uHLOvZeNeCuTaXLMyn9KiQObXJwr7oy-Ctmg&oe=69B44A59"; // Spotify profile style placeholder for Nasser
+                "https://i1.sndcdn.com/artworks-IUNBxRxsvNOlQ55w-xPQ9Yw-t500x500.jpg"; // Spotify profile style placeholder for Nasser
           } else if (audioInfo.reciter.contains("Mishary") ||
               audioInfo.reciter.contains("Alafasy")) {
             placeholderImg =

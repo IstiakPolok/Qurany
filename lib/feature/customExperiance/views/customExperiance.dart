@@ -119,35 +119,29 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
             ),
           ),
           SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-
-                    children: [
-                      _buildHeader(),
-                      SizedBox(height: width * 0.02),
-
-                      _buildSelectionCard(
-                        "Qibla Compass",
-                        ["Classic", "Modern", "Clean"],
-                        selectedCompass,
-                        (val) {
-                          setState(() => selectedCompass = val);
-                          _saveCompassStyle(val);
-                        },
-                      ),
-                      SizedBox(height: width * 0.05),
-                      _buildPaginationDots(),
-                      SizedBox(height: width * 0.05),
-                      _buildCompassPreview(),
-
-                      SizedBox(height: width * 0.05),
-                    ],
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(),
+                  SizedBox(height: width * 0.02),
+                  _buildSelectionCard(
+                    "Qibla Compass",
+                    ["Classic", "Modern", "Clean"],
+                    selectedCompass,
+                    (val) {
+                      setState(() => selectedCompass = val);
+                      _saveCompassStyle(val);
+                    },
                   ),
-                ),
-              ],
+                  SizedBox(height: width * 0.05),
+                  _buildPaginationDots(),
+                  SizedBox(height: width * 0.1),
+                  _buildCompassPreview(),
+                  SizedBox(height: width * 0.3), // Extra space for bottomSheet
+                ],
+              ),
             ),
           ),
         ],
@@ -288,7 +282,7 @@ class _CustomizeExperienceScreenState extends State<CustomizeExperienceScreen> {
   Widget _buildCompassPreview() {
     final width = MediaQuery.of(context).size.width;
     final hMargin = (width * 0.05).clamp(12.0, 32.0);
-    final innerPad = (width * 0.06).clamp(16.0, 40.0);
+    final innerPad = (width * 0.1).clamp(16.0, 40.0);
     final radius = (width * 0.08).clamp(20.0, 40.0);
 
     return Container(

@@ -336,7 +336,10 @@ class QuranController extends GetxController {
           actions: [
             TextButton(
               onPressed: () => Get.back(),
-              child: Text("cancel".tr, style: const TextStyle(color: Colors.grey)),
+              child: Text(
+                "cancel".tr,
+                style: const TextStyle(color: Colors.grey),
+              ),
             ),
             TextButton(
               onPressed: () async {
@@ -364,7 +367,10 @@ class QuranController extends GetxController {
                   );
                 }
               },
-              child: Text("remove".tr, style: const TextStyle(color: Colors.red)),
+              child: Text(
+                "remove".tr,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ),
@@ -409,7 +415,9 @@ class QuranController extends GetxController {
       } else if (difference.inDays == 1) {
         return "saved_yesterday".tr;
       } else if (difference.inDays < 7) {
-        return "saved_days_ago".trParams({'days': difference.inDays.toString()});
+        return "saved_days_ago".trParams({
+          'days': difference.inDays.toString(),
+        });
       } else if (difference.inDays < 30) {
         final weeks = (difference.inDays / 7).floor();
         return "saved_weeks_ago".trParams({
@@ -1315,14 +1323,14 @@ class QuranScreen extends StatelessWidget {
                 "Juz ${juz.number}",
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
-              Text(
-                "read_juz".tr,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: const Color(0xFF2E7D32),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              // Text(
+              //   "read_juz".tr,
+              //   style: TextStyle(
+              //     fontSize: 12.sp,
+              //     color: const Color(0xFF2E7D32),
+              //     fontWeight: FontWeight.w600,
+              //   ),
+              // ),
             ],
           ),
           SizedBox(height: 12.h),

@@ -4,8 +4,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:get/get.dart';
 import 'package:purchases_flutter/models/package_wrapper.dart';
+import 'package:qurany/feature/profile/view/payment_success_screen.dart';
 import '../../../core/services/purchase_api.dart';
 import '../controller/profile_controller.dart';
+import 'payment_checkout_screen.dart';
 
 class PremiumPlanScreen extends StatefulWidget {
   const PremiumPlanScreen({super.key});
@@ -77,6 +79,11 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
 
     if (success) {
       _showSuccessDialog();
+      // Instead of an alert dialog, we'll navigate to the new success screen
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => const PaymentSuccessScreen()),
+      // );
     } else {
       setState(
         () => errorMessage =
@@ -632,7 +639,25 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: GestureDetector(
-        onTap: isDisabled ? null : () => _handlePurchase(package),
+        onTap: isDisabled
+            ? null
+            : () {
+                if (_isApple) {
+                  // If on Apple, use RevenueCat's purchase logic directly
+                  _handlePurchase(package!);
+                } else {
+                  // On Android/Other, show the CheckoutScreen (which handles Google Pay)
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PaymentCheckoutScreen(
+                        planType: isYearlySelected ? 'Yearly' : 'Monthly',
+                        price: package.storeProduct.priceString,
+                      ),
+                    ),
+                  );
+                }
+              },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: double.infinity,
@@ -664,12 +689,11 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Apple Pay / Google Pay logo
                     if (_isApple) ...[
                       Icon(Icons.apple, color: Colors.black, size: 22.sp),
-                      SizedBox(width: 6.w),
+                      SizedBox(width: 8.w),
                       Text(
-                        "Pay",
+                        "Apple Pay",
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
@@ -677,18 +701,17 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                         ),
                       ),
                     ] else ...[
-                      Image.asset(
-                        'assets/icons/google_pay.png',
-                        height: 22.h,
-                        errorBuilder: (ctx, e, s) => Icon(
-                          Icons.payment,
-                          size: 22.sp,
-                          color: Colors.black87,
+                      Text(
+                        "G",
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF4285F4),
                         ),
                       ),
-                      SizedBox(width: 6.w),
+                      SizedBox(width: 8.w),
                       Text(
-                        "Pay",
+                        "Google Pay",
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
@@ -696,13 +719,13 @@ class _PremiumPlanScreenState extends State<PremiumPlanScreen> {
                         ),
                       ),
                     ],
-                    SizedBox(width: 8.w),
-                    Container(width: 1.w, height: 18.h, color: Colors.black38),
-                    SizedBox(width: 8.w),
+                    SizedBox(width: 12.w),
+                    Container(width: 1.w, height: 18.h, color: Colors.black12),
+                    SizedBox(width: 12.w),
                     Text(
                       package != null
-                          ? "Get 7 days free • ${package.storeProduct.priceString}"
-                          : "Get 7 days free trial",
+                          ? "Continue for ${package.storeProduct.priceString}"
+                          : "Start Trial",
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,

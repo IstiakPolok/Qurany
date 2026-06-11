@@ -64,7 +64,7 @@ class HomeScreen extends StatelessWidget {
           const QuranTabSection(),
 
           // Extra padding for bottom nav bar
-          SizedBox(height: 100.h),
+          //SizedBox(height: 100.h),
         ],
       ),
     );

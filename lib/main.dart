@@ -41,6 +41,9 @@ void main() async {
   // Initialize LocationService
   Get.put(LocationService());
 
+  // Record login for today
+  await SharedPreferencesHelper.recordLoginForToday();
+
   // Get saved language pref
   final String savedLang = await SharedPreferencesHelper.getLanguage();
   Locale initialLocale = const Locale('en');
@@ -98,7 +101,16 @@ class MyApp extends StatelessWidget {
         getPages: AppRoute.routes,
         initialRoute: AppRoute.splashScreen,
         theme: ThemeData(textTheme: GoogleFonts.figtreeTextTheme()),
-        builder: EasyLoading.init(),
+        builder: EasyLoading.init(
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: const TextScaler.linear(1.0)),
+              child: child!,
+            );
+          },
+        ),
       ),
     );
   }

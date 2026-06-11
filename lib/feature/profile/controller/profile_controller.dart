@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/services/purchase_api.dart';
 import '../model/user_model.dart';
@@ -10,12 +11,28 @@ class ProfileController extends GetxController {
   final Rx<UserModel?> user = Rx<UserModel?>(null);
   final RxBool isLoading = false.obs;
   final RxBool isUploadingAvatar = false.obs;
+  final RxBool isUpdating = false.obs;
   final RxString error = ''.obs;
+
+  late TextEditingController firstNameController;
+  late TextEditingController lastNameController;
+  late TextEditingController emailController;
 
   @override
   void onInit() {
     super.onInit();
+    firstNameController = TextEditingController();
+    lastNameController = TextEditingController();
+    emailController = TextEditingController();
     fetchProfile();
+  }
+
+  @override
+  void onClose() {
+    firstNameController.dispose();
+    lastNameController.dispose();
+    emailController.dispose();
+    super.onClose();
   }
 
   Future<void> fetchProfile() async {
@@ -25,6 +42,10 @@ class ProfileController extends GetxController {
       final result = await _profileService.getProfile();
       if (result != null) {
         user.value = result;
+        // Populate text controllers
+        firstNameController.text = result.firstName ?? '';
+        lastNameController.text = result.lastName ?? '';
+        emailController.text = result.email;
         // Sync RevenueCat with backend UID for webhooks and purchase tracking
         await PurchaseApi.logIn(result.id);
       } else {
@@ -34,6 +55,31 @@ class ProfileController extends GetxController {
       error(e.toString());
     } finally {
       isLoading(false);
+    }
+  }
+
+  Future<void> updateProfile() async {
+    try {
+      isUpdating(true);
+      error('');
+
+      final updated = await _profileService.updateProfile(
+        firstName: firstNameController.text,
+        lastName: lastNameController.text,
+        email: emailController.text,
+      );
+
+      if (updated != null) {
+        user.value = updated;
+        Get.snackbar('Success', 'Profile updated successfully');
+      } else {
+        error('Failed to update profile');
+      }
+    } catch (e) {
+      error(e.toString());
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isUpdating(false);
     }
   }
 

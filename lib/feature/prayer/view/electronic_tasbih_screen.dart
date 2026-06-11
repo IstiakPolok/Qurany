@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -28,9 +28,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   late Path _beadPath;
   ui.PathMetric? _pathMetric;
   final AudioPlayer _audioPlayer = AudioPlayer();
-  PlayerState _playerState = PlayerState.stopped;
+  bool _isAudioPlaying = false;
   int? _currentlyPlayingIndex;
   bool _isPremium = false;
+  bool _soundEnabled = true;
+  bool _vibrationEnabled = true;
 
   // Bead style: maps style name to ball image asset
   static const Map<String, String> _beadStyles = {
@@ -113,14 +115,12 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   void initState() {
     super.initState();
     _loadPreferences();
-    _audioPlayer.onPlayerStateChanged.listen((state) {
-      if (mounted) {
-        setState(() {
-          _playerState = state;
-          if (state == PlayerState.completed || state == PlayerState.stopped) {
-            _currentlyPlayingIndex = null;
-          }
-        });
+    _audioPlayer.playerStateStream.listen((state) {
+      _isAudioPlaying = state.playing;
+      if (state.processingState == ProcessingState.completed) {
+        if (mounted) {
+          setState(() {});
+        }
       }
     });
     // Initialize standard path for metrics calculation (will be updated in build with actual constraints)
@@ -140,6 +140,10 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
         _selectedDhikrIndex = prefs.getInt('electronic_tasbih_dhikr_index');
         _selectedBeadStyle =
             prefs.getString('electronic_tasbih_bead_style') ?? 'Green';
+        _soundEnabled =
+            prefs.getBool('electronic_tasbih_sound_enabled') ?? true;
+        _vibrationEnabled =
+            prefs.getBool('electronic_tasbih_vibration_enabled') ?? true;
       });
     }
   }
@@ -155,6 +159,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       await prefs.remove('electronic_tasbih_dhikr_index');
     }
     await prefs.setString('electronic_tasbih_bead_style', _selectedBeadStyle);
+    await prefs.setBool('electronic_tasbih_sound_enabled', _soundEnabled);
+    await prefs.setBool(
+      'electronic_tasbih_vibration_enabled',
+      _vibrationEnabled,
+    );
   }
 
   void _calculatePath(Size size) {
@@ -192,13 +201,20 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
   }
 
   void _incrementCounter() {
-    HapticFeedback.lightImpact();
+    if (_vibrationEnabled) {
+      HapticFeedback.lightImpact();
+    }
+    if (_soundEnabled) {
+      SystemSound.play(SystemSoundType.click);
+    }
     setState(() {
       _counter++;
       if (_counter > _targetCount) {
         _counter = 1;
         _round++;
-        HapticFeedback.mediumImpact();
+        if (_vibrationEnabled) {
+          HapticFeedback.mediumImpact();
+        }
       }
     });
     _savePreferences();
@@ -207,7 +223,12 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
 
   void _decrementCounter() {
     if (_counter > 0) {
-      HapticFeedback.lightImpact();
+      if (_vibrationEnabled) {
+        HapticFeedback.lightImpact();
+      }
+      if (_soundEnabled) {
+        SystemSound.play(SystemSoundType.click);
+      }
       setState(() {
         _counter--;
       });
@@ -231,15 +252,15 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
       }
       debugPrint("Resolved asset path: $path");
 
-      if (_playerState == PlayerState.playing &&
-          _currentlyPlayingIndex == index) {
+      if (_isAudioPlaying && _currentlyPlayingIndex == index) {
         await _audioPlayer.stop();
         setState(() {
           _currentlyPlayingIndex = null;
         });
       } else {
         await _audioPlayer.stop(); // Stop any currently playing audio
-        await _audioPlayer.play(AssetSource(path));
+        await _audioPlayer.setAsset(path);
+        await _audioPlayer.play();
         setState(() {
           _currentlyPlayingIndex = index;
         });
@@ -254,8 +275,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     int tempTargetCount = _targetCount;
     int tempRound = _round;
     int tempCustomCount = _counter;
-    bool soundFeedback = true;
-    bool vibration = true;
+    bool soundFeedback = _soundEnabled;
+    bool vibration = _vibrationEnabled;
     final List<int> presetCounts = [11, 33, 50, 99, 100, 300, 500, 1000];
 
     showModalBottomSheet(
@@ -520,6 +541,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                             _targetCount = tempTargetCount;
                             _round = tempRound;
                             _counter = tempCustomCount;
+                            _soundEnabled = soundFeedback;
+                            _vibrationEnabled = vibration;
                           });
                           _savePreferences();
                           Navigator.pop(context);
@@ -649,8 +672,7 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
     final String arabic = _dhikrList[_selectedDhikrIndex!]['arabic']!;
     final String meaning = _dhikrList[_selectedDhikrIndex!]['meaning']!;
     final bool isPlaying =
-        _playerState == PlayerState.playing &&
-        _currentlyPlayingIndex == _selectedDhikrIndex;
+        _isAudioPlaying && _currentlyPlayingIndex == _selectedDhikrIndex;
 
     return Column(
       children: [
@@ -802,12 +824,11 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
                     ...List.generate(_dhikrList.length, (index) {
                       final dhikr = _dhikrList[index];
                       final bool isPlayingThis =
-                          _playerState == PlayerState.playing &&
-                          _currentlyPlayingIndex == index;
+                          _isAudioPlaying && _currentlyPlayingIndex == index;
                       return GestureDetector(
                         onTap: () {
                           // Stop audio if playing when selecting a new dhikr
-                          if (_playerState == PlayerState.playing) {
+                          if (_isAudioPlaying) {
                             _playAudio(index); // This toggles it off
                           }
                           setState(() {
@@ -971,37 +992,40 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           Stack(
             alignment: Alignment.center,
             children: [
-              Container(
-                width: 130.w,
-                height: 145.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/image/Polygon.png'),
-                    fit: BoxFit.fill,
+              GestureDetector(
+                onTap: _incrementCounter,
+                child: Container(
+                  width: 130.w,
+                  height: 145.w,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/image/Polygon.png'),
+                      fit: BoxFit.fill,
+                    ),
                   ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "$_counter / $_targetCount",
-                      style: TextStyle(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "$_counter / $_targetCount",
+                        style: TextStyle(
+                          fontSize: 24.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 2.h),
-                    Text(
-                      "round".tr + " $_round",
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                      SizedBox(height: 2.h),
+                      Text(
+                        "round".tr + " $_round",
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Positioned(
@@ -1027,12 +1051,13 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
             ],
           ),
 
-          SizedBox(height: 5.h),
+          SizedBox(height: 15.h),
 
           // Beads Curve & Interaction
           Expanded(
             child: GestureDetector(
               onHorizontalDragUpdate: _onDragUpdate,
+              onTap: _incrementCounter,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final beadHeight = constraints.maxHeight;
@@ -1238,7 +1263,8 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           beadLinearPos,
         );
         if (tangent != null) {
-          final bool isCenterBead = i == 0;
+          if (i == 0 || i == 1) continue;
+          final bool isCenterBead = false;
           beads.add(
             Positioned(
               left: tangent.position.dx - 20.w,
@@ -1308,13 +1334,9 @@ class _ElectronicTasbihScreenState extends State<ElectronicTasbihScreen>
           ),
           if (isLocked)
             Positioned(
-              top: 0.h,
+              top: 10.h,
               right: 12.w,
-              child: Container(
-                padding: EdgeInsets.all(3.w),
-
-                child: Icon(Icons.lock, size: 12.sp, color: Colors.grey),
-              ),
+              child: Icon(Icons.lock, size: 14.sp, color: Colors.black87),
             ),
         ],
       ),

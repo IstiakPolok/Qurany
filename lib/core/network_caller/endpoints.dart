@@ -4,6 +4,7 @@ const String baseUrl = 'https://backend.qurany.pro';
 
 // Auth Endpoints
 const String googleAuthEndpoint = '$baseUrl/api/user/auth/google';
+const String appleAuthEndpoint = '$baseUrl/api/user/auth/apple';
 const String guestLoginEndpoint = '$baseUrl/api/user/guest';
 
 // Quran Endpoints
@@ -37,7 +38,7 @@ const String verseProgressEndpoint = '$baseUrl/api/progress';
 const String noteEndpoint = '$baseUrl/api/auth/note';
 
 // Knowledge Endpoints
-const String knowledgeBaseUrl = '$baseUrl/auth/knowledge';
+const String knowledgeBaseUrl = '$baseUrl/api/auth/knowledge';
 
 // AI Endpoints
 const String askAiChatEndpoint = '$baseUrl/api/auth/ai/chat';

@@ -37,17 +37,27 @@ class EditProfileScreen extends StatelessWidget {
                       SizedBox(height: 40.h),
 
                       // First Name Field
-                      _buildTextField("First name", user.firstName ?? ""),
+                      _buildTextField(
+                        "First name",
+                        controller.firstNameController,
+                      ),
 
                       SizedBox(height: 20.h),
 
                       // Last Name Field
-                      _buildTextField("Last Name", user.lastName ?? ""),
+                      _buildTextField(
+                        "Last Name",
+                        controller.lastNameController,
+                      ),
 
                       SizedBox(height: 20.h),
 
                       // Email Field
-                      _buildTextField("Email Address", user.email),
+                      _buildTextField(
+                        "Email Address",
+                        controller.emailController,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
 
                       SizedBox(height: 40.h),
 
@@ -170,7 +180,11 @@ class EditProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String label, String value) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -183,41 +197,72 @@ class EditProfileScreen extends StatelessWidget {
           ),
         ),
         SizedBox(height: 8.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.grey[200]!),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16.w,
+              vertical: 16.h,
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: BorderSide(color: Colors.grey[200]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
+            ),
           ),
-          child: Text(
-            value,
-            style: TextStyle(fontSize: 14.sp, color: Colors.black87),
-          ),
+          style: TextStyle(fontSize: 14.sp, color: Colors.black87),
         ),
       ],
     );
   }
 
   Widget _buildUpdateButton() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 16.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2E7D32),
-        borderRadius: BorderRadius.circular(25.r),
-      ),
-      child: Center(
-        child: Text(
-          "Update Profile",
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+    final ProfileController controller = Get.find<ProfileController>();
+    return Obx(() {
+      return GestureDetector(
+        onTap: controller.isUpdating.value
+            ? null
+            : () => controller.updateProfile(),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(vertical: 16.h),
+          decoration: BoxDecoration(
+            color: controller.isUpdating.value
+                ? const Color(0xFF2E7D32).withOpacity(0.6)
+                : const Color(0xFF2E7D32),
+            borderRadius: BorderRadius.circular(25.r),
+          ),
+          child: Center(
+            child: controller.isUpdating.value
+                ? SizedBox(
+                    height: 20.h,
+                    width: 20.h,
+                    child: const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    "Update Profile",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

@@ -1,18 +1,25 @@
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:qurany/feature/prayer/controller/prayer_controller.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:qurany/core/network_caller/endpoints.dart';
 
 import '../../compass/widgets/classicCompass.dart';
 import '../../compass/widgets/modernCompass.dart';
 import '../../compass/widgets/cleanCompass.dart';
+import '../../compass/widgets/oranteCompass.dart';
+import '../../compass/widgets/neonCompass.dart';
+import '../../compass/widgets/galaxyCompass.dart';
 
 class QiblaCompassScreen extends StatefulWidget {
-  const QiblaCompassScreen({super.key});
+  final bool showBackButton;
+  const QiblaCompassScreen({super.key, this.showBackButton = false});
 
   @override
   State<QiblaCompassScreen> createState() => _QiblaCompassScreenState();
@@ -24,6 +31,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
   double _qiblaDirection = 0.0; // Will be updated from API
   double _distanceToMakkah = 0.0; // Will be updated from API
   double _currentHeading = 0.0;
+  bool _hasSubscription = true; // Default to true until checked
 
   PrayerController? prayerController;
 
@@ -33,6 +41,56 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
     _loadSavedCompassStyle();
     _initializePrayerController();
     _determinePosition();
+    _checkSubscriptionStatus();
+  }
+
+  Future<void> _checkSubscriptionStatus() async {
+    try {
+      final token = await SharedPreferencesHelper.getAccessToken();
+      if (token == null) {
+        if (mounted) {
+          setState(() {
+            _hasSubscription = false;
+          });
+        }
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse(subscriptionStatusEndpoint),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (mounted) {
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> body = jsonDecode(response.body);
+          if (body['success'] == true) {
+            setState(() {
+              // data: false means "No subscription"
+              _hasSubscription = body['data'] ?? false;
+            });
+          } else {
+            setState(() {
+              _hasSubscription = false;
+            });
+          }
+        } else {
+          setState(() {
+            _hasSubscription = false;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error checking subscription status: $e');
+      if (mounted) {
+        setState(() {
+          _hasSubscription = false;
+        });
+      }
+    }
   }
 
   void _loadSavedCompassStyle() async {
@@ -260,26 +318,27 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           ),
         ),
         // Back button
-        // Positioned(
-        //   top: 50.h,
-        //   left: 16.w,
-        //   child: GestureDetector(
-        //     onTap: () => Navigator.pop(context),
-        //     child: Container(
-        //       padding: EdgeInsets.all(8.w),
-        //       decoration: BoxDecoration(
-        //         color: Colors.white,
-        //         shape: BoxShape.circle,
-        //         border: Border.all(color: Colors.grey[300]!),
-        //       ),
-        //       child: Icon(
-        //         Icons.arrow_back_ios_new,
-        //         size: 16.sp,
-        //         color: Colors.black87,
-        //       ),
-        //     ),
-        //   ),
-        // ),
+        if (widget.showBackButton)
+          Positioned(
+            top: 50.h,
+            left: 16.w,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                padding: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 16.sp,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
         // Expand map button
         // Positioned(
         //   top: 50.h,
@@ -379,48 +438,82 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
         color: const Color(0xFFFFF9F0),
         borderRadius: BorderRadius.circular(12.r),
       ),
-      child: Obx(() {
-        // Show loading state if prayer data is not available
-        if (prayerController == null ||
-            prayerController!.prayerData.value == null) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatItem("loading".tr, "to_makkah".tr),
-              Container(width: 1, height: 40.h, color: Colors.grey[400]),
-              _buildStatItem(
-                "${_currentHeading.toInt()}°",
-                "current_heading".tr,
-              ),
-              Container(width: 1, height: 40.h, color: Colors.grey[400]),
-              _buildStatItem("loading".tr, "qibla_direction".tr),
-            ],
-          );
-        }
+      child: StreamBuilder<CompassEvent>(
+        stream: FlutterCompass.events,
+        builder: (context, snapshot) {
+          final heading = snapshot.data?.heading ?? 0.0;
 
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildStatItem(
-              "${_distanceToMakkah.toStringAsFixed(2)} KM",
-              "to_makkah".tr,
-            ),
-            Container(width: 1, height: 40.h, color: Colors.grey[400]),
-            _buildStatItem("${_currentHeading.toInt()}°", "current_heading".tr),
-            Container(width: 1, height: 40.h, color: Colors.grey[400]),
-            _buildStatItem("${_qiblaDirection.toInt()}°", "qibla_direction".tr),
-          ],
-        );
-      }),
+          // Normalize angles to 0-360
+          final double normHeading = (heading + 360) % 360;
+          final double normQibla = (_qiblaDirection + 360) % 360;
+
+          // Calculate difference
+          double diff = (normHeading - normQibla).abs();
+          if (diff > 180) {
+            diff = 360 - diff;
+          }
+
+          // Aligned if deviation is within 3 degrees
+          final bool isAligned = diff <= 3.0;
+          final Color valueColor = isAligned ? Colors.blue : Colors.black87;
+          final String displayHeading = isAligned
+              ? "Facing the Qibla"
+              : "${heading.toInt()}°";
+
+          return Obx(() {
+            // Show loading state if prayer data is not available
+            if (prayerController == null ||
+                prayerController!.prayerData.value == null) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildStatItem("loading".tr, "to_makkah".tr),
+                  Container(width: 1, height: 40.h, color: Colors.grey[400]),
+                  _buildStatItem("${heading.toInt()}°", "current_heading".tr),
+                  Container(width: 1, height: 40.h, color: Colors.grey[400]),
+                  _buildStatItem("loading".tr, "qibla_direction".tr),
+                ],
+              );
+            }
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildStatItem(
+                  "${_distanceToMakkah.toStringAsFixed(2)} KM",
+                  "to_makkah".tr,
+                  color: valueColor,
+                ),
+                Container(width: 1, height: 40.h, color: Colors.grey[400]),
+                _buildStatItem(
+                  displayHeading,
+                  "current_heading".tr,
+                  color: valueColor,
+                ),
+                Container(width: 1, height: 40.h, color: Colors.grey[400]),
+                _buildStatItem(
+                  "${_qiblaDirection.toInt()}°",
+                  "qibla_direction".tr,
+                  color: valueColor,
+                ),
+              ],
+            );
+          });
+        },
+      ),
     );
   }
 
-  Widget _buildStatItem(String value, String label) {
+  Widget _buildStatItem(String value, String label, {Color? color}) {
     return Column(
       children: [
         Text(
           value,
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.bold,
+            color: color ?? Colors.black87,
+          ),
         ),
         SizedBox(height: 4.h),
         Text(
@@ -443,6 +536,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
           Widget compass;
           // Use stable IDs for selection logic instead of translated labels
           // to ensure selection isn't lost when the language changes.
+
           switch (_selectedCompass) {
             case 'Modern':
               compass = ModernCompass(
@@ -456,6 +550,24 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                 qiblaAngle: _qiblaDirection,
               );
               break;
+            case 'Orante':
+              compass = OranteCompass(
+                heading: heading,
+                qiblaAngle: _qiblaDirection,
+              );
+              break;
+            case 'Neon':
+              compass = NeonCompass(
+                heading: heading,
+                qiblaAngle: _qiblaDirection,
+              );
+              break;
+            case 'Galaxy':
+              compass = GalaxyCompass(
+                heading: heading,
+                qiblaAngle: _qiblaDirection,
+              );
+              break;
             case 'Classic':
             default:
               compass = ClassicCompass(
@@ -464,7 +576,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
               );
           }
 
-          return compass;
+          return Transform.scale(scale: 0.75, child: compass);
         },
       ),
     );
@@ -540,24 +652,24 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
-                  "Ornate", // Internal ID (Stable)
-                  "style_ornate".tr, // Display Label (Translated)
+                  "Orante", // Internal ID (Stable)
+                  "Orante", // Display Label (You can localize if needed)
                   'assets/image/ornateCompass.png',
-                  true,
+                  !_hasSubscription,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
                   "Neon", // Internal ID (Stable)
-                  "style_neon".tr, // Display Label (Translated)
-                  'assets/image/neonCOmpass.png',
-                  true,
+                  "Neon", // Display Label
+                  'assets/image/neonbody.png',
+                  !_hasSubscription,
                 ),
                 SizedBox(width: 12.w),
                 _buildCompassOption(
                   "Galaxy", // Internal ID (Stable)
-                  "style_galaxy".tr, // Display Label (Translated)
-                  'assets/image/galaxycompass.png',
-                  true,
+                  "Galaxy", // Display Label
+                  'assets/image/galaxybody.png',
+                  !_hasSubscription,
                 ),
                 SizedBox(width: 8.w),
               ],
@@ -594,7 +706,7 @@ class _QiblaCompassScreenState extends State<QiblaCompassScreen> {
                 width: 75.w,
                 height: 75.w,
                 decoration: BoxDecoration(
-                  color: isLocked ? Colors.grey[200] : const Color(0xFFE8F5E9),
+                  color: isLocked ? Colors.grey[200] : const Color(0xFFECEFE2),
                   borderRadius: BorderRadius.circular(16.r),
                   border: isSelected
                       ? Border.all(color: const Color(0xFF2E7D32), width: 2)

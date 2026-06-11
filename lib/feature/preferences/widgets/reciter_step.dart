@@ -1,4 +1,4 @@
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:get/get.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -21,11 +21,11 @@ class _ReciterStepState extends State<ReciterStep> {
   final List<Map<String, String>> reciters = [
     {
       "name": "Mishary Rashid Alafasy",
-      "path": "audio/Mishary Rashid Al-Afasy.mp3",
+      "path": "assets/audio/Mishary Rashid Al-Afasy.mp3",
     },
-    {"name": "Abu Bakr Al-Shatri", "path": "audio/Abu Bakr Al-Shatri.mp3"},
-    {"name": "Nasser Al-Qatami", "path": "audio/Nasser Al-Qatami.mp3"},
-    {"name": "Yasser Al-Dosari", "path": "audio/Yasser Al-Dosari.mp3"},
+    {"name": "Abu Bakr Al-Shatri", "path": "assets/audio/Abu Bakr Al-Shatri.mp3"},
+    {"name": "Nasser Al-Qatami", "path": "assets/audio/Nasser Al-Qatami.mp3"},
+    {"name": "Yasser Al-Dosari", "path": "assets/audio/Yasser Al-Dosari.mp3"},
   ];
 
   @override
@@ -68,7 +68,8 @@ class _ReciterStepState extends State<ReciterStep> {
     // Play preview
     try {
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource(audioPath));
+      await _audioPlayer.setAsset(audioPath);
+          await _audioPlayer.play();
     } catch (e) {
       debugPrint("Error playing audio: $e");
     }

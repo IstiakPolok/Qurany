@@ -144,7 +144,7 @@ class RecentReadingList extends StatelessWidget {
                     ),
                     SizedBox(height: 8.h),
                     SizedBox(
-                      width: 200.w,
+                      width: 245.w,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -159,6 +159,7 @@ class RecentReadingList extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+
                           Container(
                             padding: EdgeInsets.all(4.w),
                             decoration: const BoxDecoration(

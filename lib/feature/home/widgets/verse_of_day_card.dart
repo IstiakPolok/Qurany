@@ -6,198 +6,213 @@ import 'package:qurany/feature/home/view/verse_of_day_screen.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 import 'package:share_plus/share_plus.dart';
 
-class VerseOfDayCard extends StatelessWidget {
+class VerseOfDayCard extends StatefulWidget {
   const VerseOfDayCard({super.key});
 
+  @override
+  State<VerseOfDayCard> createState() => _VerseOfDayCardState();
+}
+
+class _VerseOfDayCardState extends State<VerseOfDayCard> {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(VerseOfDayController());
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const VerseOfDayScreen()),
-        );
-      },
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        constraints: BoxConstraints(minHeight: 180.h),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16.r),
-          image: const DecorationImage(
-            image: AssetImage('assets/image/VerseOfDayCard.png'),
-            fit: BoxFit.cover,
+    return Obx(() {
+      final bg = controller.backgroundImage.value;
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const VerseOfDayScreen()),
+          );
+        },
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+          constraints: BoxConstraints(minHeight: 180.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            image: DecorationImage(
+              image: AssetImage(
+                bg.isNotEmpty ? bg : 'assets/image/VerseOfDayCard.png',
+              ),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(20.w),
-          child: Center(
-            child: Obx(() {
-              // Loading state
-              if (controller.isLoading.value) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                );
-              }
+          child: Padding(
+            padding: EdgeInsets.all(20.w),
+            child: Center(
+              child: Obx(() {
+                // Loading state
+                if (controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                }
 
-              // Error state
-              if (controller.errorMessage.value.isNotEmpty) {
+                // Error state
+                if (controller.errorMessage.value.isNotEmpty) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.white,
+                        size: 40.sp,
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'failed_load_verse'.tr,
+                        style: TextStyle(color: Colors.white, fontSize: 14.sp),
+                      ),
+                      SizedBox(height: 8.h),
+                      ElevatedButton(
+                        onPressed: controller.refreshVerse,
+                        child: Text('retry'.tr),
+                      ),
+                    ],
+                  );
+                }
+
+                // Success state - display verse
+                final verse = controller.randomVerse.value;
+                if (verse == null) {
+                  return const SizedBox.shrink();
+                }
+
                 return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, color: Colors.white, size: 40.sp),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'failed_load_verse'.tr,
-                      style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                    ),
-                    SizedBox(height: 8.h),
-                    ElevatedButton(
-                      onPressed: controller.refreshVerse,
-                      child: Text('retry'.tr),
-                    ),
-                  ],
-                );
-              }
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "verse_of_day".tr,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            final reference = controller.getVerseReference();
+                            final arabicText = verse.data.verse.verse.text;
+                            final translation =
+                                verse.data.verse.verse.translation;
 
-              // Success state - display verse
-              final verse = controller.randomVerse.value;
-              if (verse == null) {
-                return const SizedBox.shrink();
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "verse_of_day".tr,
+                            Share.share(
+                              "$arabicText\n\n$translation\n\n— $reference",
+                              subject: "Verse of the Day: $reference",
+                            );
+                          },
+                          icon: Icon(
+                            Icons.share_outlined,
+                            color: Colors.white,
+                            size: 20.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/icons/navquranIcons.png',
+                          width: 20.w,
+                          height: 20.h,
+                          color: Colors.white,
+                        ),
+                        SizedBox(width: 8.w),
+                        Expanded(
+                          child: Text(
+                            controller.getVerseReference(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Image.asset(
+                              'assets/icons/123.png',
+                              width: 30.w,
+                              height: 30.h,
+                            ),
+                            SizedBox(width: 8.w),
+                            Expanded(
+                              child: FutureBuilder<String>(
+                                future:
+                                    SharedPreferencesHelper.getArabicScript(),
+                                builder: (context, snapshot) {
+                                  final scriptFont = snapshot.data ?? 'Imlaei';
+                                  return Text(
+                                    verse.data.verse.verse.text,
+                                    textDirection: TextDirection.rtl,
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18.sp,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.5,
+                                      fontFamily: scriptFont == 'IndoPak'
+                                          ? 'IndoPak'
+                                          : 'Arial',
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Text(
+                        verse.data.verse.verse.translation,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          final reference = controller.getVerseReference();
-                          final arabicText = verse.data.verse.verse.text;
-                          final translation =
-                              verse.data.verse.verse.translation;
-
-                          Share.share(
-                            "$arabicText\n\n$translation\n\n— $reference",
-                            subject: "Verse of the Day: $reference",
-                          );
-                        },
-                        icon: Icon(
-                          Icons.share_outlined,
-                          color: Colors.white,
-                          size: 20.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/icons/navquranIcons.png',
-                        width: 20.w,
-                        height: 20.h,
-                        color: Colors.white,
-                      ),
-                      SizedBox(width: 8.w),
-                      Expanded(
-                        child: Text(
-                          controller.getVerseReference(),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 12.h),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Image.asset(
-                            'assets/icons/123.png',
-                            width: 30.w,
-                            height: 30.h,
-                          ),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: FutureBuilder<String>(
-                              future: SharedPreferencesHelper.getArabicScript(),
-                              builder: (context, snapshot) {
-                                final scriptFont = snapshot.data ?? 'Imlaei';
-                                return Text(
-                                  verse.data.verse.verse.text,
-                                  textDirection: TextDirection.rtl,
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.bold,
-                                    height: 1.5,
-                                    fontFamily: scriptFont == 'IndoPak'
-                                        ? 'IndoPak'
-                                        : 'Arial',
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Text(
-                      verse.data.verse.verse.translation,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w500,
-                        height: 1.4,
                       ),
                     ),
-                  ),
-                  SizedBox(height: 8.h),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const VerseOfDayScreen(),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      'read_full_surah'.tr,
-                      style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                    SizedBox(height: 8.h),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const VerseOfDayScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'read_full_surah'.tr,
+                        style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                      ),
                     ),
-                  ),
-                ],
-              );
-            }),
+                  ],
+                );
+              }),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

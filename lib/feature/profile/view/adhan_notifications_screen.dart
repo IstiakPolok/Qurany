@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class AdhanNotificationsScreen extends StatefulWidget {
@@ -81,7 +81,8 @@ class _AdhanNotificationsScreenState extends State<AdhanNotificationsScreen> {
 
     if (assetPath.isNotEmpty) {
       await _audioPlayer.stop();
-      await _audioPlayer.play(AssetSource(assetPath));
+      await _audioPlayer.setAsset(assetPath);
+          await _audioPlayer.play();
       setState(() {
         _playingValue = value;
       });

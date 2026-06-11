@@ -43,6 +43,7 @@ class _onBoardind2State extends State<onBoardind2> {
     'assets/image/onboard2.jpg',
     'assets/image/onboard3.jpg',
     'assets/image/onboard4.jpg',
+    'assets/image/onboard5.jpg',
   ];
 
   @override
@@ -76,22 +77,8 @@ class _onBoardind2State extends State<onBoardind2> {
               );
             },
           ),
-          // Show close button only on last image
-          if (_currentPage == _images.length - 1)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              right: 16,
-              child: IconButton(
-                icon: Image.asset(
-                  'assets/icons/close_icon.png',
-                  width: 32,
-                  height: 32,
-                ),
-                onPressed: () {
-                  Get.to(CustomizeExperienceScreen());
-                },
-              ),
-            ),
+          // Top Bar with progress and Skip
+          _buildTopBar(),
 
           // Show SlideAction only on last image
           if (_currentPage == _images.length - 1)
@@ -123,21 +110,21 @@ class _onBoardind2State extends State<onBoardind2> {
                           Get.to(CustomizeExperienceScreen());
                           return null;
                         },
-                        height: 50, // Increased height
-                        borderRadius: 60,
+                        height: 50.h, // Using screenutil
+                        borderRadius: 60.r,
                         elevation: 0,
                         innerColor: Colors.white,
                         outerColor: AppColors.primaryColor,
                         sliderButtonIcon: SizedBox(
-                          width: 40, // Increased width
-                          height: 10, // Increased height
+                          width: 40.w,
+                          height: 10.h,
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Image.asset(
                                 'assets/icons/arrow_right.png',
-                                width: 24,
-                                height: 24,
+                                width: 24.w,
+                                height: 24.h,
                               ),
                             ],
                           ),
@@ -149,7 +136,7 @@ class _onBoardind2State extends State<onBoardind2> {
                             Text(
                               'Get started',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 18.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
@@ -162,6 +149,52 @@ class _onBoardind2State extends State<onBoardind2> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top - 10.h,
+      left: 16.w,
+      right: 16.w,
+      child: Row(
+        children: [
+          // Progress Bars
+          Expanded(
+            child: Row(
+              children: List.generate(_images.length, (index) {
+                return Expanded(
+                  child: Container(
+                    height: 6.h,
+                    margin: EdgeInsets.symmetric(horizontal: 2.w),
+                    decoration: BoxDecoration(
+                      color: index == _currentPage
+                          ? AppColors.green
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          SizedBox(width: 15.w),
+          // Skip Button
+          GestureDetector(
+            onTap: () {
+              Get.to(CustomizeExperienceScreen());
+            },
+            child: Text(
+              'Skip',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54,
+              ),
+            ),
+          ),
         ],
       ),
     );

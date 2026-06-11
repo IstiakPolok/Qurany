@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,8 @@ import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/model/verse_detail_model.dart';
 import 'package:qurany/feature/quran/services/memorization_service.dart';
 import 'package:record/record.dart';
+import 'package:qurany/core/services/purchase_api.dart';
+import 'package:qurany/core/services/usage_service.dart';
 
 class MemorizationController extends GetxController {
   final MemorizationService _memorizationService = MemorizationService();
@@ -37,6 +40,16 @@ class MemorizationController extends GetxController {
   // Completed counts map: surahId -> totalCompleted
   final completedCounts = <int, int>{}.obs;
 
+  final RxInt practiceUsageCount = 0.obs;
+  final RxInt practiceCap = 3.obs;
+
+  Future<void> refreshUsageCount() async {
+    final userId = UsageService.getActiveUserId();
+    practiceUsageCount.value = await UsageService.getUsageCount(userId, 'practice_session');
+    final caps = await UsageService.getCaps();
+    practiceCap.value = caps['practice_session'] ?? 3;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -46,6 +59,7 @@ class MemorizationController extends GetxController {
     _log('Initialized surahList: ${surahList.length}');
     fetchStats();
     _setupAudioListeners();
+    refreshUsageCount();
   }
 
   void _setupAudioListeners() {
@@ -188,6 +202,7 @@ class MemorizationController extends GetxController {
   final AudioRecorder _recorder = AudioRecorder();
   final RxBool isRecording = false.obs;
   final RxBool isAIProcessing = false.obs;
+  final Rx<Map<String, dynamic>?> aiResult = Rx<Map<String, dynamic>?>(null);
 
   @override
   void onClose() {
@@ -202,6 +217,42 @@ class MemorizationController extends GetxController {
   }
 
   Future<void> startPracticeSession(int surahId, int verseId) async {
+    final isPremium = PurchaseApi.isUserPremium();
+      if (!isPremium) {
+        final userId = UsageService.getActiveUserId();
+        final count = await UsageService.getUsageCount(userId, 'practice_session');
+      final caps = await UsageService.getCaps();
+      final cap = caps['practice_session'] ?? 3;
+
+      if (count >= cap) {
+        // Present paywall
+        await PurchaseApi.presentPaywallIfNeededForPlacement('practice_session');
+        // Update status
+        await PurchaseApi.updatePremiumStatus();
+        if (!PurchaseApi.isUserPremium()) {
+          // block start
+          Get.snackbar(
+            'Premium Required',
+            'You have reached your weekly limit of free practice sessions.',
+            backgroundColor: Colors.orange[800],
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+          return;
+        }
+      }
+    }
+
+    // Increment usage on session start (only if not premium)
+    if (!PurchaseApi.isUserPremium()) {
+      final userId = UsageService.getActiveUserId();
+      UsageService.incrementUsage(userId, 'practice_session').then((_) {
+        refreshUsageCount();
+      }).catchError((e) {
+        debugPrint('[Memorization] Error incrementing usage: $e');
+      });
+    }
+
     _log('startPracticeSession: surahId=$surahId verseId=$verseId');
     currentPracticeSurahId.value = surahId;
     currentStep.value = 2;
@@ -366,6 +417,7 @@ class MemorizationController extends GetxController {
     _log('backToDashboard');
     stopAudio();
     currentStep.value = 0;
+    refreshUsageCount();
   }
 
   void backToSelection() {
@@ -454,7 +506,8 @@ class MemorizationController extends GetxController {
         _log(
           'AI result: accuracy=${result['accuracy']} fluency=${result['fluency']} completeness=${result['completeness']}',
         );
-        _showResultsDialog(result);
+        aiResult.value = result;
+        currentStep.value = 3;
         // Refresh stats to include new points
         fetchStats();
         // Track daily memorized verse
@@ -472,226 +525,7 @@ class MemorizationController extends GetxController {
   }
 
   void _showResultsDialog(Map<String, dynamic> result) {
-    final int accuracy = result['accuracy'] ?? 0;
-    final int fluency = result['fluency'] ?? 0;
-    final int completeness = result['completeness'] ?? 0;
-    final String textSpoken = result['text_spoken'] ?? "";
-    final List<dynamic> wordsDetails = result['words_details'] ?? [];
-
-    _log(
-      'showResultsDialog: accuracy=$accuracy fluency=$fluency completeness=$completeness words=${wordsDetails.length} transcriptionLen=${textSpoken.length}',
-    );
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(24.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                  onTap: () => Get.back(),
-                  child: Icon(Icons.close, size: 24.sp, color: Colors.grey),
-                ),
-              ),
-              Text(
-                "memo_recitation_results".tr,
-                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 24.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildResultScore("memo_accuracy".tr, accuracy, primaryColor),
-                  _buildResultScore("memo_fluency".tr, fluency, Colors.blue),
-                  _buildResultScore("memo_completeness".tr, completeness, Colors.redAccent),
-                ],
-              ),
-              SizedBox(height: 32.h),
-              Text(
-                accuracy > 80 ? "memo_excellent_progress".tr : "memo_keep_practicing".tr,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.bold,
-                  color: accuracy > 80 ? primaryColor : Colors.redAccent,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              if (wordsDetails.isNotEmpty) ...[
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "memo_word_analysis".tr,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 12.h),
-                Wrap(
-                  spacing: 8.w,
-                  runSpacing: 8.h,
-                  alignment: WrapAlignment.center,
-                  children: wordsDetails.map((wordData) {
-                    final String word = wordData['word'] ?? "";
-                    final String errorType = wordData['error_type'] ?? "None";
-                    String translatedError = "";
-
-                    Color wordColor;
-                    if (errorType == "None") {
-                      wordColor = primaryColor;
-                    } else if (errorType == "Omission") {
-                      wordColor = Colors.red;
-                      translatedError = "memo_omission".tr;
-                    } else {
-                      wordColor = Colors.orange;
-                      translatedError = errorType;
-                    }
-
-                    return Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 10.w,
-                        vertical: 4.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: wordColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8.r),
-                        border: Border.all(color: wordColor.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            word,
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontFamily: "Amiri",
-                              fontWeight: FontWeight.bold,
-                              color: wordColor,
-                            ),
-                          ),
-                          if (errorType != "None")
-                            Text(
-                              translatedError,
-                              style: TextStyle(
-                                fontSize: 8.sp,
-                                color: wordColor,
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-                SizedBox(height: 24.h),
-              ],
-              Text(
-                "memo_full_transcription".tr,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey,
-                ),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                textSpoken,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontFamily: "Amiri",
-                  height: 1.5,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 32.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24.r),
-                        ),
-                        side: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        "memo_try_again".tr,
-                        style: TextStyle(color: Colors.black87),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Get.back();
-                        nextVerse();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24.r),
-                        ),
-                      ),
-                      child: Text(
-                        "memo_next_verse".tr,
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultScore(String label, int score, Color color) {
-    return Column(
-      children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 60.w,
-              height: 60.w,
-              child: CircularProgressIndicator(
-                value: score / 100,
-                strokeWidth: 5,
-                color: color,
-                backgroundColor: CupertinoColors.inactiveGray,
-              ),
-            ),
-            Text(
-              "$score%",
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8.h),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
-        ),
-      ],
-    );
+    // Deprecated for the new review screen feature
   }
 }
 
@@ -856,7 +690,9 @@ class MemorizationScreen extends StatelessWidget {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
-        if (controller.currentStep.value == 2) {
+        if (controller.currentStep.value == 3) {
+          controller.currentStep.value = 2; // Back to practice
+        } else if (controller.currentStep.value == 2) {
           controller.backToSelection();
         } else if (controller.currentStep.value == 1) {
           controller.backToDashboard();
@@ -867,15 +703,17 @@ class MemorizationScreen extends StatelessWidget {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFFFAF3),
         body: SafeArea(
           child: Obx(() {
             if (controller.currentStep.value == 0) {
               return _buildDashboard(context, controller);
             } else if (controller.currentStep.value == 1) {
               return _buildSelectionScreen(context, controller);
-            } else {
+            } else if (controller.currentStep.value == 2) {
               return _buildPracticeSession(context, controller);
+            } else {
+              return _buildReviewSession(context, controller);
             }
           }),
         ),
@@ -902,6 +740,23 @@ class MemorizationScreen extends StatelessWidget {
                 : _buildStatsCards(controller),
           ),
           SizedBox(height: 24.h),
+          Obx(() {
+            final isPremium = PurchaseApi.isUserPremium();
+            if (!isPremium && controller.practiceUsageCount.value == controller.practiceCap.value - 1) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: Text(
+                  "1 free session left this week",
+                  style: TextStyle(
+                    color: Colors.orange[800],
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
           _buildStartPracticeButton(controller),
           SizedBox(height: 32.h),
           Align(
@@ -1167,6 +1022,91 @@ class MemorizationScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildStepIndicator(MemorizationController controller) {
+    return Obx(() {
+      final isReview = controller.currentStep.value == 3;
+      final isPracticing =
+          controller.isRecording.value || controller.isAIProcessing.value;
+
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 30.w),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildStepItem(
+              icon: Icons.volume_up,
+              label: "Listen",
+              active: !isPracticing && !isReview,
+              completed: isPracticing || isReview,
+            ),
+            _buildStepConnector(active: isPracticing || isReview),
+            _buildStepItem(
+              icon: Icons.mic_none,
+              label: "Practice",
+              active: isPracticing && !isReview,
+              completed: isReview,
+            ),
+            _buildStepConnector(active: isReview),
+            _buildStepItem(
+              icon: Icons.check,
+              label: "Review",
+              active: isReview,
+              completed:
+                  false, // Maybe completing review later? Or active is enough.
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildStepItem({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required bool completed,
+  }) {
+    Color color = active || completed ? const Color(0xFF2E7D32) : Colors.grey;
+    return Column(
+      children: [
+        ClipPath(
+          clipper: HexagonClipper(),
+          child: Container(
+            width: 44.sp,
+            height: 48.sp,
+            decoration: BoxDecoration(
+              color: active || completed ? color : Colors.white,
+            ),
+            child: Icon(
+              completed ? icon : icon,
+              color: active || completed ? Colors.white : color,
+              size: 20.sp,
+            ),
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.sp,
+            color: color,
+            fontWeight: active ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepConnector({required bool active}) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        margin: EdgeInsets.only(bottom: 16.h),
+        color: active ? const Color(0xFF2E7D32) : Colors.grey.withOpacity(0.3),
+      ),
+    );
+  }
+
   Widget _buildPracticeSession(
     BuildContext context,
     MemorizationController controller,
@@ -1178,11 +1118,13 @@ class MemorizationScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 16.w),
           child: _buildHeader(
             context,
-            "memo_practice_session".tr,
+            "Listen",
             isPractice: true,
             onBack: controller.backToSelection,
           ),
         ),
+        SizedBox(height: 16.h),
+        _buildStepIndicator(controller),
         SizedBox(height: 24.h),
 
         // Verse Card
@@ -1215,12 +1157,11 @@ class MemorizationScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
+                  Center(
                     child: Container(
                       padding: EdgeInsets.all(8.w),
                       decoration: BoxDecoration(
-                        color: primaryColor,
+                        border: Border.all(color: Colors.black, width: 1),
                         shape: BoxShape.circle,
                       ),
                       child: Text(
@@ -1228,7 +1169,7 @@ class MemorizationScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Colors.black,
                         ),
                       ),
                     ),
@@ -1248,18 +1189,18 @@ class MemorizationScreen extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 32.h),
+                          SizedBox(height: 16.h),
                           Text(
                             verse.transliteration,
                             style: TextStyle(
                               fontSize: 14.sp,
-                              color: Colors.black87,
+                              color: Colors.grey[600],
                               height: 1.5,
                               fontStyle: FontStyle.italic,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 16.h),
+                          SizedBox(height: 8.h),
                           Text(
                             verse.translation,
                             style: TextStyle(
@@ -1273,182 +1214,739 @@ class MemorizationScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  SizedBox(height: 16.h),
                   // Player Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      GestureDetector(
-                        onTap: () => controller.previousVerse(),
-                        child: Icon(
-                          Icons.arrow_back_ios,
-                          size: 18.sp,
-                          color: controller.currentPracticeVerseIndex.value > 0
-                              ? Colors.black87
-                              : Colors.grey,
-                        ),
-                      ),
-                      SizedBox(width: 24.w),
-                      GestureDetector(
-                        onTap: () => controller.togglePlayPause(),
-                        child: Container(
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: primaryColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            controller.isPlayingAudio.value
-                                ? Icons.pause
-                                : Icons.play_arrow,
-                            color: Colors.white,
-                            size: 32.sp,
+                  Obx(() {
+                    if (controller.isRecording.value ||
+                        controller.isAIProcessing.value) {
+                      return const SizedBox.shrink();
+                    }
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(height: 16.h),
+                        Center(
+                          child: GestureDetector(
+                            onTap: () => controller.togglePlayPause(),
+                            child: Container(
+                              padding: EdgeInsets.all(16.w),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF2E7D32),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                controller.isPlayingAudio.value
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                                color: Colors.white,
+                                size: 32.sp,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(width: 24.w),
-                      GestureDetector(
-                        onTap: () => controller.nextVerse(),
-                        child: Icon(
-                          Icons.arrow_forward_ios,
-                          size: 18.sp,
-                          color:
-                              controller.currentPracticeVerseIndex.value <
-                                  controller.practiceVerses.length - 1
-                              ? Colors.black87
-                              : Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             );
           }),
         ),
 
-        SizedBox(height: 24.h),
-
         // Repeat Count
-        Container(
-          margin: EdgeInsets.symmetric(horizontal: 16.w),
-          padding: EdgeInsets.all(8.w),
-          decoration: BoxDecoration(
-            color: bgColor.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Row(
+        Obx(() {
+          if (controller.isRecording.value || controller.isAIProcessing.value) {
+            return SizedBox(height: 24.h);
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: EdgeInsets.only(left: 8.w),
-                child: Text(
-                  "memo_repeat_count".tr,
-                  style: TextStyle(fontWeight: FontWeight.w600),
+              SizedBox(height: 24.h),
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16.w),
+                padding: EdgeInsets.symmetric(vertical: 4.h, horizontal: 12.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F5EE),
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      "Repeat Count",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const Spacer(),
+                    _buildRepeatToggle(controller, 1),
+                    _buildRepeatToggle(controller, 3),
+                    _buildRepeatToggle(controller, 5),
+                    _buildRepeatToggle(controller, 7),
+                  ],
                 ),
               ),
-              Spacer(),
-              _buildRepeatToggle(controller, 1),
-              _buildRepeatToggle(controller, 3),
-              _buildRepeatToggle(controller, 5),
-              _buildRepeatToggle(controller, 7),
             ],
-          ),
-        ),
+          );
+        }),
 
-        SizedBox(height: 24.h),
+        SizedBox(height: 16.h),
 
         // AI Voice Recognition
-        Container(
-          width: double.infinity,
-          margin: EdgeInsets.symmetric(horizontal: 16.w),
-          padding: EdgeInsets.all(24.w),
-          decoration: BoxDecoration(
-            color: green,
-            borderRadius: BorderRadius.circular(24.r),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        Obx(() {
+          final isRecording = controller.isRecording.value;
+          final isProcessing = controller.isAIProcessing.value;
+
+          return GestureDetector(
+            onTap: (isRecording || isProcessing)
+                ? controller.handleRecording
+                : null,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: double.infinity,
+              margin: EdgeInsets.symmetric(horizontal: 16.w),
+              padding: EdgeInsets.symmetric(
+                vertical: isRecording || isProcessing ? 40.h : 20.h,
+                horizontal: 20.w,
+              ),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF2E7D32), Color(0xFF1B5E20)],
+                ),
+                borderRadius: BorderRadius.circular(24.r),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.mic_none, color: Colors.white, size: 20.sp),
-                  SizedBox(width: 8.w),
                   Text(
-                    "memo_ai_recognition".tr,
+                    isProcessing
+                        ? "Processing..."
+                        : (isRecording
+                              ? "Recording Now"
+                              : "Are you ready to practice?"),
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16.sp,
+                      fontSize: isRecording || isProcessing ? 20.sp : 16.sp,
                     ),
                   ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    isProcessing
+                        ? "Checking your recitation..."
+                        : (isRecording
+                              ? "Recite the verse clearly"
+                              : "Begin your recitation by tapping below and grow\nwith every verse"),
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: isRecording || isProcessing ? 14.sp : 11.sp,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  if (isRecording || isProcessing) ...[
+                    SizedBox(height: 32.h),
+                    if (isProcessing)
+                      SizedBox(
+                        height: 40.h,
+                        width: 40.h,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: Colors.white,
+                        ),
+                      )
+                    else ...[
+                      const WaveformAnimation(),
+                    ],
+                    SizedBox(height: 16.h),
+                    Text(
+                      "Tap to Stop",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10.sp,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ] else ...[
+                    SizedBox(height: 20.h),
+                    GestureDetector(
+                      onTap: controller.isAIProcessing.value
+                          ? null
+                          : controller.handleRecording,
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.mic_none,
+                              color: Colors.black87,
+                              size: 20.sp,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              "Start Practicing",
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              SizedBox(height: 8.h),
-              Text(
-                "memo_ai_desc".tr,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontSize: 12.sp,
-                ),
-              ),
-              SizedBox(height: 24.h),
-              Obx(
-                () => GestureDetector(
-                  onTap: controller.isAIProcessing.value
-                      ? null
-                      : controller.handleRecording,
-                  child: Container(
+            ),
+          );
+        }),
+        SizedBox(height: 24.h),
+      ],
+    );
+  }
+
+  Widget _buildReviewSession(
+    BuildContext context,
+    MemorizationController controller,
+  ) {
+    return Obx(() {
+      final result = controller.aiResult.value;
+      if (result == null) {
+        return const Center(
+          child: CircularProgressIndicator(color: primaryColor),
+        );
+      }
+
+      final int accuracy = result['accuracy'] ?? 0;
+      final int fluency = result['fluency'] ?? 0;
+      final int completeness = result['completeness'] ?? 0;
+      final List<dynamic> wordsDetails = result['words_details'] ?? [];
+
+      int wordsToReview = 0;
+      int extraWords = 0;
+
+      for (var word in wordsDetails) {
+        final String errorType = word['error_type'] ?? "None";
+        if (errorType != "None" && errorType != "Insertion") {
+          wordsToReview++;
+        } else if (errorType == "Insertion") {
+          extraWords++;
+        }
+      }
+
+      final isExcellent = accuracy > 80;
+
+      return Column(
+        children: [
+          SizedBox(height: 12.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: _buildHeader(
+              context,
+              "Your Recitation Journey",
+              isPractice: true,
+              onBack: () {
+                controller.currentStep.value =
+                    2; // Go back to practice manually
+              },
+            ),
+          ),
+          SizedBox(height: 16.h),
+          _buildStepIndicator(controller),
+          SizedBox(height: 24.h),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  Text(
+                    isExcellent ? "Excellent Progress!" : "Keep practicing!",
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2E7D32),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    "Keep practicing to improve your accuracy.",
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[700]),
+                  ),
+                  SizedBox(height: 24.h),
+
+                  // Stats overview (accuracy, fluency)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildResultScore(
+                        "memo_accuracy".tr,
+                        accuracy,
+                        primaryColor,
+                      ),
+                      _buildResultScore(
+                        "memo_fluency".tr,
+                        fluency,
+                        Colors.blue,
+                      ),
+                      _buildResultScore(
+                        "memo_completeness".tr,
+                        completeness,
+                        Colors.orange,
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 24.h),
+
+                  // Areas for Growth Card
+                  Container(
                     width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 16.h),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(30.r),
+                      borderRadius: BorderRadius.circular(12.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (controller.isAIProcessing.value)
-                          SizedBox(
-                            width: 20.w,
-                            height: 20.w,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.black87,
-                            ),
-                          )
-                        else ...[
-                          Icon(
-                            controller.isRecording.value
-                                ? Icons.stop
-                                : Icons.mic,
-                            color: controller.isRecording.value
-                                ? Colors.red
-                                : Colors.black87,
-                            size: 20.sp,
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            vertical: 12.h,
+                            horizontal: 16.w,
                           ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            controller.isRecording.value
-                                ? "memo_stop_recording".tr
-                                : "memo_start_recording".tr,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF388E3C), // Dark green header
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(12.r),
+                              topRight: Radius.circular(12.r),
+                            ),
+                          ),
+                          child: Text(
+                            "Areas for Growth",
                             style: TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              color: controller.isRecording.value
-                                  ? Colors.red
-                                  : Colors.black87,
+                              fontSize: 14.sp,
                             ),
                           ),
-                        ],
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: 20.h,
+                            horizontal: 16.w,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "$wordsToReview",
+                                      style: TextStyle(
+                                        fontSize: 24.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(
+                                          0xFFD84315,
+                                        ), // Deep orange/red
+                                      ),
+                                    ),
+                                    Text(
+                                      "Words to Review",
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                height: 40.h,
+                                width: 1,
+                                color: Colors.grey.withOpacity(0.3),
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(left: 24.w),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "$extraWords",
+                                        style: TextStyle(
+                                          fontSize: 24.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF2E7D32),
+                                        ),
+                                      ),
+                                      Text(
+                                        "Extra Words",
+                                        style: TextStyle(
+                                          fontSize: 12.sp,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
+
+                  SizedBox(height: 16.h),
+
+                  // Mispronounced Words Cards
+                  if (wordsToReview > 0) ...[
+                    ...wordsDetails
+                        .where(
+                          (w) =>
+                              w['error_type'] != null &&
+                              w['error_type'] != 'None' &&
+                              w['error_type'] != 'Insertion',
+                        )
+                        .map((wordData) {
+                          final String word = wordData['word'] ?? "";
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 16.h),
+                            padding: EdgeInsets.all(16.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            word,
+                                            style: TextStyle(
+                                              fontSize: 24.sp,
+                                              fontFamily: "Amiri",
+                                              color: const Color(0xFFD84315),
+                                            ),
+                                          ),
+                                          SizedBox(height: 8.h),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                "You said ",
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: EdgeInsets.all(4.w),
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFFE8F5E9),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.volume_up,
+                                                  size: 14.sp,
+                                                  color: const Color(
+                                                    0xFF2E7D32,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 1,
+                                      height: 60.h,
+                                      color: Colors.grey.withOpacity(0.2),
+                                    ),
+                                    Expanded(
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            word,
+                                            style: TextStyle(
+                                              fontSize: 24.sp,
+                                              fontFamily: "Amiri",
+                                              color: const Color(0xFF2E7D32),
+                                            ),
+                                          ),
+                                          SizedBox(height: 8.h),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                "Listen to the correct ",
+                                                style: TextStyle(
+                                                  fontSize: 12.sp,
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: EdgeInsets.all(4.w),
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFFE8F5E9),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.volume_up,
+                                                  size: 14.sp,
+                                                  color: const Color(
+                                                    0xFF2E7D32,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 16.h),
+                                Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.all(12.w),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFE8F5E9,
+                                    ).withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(8.r),
+                                  ),
+                                  child: Text(
+                                    "Make sure to pronounce it correctly and practice more.", // Generic tip for the word
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 13.sp,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        })
+                        .toList(),
+                  ],
+
+                  SizedBox(height: 16.h),
+
+                  // Tips for Next Time
+                  if (wordsToReview > 0 || extraWords > 0) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline,
+                            color: const Color(0xFF2E7D32),
+                            size: 18.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            "Tips for Next Time",
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTipBullet(
+                            "It looks like some words are a bit tricky today.",
+                          ),
+                          SizedBox(height: 6.h),
+                          _buildTipBullet(
+                            "Try listening to the verse a few more times before practicing again.",
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 24.h),
+                  ],
+
+                  Text(
+                    "memo_full_transcription".tr,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF2E7D32),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    result['text_spoken'] ?? "",
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontFamily: "Amiri",
+                      height: 1.5,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 32.h),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () {
+                            controller.currentStep.value = 2; // Try Again
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.grey.withOpacity(0.2),
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.r),
+                            ),
+                          ),
+                          child: Text(
+                            "Try Again",
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16.w),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            controller.currentStep.value = 2;
+                            controller.nextVerse();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E7D32),
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.r),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            "Next Verse",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 32.h),
+                ],
               ),
-            ],
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _buildResultScore(String label, int score, Color color) {
+    return Column(
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 60.w,
+              height: 60.w,
+              child: CircularProgressIndicator(
+                value: score / 100,
+                strokeWidth: 5,
+                color: color,
+                backgroundColor: CupertinoColors.inactiveGray,
+              ),
+            ),
+            Text(
+              "$score%",
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTipBullet(String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(top: 6.h, right: 8.w, left: 4.w),
+          child: Container(
+            width: 4.w,
+            height: 4.w,
+            decoration: const BoxDecoration(
+              color: Colors.black54,
+              shape: BoxShape.circle,
+            ),
           ),
         ),
-
-        SizedBox(height: 24.h),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: Colors.grey[800],
+              height: 1.5,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1571,20 +2069,23 @@ class MemorizationScreen extends StatelessWidget {
       child: Obx(
         () => Container(
           margin: EdgeInsets.symmetric(horizontal: 4.w),
-          padding: EdgeInsets.all(8.w),
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
           decoration: BoxDecoration(
             color: controller.repeatCount.value == count
-                ? primaryColor
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(8.r),
+                ? const Color(0xFF2E7D32)
+                : Colors.white,
+            borderRadius: BorderRadius.circular(4.r),
           ),
           child: Text(
             "${count}x",
             style: TextStyle(
+              fontSize: 12.sp,
               color: controller.repeatCount.value == count
                   ? Colors.white
-                  : Colors.grey,
-              fontWeight: FontWeight.bold,
+                  : Colors.grey[700],
+              fontWeight: controller.repeatCount.value == count
+                  ? FontWeight.bold
+                  : FontWeight.normal,
             ),
           ),
         ),
@@ -1650,18 +2151,24 @@ class MemorizationScreen extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _buildStatCard(
-            title: "memo_verses_learned".tr,
-            value: "${controller.versesLearned.value}",
-            icon: Icons.check_circle_outline,
+          child: GestureDetector(
+            onTap: () => PurchaseApi.presentPaywallIfNeededForPlacement('premium_feature'),
+            child: _buildStatCard(
+              title: "memo_verses_learned".tr,
+              value: "${controller.versesLearned.value}",
+              icon: Icons.check_circle_outline,
+            ),
           ),
         ),
         SizedBox(width: 16.w),
         Expanded(
-          child: _buildStatCard(
-            title: "memo_avg_accuracy".tr,
-            value: "${controller.avgAccuracy.value}%",
-            icon: Icons.trending_up,
+          child: GestureDetector(
+            onTap: () => PurchaseApi.presentPaywallIfNeededForPlacement('premium_feature'),
+            child: _buildStatCard(
+              title: "memo_avg_accuracy".tr,
+              value: "${controller.avgAccuracy.value}%",
+              icon: Icons.trending_up,
+            ),
           ),
         ),
       ],
@@ -1751,6 +2258,86 @@ class MemorizationScreen extends StatelessWidget {
           return _buildProgressItem(item, controller);
         },
       ),
+    );
+  }
+}
+
+// Reusable Hexagon clipper if not already imported
+class HexagonClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+
+    path.moveTo(w * 0.5, 0);
+    path.lineTo(w, h * 0.25);
+    path.lineTo(w, h * 0.75);
+    path.lineTo(w * 0.5, h);
+    path.lineTo(0, h * 0.75);
+    path.lineTo(0, h * 0.25);
+    path.close();
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class WaveformAnimation extends StatefulWidget {
+  const WaveformAnimation({super.key});
+
+  @override
+  State<WaveformAnimation> createState() => _WaveformAnimationState();
+}
+
+class _WaveformAnimationState extends State<WaveformAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(20, (index) {
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            // Using different phases for each bar to create a wave effect
+            final double t = _controller.value;
+            final double phase = index * 0.4;
+            // Height between 10 and 40 based on sine wave
+            final double height =
+                10 + 30 * math.sin((t * math.pi * 2) + phase).abs();
+
+            return Container(
+              margin: EdgeInsets.symmetric(horizontal: 2.w),
+              width: 5.w,
+              height: height.h,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(3.r),
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }

@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'dart:math';
+import 'package:http/http.dart' as http;
+import '../../../core/network_caller/endpoints.dart';
+import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
 
 class AppleSignInService {
   static final isLoading = false.obs;
@@ -35,27 +38,124 @@ class AppleSignInService {
       final nonce = _sha256ofString(rawNonce);
 
       // Request credentials from Apple
-      await SignInWithApple.getAppleIDCredential(
+      print(' Initiating Apple Sign-In flow...');
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
         nonce: nonce,
+        webAuthenticationOptions: WebAuthenticationOptions(
+          // Important: Replace these with your actual Apple Service ID and Callback URL
+          clientId:
+              'backend.qurany.pro', // Service Identifier configured in Apple Developer Console
+          redirectUri: Uri.parse(
+            'https://backend.qurany.pro/api/user/auth/apple/callback',
+          ),
+        ),
       );
 
-      // final OAuthCredential credential = AppleAuthProvider.credential(
-      //   idToken: appleCredential.identityToken,
-      //   rawNonce: rawNonce,
-      // );
+      final String? idToken = appleCredential.identityToken;
+      print(
+        ' Apple Credential Received. Identity Token length: ${idToken?.length ?? 0}',
+      );
+      print(' FULL APPLE ID TOKEN: $idToken');
+      print(
+        ' User Details: ${appleCredential.givenName} ${appleCredential.familyName}, Email: ${appleCredential.email}',
+      );
 
-      // await FirebaseAuth.instance.signInWithCredential(credential);
+      if (idToken != null) {
+        String email = appleCredential.email ?? '';
+        String name = '';
+        if (appleCredential.givenName != null ||
+            appleCredential.familyName != null) {
+          name =
+              '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'
+                  .trim();
+        }
 
-      return true;
-    } catch (e) {
-      print('Error during Apple Sign In: $e');
-      return false;
-    } finally {
+        // Apple only sends email in the credential object on the very first login.
+        // For subsequent logins, we must extract it from the idToken JWT payload.
+        if (email.isEmpty) {
+          try {
+            final parts = idToken.split('.');
+            if (parts.length >= 2) {
+              final payloadStr = parts[1];
+              final normalizedStr = base64Url.normalize(payloadStr);
+              final payloadMap = jsonDecode(
+                utf8.decode(base64Url.decode(normalizedStr)),
+              );
+              email = payloadMap['email'] ?? '';
+            }
+          } catch (e) {
+            print('Error decoding Apple JWT to get email: $e');
+          }
+        }
+
+        print('✅ Obtained Apple ID Token, sending to backend...');
+        print(' Target Endpoint: $appleAuthEndpoint');
+
+        try {
+          final Map<String, dynamic> requestBody = {
+            "email": email,
+            "name": name.isEmpty ? "Apple User" : name,
+            "avatarUrl": "",
+            "authId": appleCredential.userIdentifier ?? "",
+          };
+
+          final response = await http.post(
+            Uri.parse(appleAuthEndpoint),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(requestBody),
+          );
+
+          print(' Backend Response Status: ${response.statusCode}');
+          print(' Backend Response Body: ${response.body}');
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            final data = jsonDecode(response.body);
+            print("✅ Backend Login Success: $data");
+
+            if (data['data'] != null) {
+              final accessToken = data['data']['accessToken'];
+              final refreshToken = data['data']['refreshToken'];
+              final email = data['data']['email'];
+
+              print(' Saving Tokens to SharedPreferences...');
+              await SharedPreferencesHelper.saveAccessToken(accessToken);
+              await SharedPreferencesHelper.saveRefreshToken(refreshToken);
+              if (email != null) {
+                await SharedPreferencesHelper.saveEmail(email);
+              }
+            }
+
+            isLoading.value = false;
+            return true;
+          } else {
+            print("❌ Backend Login Failed with status: ${response.statusCode}");
+            isLoading.value = false;
+            return false;
+          }
+        } catch (e) {
+          print("❌ Error sending token to backend: $e");
+          isLoading.value = false;
+          return false;
+        }
+      } else {
+        print('❌ identityToken is NULL');
+      }
+
       isLoading.value = false;
+      return false;
+    } catch (e) {
+      print(' Error during Apple Sign In: $e');
+      isLoading.value = false;
+      Get.snackbar(
+        'Sign In Failed',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return false;
     }
   }
 }

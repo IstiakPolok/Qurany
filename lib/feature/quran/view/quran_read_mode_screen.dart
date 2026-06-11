@@ -761,7 +761,9 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
           scrollDirection: Axis.horizontal,
           itemCount: reciters.length,
           itemBuilder: (context, index) {
-            final isSelected = _controller.selectedReciterName.value == reciters[index]['name'];
+            final isSelected =
+                _controller.selectedReciterName.value ==
+                reciters[index]['name'];
             return GestureDetector(
               onTap: () async {
                 final selectedReciterName = reciters[index]['name']!;
@@ -1150,7 +1152,12 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
                 ? const Color(0xFF2E7D32).withOpacity(0.1)
                 : null,
           ),
-          recognizer: TapGestureRecognizer()..onTap = () => _selectVerse(i),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () {
+              _selectVerse(i);
+              // Also trigger audio playback for the selected verse
+              _controller.playVerse(verse.verseId);
+            },
         ),
       );
 
@@ -1159,7 +1166,11 @@ class _QuranReadModeScreenState extends State<QuranReadModeScreen> {
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: GestureDetector(
-            onTap: () => _selectVerse(i),
+            onTap: () {
+              _selectVerse(i);
+              // Also trigger audio playback for the selected verse
+              _controller.playVerse(verse.verseId);
+            },
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 2.w),
               child: Stack(

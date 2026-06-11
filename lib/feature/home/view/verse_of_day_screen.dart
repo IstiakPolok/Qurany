@@ -47,18 +47,15 @@ class VerseOfDayScreen extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          // Background Gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF66BB6A), // Light Green
-                  Color(0xFF388E3C), // Darker Green
-                ],
-              ),
-            ),
+          // Background Image
+          Positioned.fill(
+            child: Obx(() {
+              final bg = controller.backgroundImage.value;
+              return Image.asset(
+                bg.isNotEmpty ? bg : 'assets/image/bgloginload.png',
+                fit: BoxFit.cover,
+              );
+            }),
           ),
           // Overlay
           Positioned.fill(

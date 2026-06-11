@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 
 class PurchaseApi {
   // Replace these with your actual API keys from the RevenueCat dashboard
@@ -9,9 +11,9 @@ class PurchaseApi {
   static const String _googleApiKey = 'goog_YOUR_GOOGLE_API_KEY';
 
   // This must exactly match the entitlement identifier in RevenueCat dashboard.
-  static const String premiumEntitlementId = 'Qurany Premium Pro';
+  static const String premiumEntitlementId = 'premium';
 
-  static bool _isPremium = false;
+  static final RxBool _isPremium = false.obs;
 
   static void _log(String message) {
     if (kDebugMode) {
@@ -54,7 +56,7 @@ class PurchaseApi {
       final active =
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;
-      _isPremium = active;
+      _isPremium.value = active;
       _log('Customer info updated. premium=$active customerInfo=$customerInfo');
     });
 
@@ -83,11 +85,11 @@ class PurchaseApi {
         }
       }
 
-      _isPremium =
+      _isPremium.value =
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;
       _log(
-        'Premium status updated: $_isPremium (checked for: $premiumEntitlementId)',
+        'Premium status updated: ${_isPremium.value} (checked for: $premiumEntitlementId)',
       );
     } catch (e) {
       _log('Error updating premium status: $e');
@@ -164,10 +166,10 @@ class PurchaseApi {
       CustomerInfo customerInfo = purchaseResult.customerInfo;
       // Print backend UID for debugging
       _log('Purchase for UID in RevenueCat: ${customerInfo.originalAppUserId}');
-      _isPremium =
+      _isPremium.value =
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;
-      _log('Purchase successful. premium=$_isPremium');
+      _log('Purchase successful. premium=${_isPremium.value}');
       return (true, null);
     } catch (e) {
       if (e is PlatformException) {
@@ -221,10 +223,10 @@ class PurchaseApi {
     try {
       _log('Restoring purchases');
       CustomerInfo customerInfo = await Purchases.restorePurchases();
-      _isPremium =
+      _isPremium.value =
           customerInfo.entitlements.all[premiumEntitlementId]?.isActive ??
           false;
-      _log('Restore completed. premium=$_isPremium');
+      _log('Restore completed. premium=${_isPremium.value}');
       return (true, null);
     } catch (e) {
       _log('Restore failed: $e');
@@ -233,7 +235,7 @@ class PurchaseApi {
   }
 
   static bool isUserPremium() {
-    return _isPremium;
+    return _isPremium.value;
   }
 
   /// Logs in the user with their unique ID (e.g., Firebase UID).
@@ -253,9 +255,32 @@ class PurchaseApi {
     try {
       _log('Logging out RevenueCat user');
       await Purchases.logOut();
-      _isPremium = false;
+      _isPremium.value = false;
     } catch (e) {
       _log('Error logging out RevenueCat: $e');
+    }
+  }
+
+  /// Fetches the offering for a placement and presents its paywall if available.
+  /// If the offering is null or if the user is already premium, does nothing.
+  static Future<void> presentPaywallIfNeededForPlacement(String placementId) async {
+    try {
+      final isPremium = isUserPremium();
+      if (isPremium) {
+        _log('User is already premium, skipping placement: $placementId');
+        return;
+      }
+
+      _log('Fetching offering for placement: $placementId');
+      Offering? offering = await Purchases.getCurrentOfferingForPlacement(placementId);
+      if (offering != null) {
+        _log('Offering found for placement: $placementId, presenting paywall');
+        await RevenueCatUI.presentPaywall(offering: offering);
+      } else {
+        _log('No offering found for placement: $placementId, skipping');
+      }
+    } catch (e) {
+      _log('Error presenting paywall for placement $placementId: $e');
     }
   }
 }

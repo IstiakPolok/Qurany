@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:qurany/core/const/app_colors.dart';
 import 'package:qurany/feature/bottom_nav_bar/screen/bottom_nav_bar.dart';
+import 'package:qurany/core/services/purchase_api.dart';
 
 import '../../../core/const/gradiant_loader.dart';
 
@@ -24,12 +24,15 @@ class _PreparingSpaceScreenState extends State<PreparingSpaceScreen>
       duration: const Duration(seconds: 2),
     )..repeat();
 
-    // Navigate to BottomNavbar after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
+    // Navigate to BottomNavbar after 3 seconds, showing onboarding paywall if needed
+    Future.delayed(const Duration(seconds: 3), () async {
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const BottomNavbar()),
-        );
+        await PurchaseApi.presentPaywallIfNeededForPlacement('onboarding');
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const BottomNavbar()),
+          );
+        }
       }
     });
   }
@@ -43,103 +46,81 @@ class _PreparingSpaceScreenState extends State<PreparingSpaceScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF227026),
-      body: Column(
-        children: [
-          Image.asset(
-            'assets/image/login_OptionBG.jpg',
-            fit: BoxFit.fitWidth,
-            alignment: Alignment.topCenter,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/image/bgloginload.png'),
+            fit: BoxFit.cover,
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        ),
+        child: SafeArea(
+          child: Column(
             children: [
+              const Spacer(),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(
-                    vertical: 32.h,
-                    horizontal: 20.w,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF17651B),
-                        Color(0xFF216F25),
-                        Color(0xFF2D7B31),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/icons/123.png',
+                          width: 36.w,
+                          height: 36.h,
+                          color: Colors.white,
+                        ),
+                        Text(
+                          "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ",
+                          textAlign: TextAlign.center,
+                          textDirection: TextDirection.rtl,
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            height: 1.6,
+                            fontFamily: 'Arial',
+                          ),
+                        ),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.2),
-                      width: 1,
+                    SizedBox(height: 16.h),
+                    Text(
+                      "Indeed, the patient will be given their reward\nwithout account.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.bold,
+                        height: 1.4,
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Image.asset(
-                            'assets/icons/123.png',
-                            width: 36.w,
-                            height: 36.h,
-                            color: Colors.white,
-                          ),
-
-                          Text(
-                            "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ",
-                            textAlign: TextAlign.center,
-                            textDirection: TextDirection.rtl,
-                            style: TextStyle(
-                              fontSize: 20.sp,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              height: 1.6,
-                              fontFamily: 'Arial',
-                            ),
-                          ),
-                        ],
+                    SizedBox(height: 12.h),
+                    Text(
+                      "Surah Az-Zumar-10",
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        "“Indeed, the patient will be given their reward\nwithout account.”",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.white.withOpacity(0.9),
-                          height: 1.4,
-                        ),
-                      ),
-                      SizedBox(height: 12.h),
-                      Text(
-                        "Surah Az-Zumar-10",
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(height: 50.h),
-
               Center(
                 child: GradientLoader(
                   size: 80,
-                  strokeWidth: 20,
-                  colors: [Colors.white, primaryColor],
+                  strokeWidth: 15,
+                  colors: [Color.fromARGB(255, 197, 197, 197), Colors.white],
                 ),
               ),
-
               SizedBox(height: 30.h),
-
-              // Loading Text
               Text(
                 "Preparing your space,",
                 style: TextStyle(
@@ -155,9 +136,10 @@ class _PreparingSpaceScreenState extends State<PreparingSpaceScreen>
                   color: Colors.white.withOpacity(0.9),
                 ),
               ),
+              const Spacer(),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

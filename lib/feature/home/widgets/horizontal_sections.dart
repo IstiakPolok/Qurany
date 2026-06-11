@@ -132,7 +132,8 @@ class DidYouKnowSection extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DetailScreen(data: item.toMap()),
+                  builder: (context) =>
+                      DetailScreen(data: item.toMap(), knowledgeData: item),
                 ),
               );
             },
@@ -259,6 +260,7 @@ class StoriesSection extends StatelessWidget {
                       'image': story.image,
                       'description': story.description,
                     },
+                    historyData: story,
                   ),
                 ),
               );

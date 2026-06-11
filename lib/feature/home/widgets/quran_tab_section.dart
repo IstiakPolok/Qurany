@@ -8,6 +8,7 @@ import 'package:qurany/feature/home/model/surah_model.dart';
 import 'package:qurany/feature/home/services/quran_service.dart';
 import 'package:qurany/feature/quran/view/surah_reading_screen.dart';
 import 'package:qurany/core/services_class/local_service/shared_preferences_helper.dart';
+import 'package:qurany/feature/bottom_nav_bar/screen/bottom_nav_bar.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Removed as not used and caused error
 
 class QuranTabSection extends StatefulWidget {
@@ -256,22 +257,36 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                 "quran".tr,
                 style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "view_all".tr,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14.sp,
-                      height: 1.5,
+              GestureDetector(
+                onTap: () {
+                  if (Get.isRegistered<BottomNavbarController>()) {
+                    final controller = Get.find<BottomNavbarController>();
+                    controller.changeIndex(1);
+                  } else {
+                    Get.to(() => BottomNavbar(initialIndex: 1));
+                  }
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "view_all".tr,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp,
+                        height: 1.5,
+                        color: Color(0xff2f7d33),
+                      ),
+                    ),
+                    SizedBox(height: 1.h),
+                    Container(
+                      height: 1.2,
+                      width: 52.w,
                       color: Color(0xff2f7d33),
                     ),
-                  ),
-                  SizedBox(height: 1.h),
-                  Container(height: 1.2, width: 52.w, color: Color(0xff2f7d33)),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -310,12 +325,12 @@ class _QuranTabSectionState extends State<QuranTabSection> {
           // Tabs
           Row(
             children: [
-              _buildTab("surah".tr, _selectedTab == "Surah"),
+              _buildTab("Surah", "surah".tr, _selectedTab == "Surah"),
               SizedBox(width: 8.w),
-              _buildTab("juz".tr, _selectedTab == "Juzz"),
+              _buildTab("Juzz", "juz".tr, _selectedTab == "Juzz"),
             ],
           ),
-          SizedBox(height: 16.h),
+          //   SizedBox(height: 16.h),
 
           // List
           _selectedTab == "Surah"
@@ -343,6 +358,10 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                     : Column(
                         children: [
                           ListView.separated(
+                            padding: EdgeInsets.symmetric(
+                              //   horizontal: 10.w,
+                              vertical: 10.h,
+                            ),
                             physics: const NeverScrollableScrollPhysics(),
                             shrinkWrap: true,
                             itemCount: _filteredSurahs.length,
@@ -372,6 +391,10 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                         ),
                       )
                     : ListView.separated(
+                        padding: EdgeInsets.symmetric(
+                          //   horizontal: 10.w,
+                          vertical: 10.h,
+                        ),
                         physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
                         itemCount: _filteredJuz.length,
@@ -400,25 +423,25 @@ class _QuranTabSectionState extends State<QuranTabSection> {
                 color: Colors.black,
               ),
             ),
-            GestureDetector(
-              onTap: () {},
-              child: Text(
-                "read_juz".tr,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w600,
-                  color: primaryColor,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
+            // GestureDetector(
+            //   onTap: () {},
+            //   child: Text(
+            //     "read_juz".tr,
+            //     style: TextStyle(
+            //       fontSize: 13.sp,
+            //       fontWeight: FontWeight.w600,
+            //       color: primaryColor,
+            //       decoration: TextDecoration.underline,
+            //     ),
+            //   ),
+            // ),
           ],
         ),
         SizedBox(height: 12.h),
         Container(
           padding: EdgeInsets.all(12.w),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF9F0),
+            color: const Color.fromARGB(255, 255, 255, 255),
             borderRadius: BorderRadius.circular(16.r),
             border: Border.all(color: Colors.grey.shade200),
           ),
@@ -561,9 +584,9 @@ class _QuranTabSectionState extends State<QuranTabSection> {
     );
   }
 
-  Widget _buildTab(String title, bool isSelected) {
+  Widget _buildTab(String id, String title, bool isSelected) {
     return GestureDetector(
-      onTap: () => _onTabSelected(title),
+      onTap: () => _onTabSelected(id),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
         decoration: BoxDecoration(

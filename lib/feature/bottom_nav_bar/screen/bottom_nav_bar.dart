@@ -7,6 +7,7 @@ import 'package:qurany/feature/home/view/home_screen.dart';
 import 'package:qurany/feature/prayer/view/prayer_screen.dart';
 import 'package:qurany/feature/ask_ai/view/ask_ai_intro_screen.dart';
 import 'package:qurany/feature/quran/view/quran_screen.dart';
+import 'package:qurany/core/services/review_service.dart';
 
 class BottomNavbarController extends GetxController {
   RxInt currentIndex = 0.obs;
@@ -16,16 +17,34 @@ class BottomNavbarController extends GetxController {
   }
 }
 
-class BottomNavbar extends StatelessWidget {
+class BottomNavbar extends StatefulWidget {
   final int initialIndex;
   const BottomNavbar({super.key, this.initialIndex = 0});
+
+  @override
+  State<BottomNavbar> createState() => _BottomNavbarState();
+}
+
+class _BottomNavbarState extends State<BottomNavbar> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Show review dialog after 5 seconds of entering the main screen (after login)
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          ReviewService.showReviewDialog(context);
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final BottomNavbarController controller = Get.put(BottomNavbarController());
     // Set initial index if provided
-    if (controller.currentIndex.value != initialIndex) {
-      controller.currentIndex.value = initialIndex;
+    if (controller.currentIndex.value != widget.initialIndex) {
+      controller.currentIndex.value = widget.initialIndex;
     }
 
     // Placeholder pages
@@ -131,7 +150,6 @@ class BottomNavbar extends StatelessWidget {
   }
 
   Widget _buildAskButton(BottomNavbarController controller, int index) {
-
     return GestureDetector(
       onTap: () => controller.changeIndex(index),
       child: Column(
